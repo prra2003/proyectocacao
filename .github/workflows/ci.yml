@@ -1,0 +1,35 @@
+# Revisa cada cambio antes de que llegue a main.
+#
+# Los tests son la red de seguridad del proyecto: si alguien rompe la
+# sincronización sin darse cuenta, se entera aquí y no en el teléfono de un
+# productor.
+name: Análisis y pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Dependencias
+        run: flutter pub get
+
+      - name: Código generado (Drift)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Análisis estático
+        run: flutter analyze
+
+      - name: Pruebas
+        run: flutter test

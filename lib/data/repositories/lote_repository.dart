@@ -1,0 +1,87 @@
+import '../daos/daos.dart';
+import '../local/database.dart';
+import '../local/enums.dart';
+
+/// Todo lo que pasa dentro de un lote: labores culturales y cosechas.
+class LoteRepository {
+  LoteRepository(AppDatabase db)
+    : _registros = db.registrosDao,
+      _lotes = db.lotesDao;
+
+  final RegistrosDao _registros;
+  final LotesDao _lotes;
+
+  Stream<Lote?> watchLote(String fincaId, String loteId) {
+    return _lotes.watchLotesDe(fincaId).map((lotes) {
+      for (final lote in lotes) {
+        if (lote.id == loteId) return lote;
+      }
+      return null;
+    });
+  }
+
+  /// Borra el lote y, en cascada, sus labores, cosechas y diagnósticos.
+  Future<void> borrarLote(String loteId) => _lotes.borrar(loteId);
+
+  Stream<List<ActividadAgricola>> watchActividades(String loteId) =>
+      _registros.watchActividadesDe(loteId);
+
+  Future<String> registrarActividad({
+    required String loteId,
+    required TipoActividad tipo,
+    required DateTime fecha,
+    String? observaciones,
+  }) {
+    return _registros.registrarActividad(
+      loteId: loteId,
+      tipo: tipo,
+      fecha: fecha,
+      observaciones: observaciones,
+    );
+  }
+
+  Future<int> borrarActividad(String id) => _registros.borrarActividad(id);
+
+  Stream<List<Cosecha>> watchCosechas(String loteId) =>
+      _registros.watchCosechasDe(loteId);
+
+  Future<String> registrarCosecha({
+    required String loteId,
+    required DateTime fecha,
+    required double cantidadKg,
+    String? observaciones,
+  }) {
+    return _registros.registrarCosecha(
+      loteId: loteId,
+      fecha: fecha,
+      cantidadKg: cantidadKg,
+      observaciones: observaciones,
+    );
+  }
+
+  Future<int> borrarCosecha(String id) => _registros.borrarCosecha(id);
+
+  Stream<double> watchKgDelAnio(String loteId, int anio) =>
+      _registros.watchKgDeLote(loteId, anio);
+
+  Stream<List<Diagnostico>> watchDiagnosticos(String loteId) =>
+      _registros.watchDiagnosticosDe(loteId);
+
+  Future<String> registrarDiagnostico({
+    required String loteId,
+    required DateTime fecha,
+    required EstadoFenologico estado,
+    String? fotoPath,
+    String? notas,
+  }) {
+    return _registros.registrarDiagnostico(
+      loteId: loteId,
+      fecha: fecha,
+      estado: estado,
+      fotoPath: fotoPath,
+      notas: notas,
+    );
+  }
+
+  Future<int> borrarDiagnostico(String id) => _registros.borrarDiagnostico(id);
+}
