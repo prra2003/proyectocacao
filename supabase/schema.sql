@@ -52,6 +52,16 @@ create table if not exists asociaciones (
   deleted_at timestamptz
 );
 
+-- Catálogo inicial (RF-23): mismos ids que `asociaciones_semilla.dart`, para
+-- que cada instalación y Supabase partan del mismo catálogo.
+insert into asociaciones (id, nombre, municipio, departamento) values
+  ('a0000001-0000-4000-8000-000000000001', 'FEDECACAO', '', ''),
+  ('a0000001-0000-4000-8000-000000000002', 'FEPCACAO', '', ''),
+  ('a0000001-0000-4000-8000-000000000003', 'ASOMUSTIC', '', ''),
+  ('a0000001-0000-4000-8000-000000000004', 'APROCAVILLA', '', ''),
+  ('a0000001-0000-4000-8000-000000000005', 'AMUCAFUE', '', '')
+on conflict (id) do nothing;
+
 -- El id es el UUID que genero el dispositivo y no cambia nunca; usuario_id es
 -- el dueño segun Supabase Auth (sesion anonima). Separarlos permite crear el
 -- perfil sin conexion, antes de que exista sesion.
@@ -62,10 +72,17 @@ create table if not exists productores (
   telefono text,
   email text,
   asociacion_id uuid references asociaciones (id),
+  tipo_documento text,
+  numero_documento text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
+
+-- Aditivo: instalaciones ya desplegadas de este script no tenían estas dos
+-- columnas (documento de identidad del productor, RF-01).
+alter table productores add column if not exists tipo_documento text;
+alter table productores add column if not exists numero_documento text;
 
 create table if not exists fincas (
   id uuid primary key,
@@ -243,3 +260,9 @@ end $$;
 drop policy if exists "asociaciones visibles" on asociaciones;
 create policy "asociaciones visibles" on asociaciones
   for select using (auth.role() = 'authenticated');
+
+-- Un productor puede agregar su asociación si no está en el catálogo ("Otra,
+-- especificar" en la app), pero no editar ni borrar las que ya existen.
+drop policy if exists "autenticados crean asociaciones" on asociaciones;
+create policy "autenticados crean asociaciones" on asociaciones
+  for insert to authenticated with check (auth.role() = 'authenticated');

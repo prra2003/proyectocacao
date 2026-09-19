@@ -10,6 +10,18 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'utiles.dart';
 
+/// Abre un `DropdownButtonFormField` por su [key] y elige la opción [texto].
+Future<void> _elegirDropdown(
+  WidgetTester tester,
+  Key key,
+  String texto,
+) async {
+  await tester.tap(find.byKey(key));
+  await asentar(tester);
+  await tester.tap(find.text(texto).last);
+  await asentar(tester);
+}
+
 void main() {
   late AppDatabase db;
   late PerfilRepository repo;
@@ -55,6 +67,15 @@ void main() {
     await tester.enterText(
       find.byKey(const Key('campo_telefono')),
       '3001234567',
+    );
+    await _elegirDropdown(
+      tester,
+      const Key('campo_tipo_documento'),
+      'Cédula de ciudadanía',
+    );
+    await tester.enterText(
+      find.byKey(const Key('campo_numero_documento')),
+      '91234567',
     );
     expect(find.text('Paso 1 de 2'), findsOneWidget);
     await tester.tap(find.text('Crear perfil'));
@@ -119,7 +140,272 @@ void main() {
     await asentar(tester);
     expect(find.text('Diego Parra'), findsOneWidget);
     expect(find.text('3001234567'), findsOneWidget);
+    expect(find.text('Cédula de ciudadanía 91234567'), findsOneWidget);
     expect(find.text('San Vicente de Chucurí, Santander'), findsOneWidget);
+
+    await desmontar(tester);
+  });
+
+  testWidgets('sin tipo ni número de documento no deja crear el perfil',
+      (tester) async {
+    await abrirApp(tester);
+
+    await tester.tap(find.text('Comenzar registro'));
+    await asentar(tester);
+    await tester.enterText(
+      find.byKey(const Key('campo_nombre_productor')),
+      'Diego Parra',
+    );
+    await tester.tap(find.text('Crear perfil'));
+    await asentar(tester);
+
+    // Sigue en el paso 1: la validación no dejó avanzar.
+    expect(find.text('Paso 1 de 2'), findsOneWidget);
+    expect(
+      await conAsync(tester, () => repo.watchProductor().first),
+      isNull,
+    );
+
+    await desmontar(tester);
+  });
+
+  testWidgets('el nombre con números y el teléfono con letras no dejan avanzar',
+      (tester) async {
+    await abrirApp(tester);
+
+    await tester.tap(find.text('Comenzar registro'));
+    await asentar(tester);
+    await tester.enterText(
+      find.byKey(const Key('campo_nombre_productor')),
+      'Diego 2',
+    );
+    await tester.enterText(
+      find.byKey(const Key('campo_telefono')),
+      '300abc4567',
+    );
+    await tester.tap(find.text('Crear perfil'));
+    await asentar(tester);
+
+    expect(find.text('Solo letras, sin números'), findsOneWidget);
+    expect(find.text('Solo números'), findsOneWidget);
+    expect(find.text('Paso 1 de 2'), findsOneWidget);
+
+    await desmontar(tester);
+  });
+
+  testWidgets('la asociación elegida en el formulario queda guardada',
+      (tester) async {
+    await conAsync(
+      tester,
+      () => db.into(db.asociaciones).insert(
+        AsociacionesCompanion.insert(
+          nombre: 'Coop. Cacaotera de Santander',
+          municipio: 'San Vicente de Chucurí',
+          departamento: 'Santander',
+        ),
+      ),
+    );
+    await conAsync(
+      tester,
+      () => repo.guardarProductor(nombreCompleto: 'Diego Parra'),
+    );
+    await abrirApp(tester);
+
+    await tester.tap(find.text('Perfil'));
+    await asentar(tester);
+    await tester.tap(find.text('Editar mis datos'));
+    await asentar(tester);
+    await _elegirDropdown(
+      tester,
+      const Key('campo_tipo_documento'),
+      'Cédula de ciudadanía',
+    );
+    await tester.enterText(
+      find.byKey(const Key('campo_numero_documento')),
+      '91234567',
+    );
+    await _elegirDropdown(
+      tester,
+      const Key('campo_asociacion'),
+      'Coop. Cacaotera de Santander',
+    );
+    await tester.tap(find.text('Guardar cambios'));
+    await asentar(tester);
+
+    final productor = await conAsync(tester, () => repo.watchProductor().first);
+    expect(productor!.asociacionId, isNotNull);
+    expect(find.text('Coop. Cacaotera de Santander'), findsOneWidget);
+
+    await desmontar(tester);
+  });
+
+  testWidgets('el catálogo de asociaciones viene sembrado desde el arranque',
+      (tester) async {
+    await abrirApp(tester);
+
+    await tester.tap(find.text('Comenzar registro'));
+    await asentar(tester);
+    await tester.tap(find.byKey(const Key('campo_asociacion')));
+    await asentar(tester);
+
+    for (final nombre in [
+      'FEDECACAO',
+      'FEPCACAO',
+      'ASOMUSTIC',
+      'APROCAVILLA',
+      'AMUCAFUE',
+    ]) {
+      expect(find.text(nombre), findsOneWidget);
+    }
+    expect(find.text('Otra (especificar)'), findsOneWidget);
+
+    await desmontar(tester);
+  });
+
+  testWidgets(
+      '"Otra (especificar)" crea una asociación nueva y la deja guardada',
+      (tester) async {
+    await conAsync(
+      tester,
+      () => repo.guardarProductor(nombreCompleto: 'Diego Parra'),
+    );
+    await abrirApp(tester);
+
+    await tester.tap(find.text('Perfil'));
+    await asentar(tester);
+    await tester.tap(find.text('Editar mis datos'));
+    await asentar(tester);
+    await _elegirDropdown(
+      tester,
+      const Key('campo_tipo_documento'),
+      'Cédula de ciudadanía',
+    );
+    await tester.enterText(
+      find.byKey(const Key('campo_numero_documento')),
+      '91234567',
+    );
+    await _elegirDropdown(
+      tester,
+      const Key('campo_asociacion'),
+      'Otra (especificar)',
+    );
+    await tester.enterText(
+      find.byKey(const Key('campo_asociacion_otra')),
+      'Asociación de Productores El Cacaotal',
+    );
+    await tester.tap(find.text('Guardar cambios'));
+    await asentar(tester);
+
+    final productor = await conAsync(tester, () => repo.watchProductor().first);
+    final asociacion = await conAsync(
+      tester,
+      () => repo.asociacionPorId(productor!.asociacionId!),
+    );
+    expect(asociacion!.nombre, 'Asociación de Productores El Cacaotal');
+    expect(find.text('Asociación de Productores El Cacaotal'), findsOneWidget);
+
+    await desmontar(tester);
+  });
+
+  /// Deja un productor con dos fincas, cada una con un lote, listo para las
+  /// dos pruebas de abajo.
+  Future<void> sembrarDosFincas(WidgetTester tester) async {
+    final productorId = await conAsync(
+      tester,
+      () => repo.guardarProductor(nombreCompleto: 'Diego Parra'),
+    );
+    final finca1 = await conAsync(
+      tester,
+      () => repo.guardarFinca(
+        productorId: productorId,
+        nombre: 'La Esperanza',
+        municipio: 'San Vicente de Chucurí',
+        departamento: 'Santander',
+      ),
+    );
+    final finca2 = await conAsync(
+      tester,
+      () => repo.guardarFinca(
+        productorId: productorId,
+        nombre: 'El Paraíso',
+        municipio: 'Rionegro',
+        departamento: 'Santander',
+      ),
+    );
+    await conAsync(
+      tester,
+      () => repo.guardarLote(
+        fincaId: finca1,
+        nombre: 'Lote 1',
+        areaSembradaHa: 2,
+        variedadCacao: 'CCN-51',
+        fechaSiembra: DateTime(2020, 1, 1),
+      ),
+    );
+    await conAsync(
+      tester,
+      () => repo.guardarLote(
+        fincaId: finca2,
+        nombre: 'Lote 2',
+        areaSembradaHa: 3,
+        variedadCacao: 'ICS-95',
+        fechaSiembra: DateTime(2021, 1, 1),
+      ),
+    );
+  }
+
+  testWidgets('un productor con varias fincas las ve todas en "Mis fincas"',
+      (tester) async {
+    await sembrarDosFincas(tester);
+    await abrirApp(tester);
+
+    await tester.tap(find.text('Perfil'));
+    await asentar(tester);
+    await tester.tap(find.text('Ver mis fincas (2)'));
+    await asentar(tester);
+
+    expect(find.text('La Esperanza'), findsOneWidget);
+    expect(find.text('El Paraíso'), findsOneWidget);
+    expect(find.text('Agregar otra finca'), findsOneWidget);
+
+    await desmontar(tester);
+  });
+
+  testWidgets('"Anotar" reúne lotes de todas las fincas, no solo de la primera',
+      (tester) async {
+    await sembrarDosFincas(tester);
+    await abrirApp(tester);
+
+    await tester.tap(find.byTooltip('Anotar'));
+    await asentar(tester);
+
+    // Uno de los dos ya se ve en el panel de Inicio (la finca "principal" es
+    // la primera en orden alfabético, no la primera creada) y por eso puede
+    // aparecer duplicado; lo que importa es que los dos están en la hoja.
+    expect(find.text('Lote 1'), findsWidgets);
+    expect(find.text('Lote 2'), findsWidgets);
+
+    await desmontar(tester);
+  });
+
+  testWidgets('el selector de fincas en Inicio cambia los lotes que se ven',
+      (tester) async {
+    await sembrarDosFincas(tester);
+    await abrirApp(tester);
+
+    // Arranca mostrando una de las dos, con ambos chips disponibles.
+    expect(find.text('La Esperanza'), findsWidgets);
+    expect(find.text('El Paraíso'), findsWidgets);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'La Esperanza'));
+    await asentar(tester);
+    expect(find.text('Lote 1'), findsOneWidget);
+    expect(find.text('Lote 2'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'El Paraíso'));
+    await asentar(tester);
+    expect(find.text('Lote 2'), findsOneWidget);
+    expect(find.text('Lote 1'), findsNothing);
 
     await desmontar(tester);
   });

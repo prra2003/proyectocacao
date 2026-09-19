@@ -14,6 +14,6 @@ class Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
 ThreadingHTTPServer(
-    ('127.0.0.1', 8099),
+    ('0.0.0.0', 8099),
     partial(Handler, directory='build/web'),
 ).serve_forever()

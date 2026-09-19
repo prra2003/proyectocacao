@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../data/local/database.dart';
+import '../data/local/enums.dart';
 import '../data/repositories/perfil_repository.dart';
+import 'formato.dart';
 import 'tema.dart';
 import 'widgets/comunes.dart';
 
@@ -25,6 +27,10 @@ class EditarProductorScreen extends StatefulWidget {
 }
 
 class _EditarProductorScreenState extends State<EditarProductorScreen> {
+  /// Valor centinela del dropdown de asociación: no es un id real, dispara el
+  /// campo de texto libre.
+  static const _otraAsociacion = '__otra__';
+
   final _formKey = GlobalKey<FormState>();
   late final _nombre = TextEditingController(
     text: widget.productor?.nombreCompleto ?? '',
@@ -35,25 +41,47 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
   late final _email = TextEditingController(
     text: widget.productor?.email ?? '',
   );
+  late final _numeroDocumento = TextEditingController(
+    text: widget.productor?.numeroDocumento ?? '',
+  );
+  final _asociacionOtroNombre = TextEditingController();
+  TipoDocumento? _tipoDocumento;
+  String? _asociacionId;
   var _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tipoDocumento = widget.productor?.tipoDocumento;
+    _asociacionId = widget.productor?.asociacionId;
+  }
 
   @override
   void dispose() {
     _nombre.dispose();
     _telefono.dispose();
     _email.dispose();
+    _numeroDocumento.dispose();
+    _asociacionOtroNombre.dispose();
     super.dispose();
   }
 
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _guardando = true);
+    // "Otra" no es un id real: primero hay que crear la asociación para
+    // conseguir uno antes de guardar el productor.
+    final asociacionId = _asociacionId == _otraAsociacion
+        ? await widget.repo.crearAsociacion(_asociacionOtroNombre.text.trim())
+        : _asociacionId;
     await widget.repo.guardarProductor(
       id: widget.productor?.id,
       nombreCompleto: _nombre.text.trim(),
       telefono: textoONulo(_telefono.text),
       email: textoONulo(_email.text),
-      asociacionId: widget.productor?.asociacionId,
+      asociacionId: asociacionId,
+      tipoDocumento: _tipoDocumento,
+      numeroDocumento: textoONulo(_numeroDocumento.text),
     );
     if (!mounted) return;
     Navigator.of(context).pop(true);
@@ -95,7 +123,7 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
                   prefixIcon: Icon(Icons.person_outline),
                 ),
                 textCapitalization: TextCapitalization.words,
-                validator: campoRequerido,
+                validator: soloLetras,
               ),
               const SizedBox(height: 14),
               TextFormField(
@@ -106,6 +134,7 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
                 keyboardType: TextInputType.phone,
+                validator: soloNumerosOpcional,
               ),
               const SizedBox(height: 14),
               TextFormField(
@@ -117,6 +146,88 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<TipoDocumento>(
+                key: const Key('campo_tipo_documento'),
+                initialValue: _tipoDocumento,
+                decoration: const InputDecoration(
+                  labelText: 'Tipo de documento',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
+                items: [
+                  for (final tipo in TipoDocumento.values)
+                    DropdownMenuItem(
+                      value: tipo,
+                      child: Text(etiquetaTipoDocumento(tipo)),
+                    ),
+                ],
+                onChanged: (valor) => setState(() => _tipoDocumento = valor),
+                validator: (valor) =>
+                    valor == null ? 'Campo obligatorio' : null,
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                key: const Key('campo_numero_documento'),
+                controller: _numeroDocumento,
+                decoration: const InputDecoration(
+                  labelText: 'Número de documento',
+                  prefixIcon: Icon(Icons.numbers_outlined),
+                ),
+                keyboardType: TextInputType.text,
+                validator: campoRequerido,
+              ),
+              const SizedBox(height: 14),
+              StreamBuilder<List<Asociacion>>(
+                stream: widget.repo.watchAsociaciones(),
+                builder: (context, snapshot) {
+                  final asociaciones = snapshot.data ?? const <Asociacion>[];
+                  // Si la asociación que traía el productor ya no está en el
+                  // catálogo (borrada o aún sin bajar), el dropdown no puede
+                  // mostrarla como seleccionada sin romper.
+                  final valorValido =
+                      _asociacionId == null ||
+                      _asociacionId == _otraAsociacion ||
+                      asociaciones.any((a) => a.id == _asociacionId);
+                  return DropdownButtonFormField<String?>(
+                    key: const Key('campo_asociacion'),
+                    initialValue: valorValido ? _asociacionId : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Asociación',
+                      prefixIcon: Icon(Icons.groups_outlined),
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('Sin asociación'),
+                      ),
+                      for (final asociacion in asociaciones)
+                        DropdownMenuItem(
+                          value: asociacion.id,
+                          child: Text(asociacion.nombre),
+                        ),
+                      const DropdownMenuItem(
+                        value: _otraAsociacion,
+                        child: Text('Otra (especificar)'),
+                      ),
+                    ],
+                    onChanged: (valor) =>
+                        setState(() => _asociacionId = valor),
+                  );
+                },
+              ),
+              if (_asociacionId == _otraAsociacion) ...[
+                const SizedBox(height: 14),
+                TextFormField(
+                  key: const Key('campo_asociacion_otra'),
+                  controller: _asociacionOtroNombre,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de la asociación',
+                    prefixIcon: Icon(Icons.edit_outlined),
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  validator: campoRequerido,
+                ),
+              ],
               const SizedBox(height: 28),
               FilledButton(
                 onPressed: _guardando ? null : _guardar,

@@ -4,8 +4,9 @@ import '../data/local/database.dart';
 import '../data/repositories/perfil_repository.dart';
 import '../data/sync/sync_service.dart';
 import 'cuenta_screens.dart';
-import 'editar_finca_screen.dart';
 import 'editar_productor_screen.dart';
+import 'formato.dart';
+import 'mis_fincas_screen.dart';
 import 'tema.dart';
 import 'widgets/comunes.dart';
 
@@ -50,15 +51,15 @@ class PerfilScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 _TarjetaCuenta(db: db, sync: sync),
                 const SizedBox(height: 20),
-                StreamBuilder<Finca?>(
-                  stream: repo.watchFinca(productor.id),
+                StreamBuilder<List<Finca>>(
+                  stream: repo.watchFincas(productor.id),
                   builder: (context, snapshot) {
-                    final finca = snapshot.data;
-                    if (finca == null) return const SizedBox.shrink();
-                    return _TarjetaFinca(
+                    final fincas = snapshot.data ?? const <Finca>[];
+                    if (fincas.isEmpty) return const SizedBox.shrink();
+                    return _TarjetaFincas(
                       repo: repo,
                       productorId: productor.id,
-                      finca: finca,
+                      fincas: fincas,
                     );
                   },
                 ),
@@ -341,6 +342,26 @@ class _TarjetaProductor extends StatelessWidget {
               FilaDato(icono: Icons.phone_outlined, texto: productor.telefono!),
             if (productor.email != null)
               FilaDato(icono: Icons.mail_outline, texto: productor.email!),
+            if (productor.tipoDocumento != null &&
+                productor.numeroDocumento != null)
+              FilaDato(
+                icono: Icons.badge_outlined,
+                texto:
+                    '${etiquetaTipoDocumento(productor.tipoDocumento!)} '
+                    '${productor.numeroDocumento}',
+              ),
+            if (productor.asociacionId != null)
+              FutureBuilder<Asociacion?>(
+                future: repo.asociacionPorId(productor.asociacionId!),
+                builder: (context, snapshot) {
+                  final asociacion = snapshot.data;
+                  if (asociacion == null) return const SizedBox.shrink();
+                  return FilaDato(
+                    icono: Icons.groups_outlined,
+                    texto: asociacion.nombre,
+                  );
+                },
+              ),
             const SizedBox(height: 18),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(
@@ -359,52 +380,59 @@ class _TarjetaProductor extends StatelessWidget {
   }
 }
 
-class _TarjetaFinca extends StatelessWidget {
-  const _TarjetaFinca({
+/// Resumen de la(s) finca(s) del productor, con acceso al listado completo.
+///
+/// Un productor puede tener varias fincas (RF-02): esta tarjeta muestra la
+/// primera como referencia rápida y siempre enlaza a "Mis fincas" para verlas,
+/// editarlas o agregar una nueva (RF-04).
+class _TarjetaFincas extends StatelessWidget {
+  const _TarjetaFincas({
     required this.repo,
     required this.productorId,
-    required this.finca,
+    required this.fincas,
   });
 
   final PerfilRepository repo;
   final String productorId;
-  final Finca finca;
+  final List<Finca> fincas;
 
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+    final principal = fincas.first;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(finca.nombre, style: tema.textTheme.titleLarge),
+            Text(principal.nombre, style: tema.textTheme.titleLarge),
             FilaDato(
               icono: Icons.place_outlined,
-              texto: '${finca.municipio}, ${finca.departamento}',
+              texto: '${principal.municipio}, ${principal.departamento}',
             ),
-            if (finca.latitud != null && finca.longitud != null)
+            if (principal.latitud != null && principal.longitud != null)
               FilaDato(
                 icono: Icons.my_location_outlined,
                 secundario: true,
                 texto:
-                    '${finca.latitud!.toStringAsFixed(4)}, '
-                    '${finca.longitud!.toStringAsFixed(4)}',
+                    '${principal.latitud!.toStringAsFixed(4)}, '
+                    '${principal.longitud!.toStringAsFixed(4)}',
               ),
             const SizedBox(height: 18),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => EditarFincaScreen(
-                    repo: repo,
-                    productorId: productorId,
-                    finca: finca,
-                  ),
+                  builder: (_) =>
+                      MisFincasScreen(repo: repo, productorId: productorId),
                 ),
               ),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Editar la finca'),
+              icon: const Icon(Icons.holiday_village_outlined),
+              label: Text(
+                fincas.length == 1
+                    ? 'Ver mi finca'
+                    : 'Ver mis fincas (${fincas.length})',
+              ),
             ),
           ],
         ),

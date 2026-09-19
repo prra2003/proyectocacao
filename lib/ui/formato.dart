@@ -57,6 +57,15 @@ String etiquetaActividad(TipoActividad tipo) => switch (tipo) {
   TipoActividad.otro => 'Otra labor',
 };
 
+String etiquetaTipoDocumento(TipoDocumento tipo) => switch (tipo) {
+  TipoDocumento.cedulaCiudadania => 'Cédula de ciudadanía',
+  TipoDocumento.cedulaExtranjeria => 'Cédula de extranjería',
+  TipoDocumento.tarjetaIdentidad => 'Tarjeta de identidad',
+  TipoDocumento.nit => 'NIT',
+  TipoDocumento.pasaporte => 'Pasaporte',
+  TipoDocumento.otro => 'Otro',
+};
+
 String etiquetaEstado(EstadoFenologico estado) => switch (estado) {
   EstadoFenologico.vegetativo => 'Vegetativo',
   EstadoFenologico.floracion => 'Floración',

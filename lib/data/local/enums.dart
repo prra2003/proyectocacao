@@ -1,6 +1,16 @@
 /// Estado de sincronización de cada registro con Supabase.
 enum SyncStatus { pending, synced, error }
 
+/// Tipo de documento de identidad del productor.
+enum TipoDocumento {
+  cedulaCiudadania,
+  cedulaExtranjeria,
+  tarjetaIdentidad,
+  nit,
+  pasaporte,
+  otro,
+}
+
 /// Tipos de labor cultural que el productor registra en un lote.
 enum TipoActividad { poda, fertilizacion, controlFitosanitario, riego, otro }
 

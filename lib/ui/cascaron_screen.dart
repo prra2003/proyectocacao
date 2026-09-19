@@ -45,8 +45,17 @@ class CascaronScreen extends StatefulWidget {
 }
 
 class _CascaronScreenState extends State<CascaronScreen> {
+  // RNF-02: respaldo periódico. El intervalo es largo y con backoff a
+  // propósito (RNF-01): en campo, con datos móviles y señal intermitente, no
+  // conviene insistir cada pocos minutos si ya se sabe que está fallando.
+  static const _intervaloBase = Duration(minutes: 15);
+  static const _intervaloMaximo = Duration(minutes: 60);
+
   var _pestana = 0;
   StreamSubscription<List<ConnectivityResult>>? _conexion;
+  Timer? _reintentoPeriodico;
+  var _fallosSeguidos = 0;
+  DateTime? _proximoIntentoPermitido;
 
   @override
   void initState() {
@@ -56,6 +65,10 @@ class _CascaronScreenState extends State<CascaronScreen> {
     // lleva la cuenta de lo que falta por mandar.
     unawaited(widget.sync.sincronizar());
     _escucharConexion();
+    _reintentoPeriodico = Timer.periodic(
+      _intervaloBase,
+      (_) => unawaited(_intentoPeriodico()),
+    );
   }
 
   void _escucharConexion() {
@@ -67,9 +80,33 @@ class _CascaronScreenState extends State<CascaronScreen> {
     });
   }
 
+  /// Reintento de fondo cada [_intervaloBase], salvo que los últimos intentos
+  /// hayan fallado: entonces se espera más (15 → 30 → 60 min) para no gastar
+  /// datos móviles insistiendo contra una señal que ya se sabe mala.
+  Future<void> _intentoPeriodico() async {
+    if (widget.sync.estado.value.sincronizando) return;
+    final ahora = DateTime.now();
+    if (_proximoIntentoPermitido != null &&
+        ahora.isBefore(_proximoIntentoPermitido!)) {
+      return;
+    }
+    final resultado = await widget.sync.sincronizar();
+    if (resultado.ok) {
+      _fallosSeguidos = 0;
+      _proximoIntentoPermitido = null;
+      return;
+    }
+    _fallosSeguidos++;
+    final espera = _intervaloBase * (1 << _fallosSeguidos);
+    _proximoIntentoPermitido = ahora.add(
+      espera > _intervaloMaximo ? _intervaloMaximo : espera,
+    );
+  }
+
   @override
   void dispose() {
     _conexion?.cancel();
+    _reintentoPeriodico?.cancel();
     super.dispose();
   }
 
@@ -118,12 +155,17 @@ class _CascaronScreenState extends State<CascaronScreen> {
     }
   }
 
+  /// Lotes de **todas** las fincas del productor (RF-02): con una sola finca
+  /// asumida, el botón "Anotar" dejaría invisibles los lotes de la segunda.
   Future<List<Lote>> _lotesDisponibles() async {
     final productor = await widget.repo.watchProductor().first;
     if (productor == null) return const [];
-    final finca = await widget.repo.watchFinca(productor.id).first;
-    if (finca == null) return const [];
-    return widget.repo.watchLotes(finca.id).first;
+    final fincas = await widget.repo.watchFincas(productor.id).first;
+    final lotes = <Lote>[];
+    for (final finca in fincas) {
+      lotes.addAll(await widget.repo.watchLotes(finca.id).first);
+    }
+    return lotes;
   }
 
   @override

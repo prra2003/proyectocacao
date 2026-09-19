@@ -40,6 +40,8 @@ class ProductoresDao extends DatabaseAccessor<AppDatabase>
     String? telefono,
     String? email,
     String? asociacionId,
+    TipoDocumento? tipoDocumento,
+    String? numeroDocumento,
   }) async {
     final idFinal = id ?? nuevoId();
     await into(productores).insertOnConflictUpdate(
@@ -50,11 +52,56 @@ class ProductoresDao extends DatabaseAccessor<AppDatabase>
         telefono: Value(telefono),
         email: Value(email),
         asociacionId: Value(asociacionId),
+        tipoDocumento: Value(tipoDocumento),
+        numeroDocumento: Value(numeroDocumento),
         updatedAt: Value(_ahora()),
         syncStatus: const Value(SyncStatus.pending),
       ),
     );
     return idFinal;
+  }
+
+  Future<Asociacion?> asociacionPorId(String id) => (select(
+    asociaciones,
+  )..where((a) => a.id.equals(id))).getSingleOrNull();
+
+  /// Crea una asociación que no estaba en el catálogo ("Otra, especificar" en
+  /// el formulario del productor). Nace `pending` para que viaje al servidor
+  /// y quede visible para las demás instalaciones.
+  Future<String> crearAsociacion(String nombre) async {
+    final id = nuevoId();
+    await into(asociaciones).insert(
+      AsociacionesCompanion.insert(
+        id: Value(id),
+        nombre: nombre,
+        municipio: '',
+        departamento: '',
+        updatedAt: Value(_ahora()),
+        syncStatus: const Value(SyncStatus.pending),
+      ),
+    );
+    return id;
+  }
+
+  Future<List<Asociacion>> asociacionesPendientes() {
+    return (select(asociaciones)
+          ..where((a) => a.syncStatus.equalsValue(SyncStatus.pending))
+          ..orderBy([(a) => OrderingTerm(expression: a.updatedAt)]))
+        .get();
+  }
+
+  Future<void> marcarAsociacionSincronizada(String id, DateTime selloServidor) {
+    return (update(asociaciones)..where((a) => a.id.equals(id))).write(
+      AsociacionesCompanion(
+        syncStatus: const Value(SyncStatus.synced),
+        serverUpdatedAt: Value(selloServidor),
+        syncError: const Value(null),
+      ),
+    );
+  }
+
+  Future<void> aplicarAsociacionRemota(AsociacionesCompanion fila) {
+    return into(asociaciones).insertOnConflictUpdate(fila);
   }
 
   /// Filas que faltan por subir, borradas incluidas: el borrado también viaja.

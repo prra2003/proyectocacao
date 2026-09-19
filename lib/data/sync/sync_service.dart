@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../local/database.dart';
 import '../local/enums.dart';
 import 'api_remota.dart';
+import 'mapeador_asociacion.dart';
 import 'mapeador_finca.dart';
 import 'mapeador_lote.dart';
 import 'mapeadores_registros.dart';
@@ -180,7 +181,9 @@ class SyncService {
       await _db.syncDao.guardarAuthUid(authUid);
 
       // El orden es el del árbol: un padre nunca puede ir después de su hijo.
+      // Asociaciones va primero porque productores.asociacion_id apunta ahí.
       for (final plan in [
+        _planAsociaciones(),
         _planProductores(authUid),
         _planFincas(),
         _planLotes(),
@@ -271,6 +274,53 @@ class SyncService {
       await _db.syncDao.guardarCursor(plan.nombre, selloResuelto, idResuelto);
     }
     return resultado;
+  }
+
+  // --- Asociaciones ------------------------------------------------------
+  //
+  // Catálogo compartido sin dueño: no hay `usuario_id` que filtrar en
+  // pendientes ni padre que esperar al aplicar.
+
+  PlanEntidad _planAsociaciones() => PlanEntidad(
+    nombre: MapeadorAsociacion.entidad,
+    selloDe: MapeadorAsociacion.selloDe,
+    pendientes: () async {
+      final filas = await _db.productoresDao.asociacionesPendientes();
+      return [for (final fila in filas) MapeadorAsociacion.aRemoto(fila)];
+    },
+    marcarSincronizado: _db.productoresDao.marcarAsociacionSincronizada,
+    aplicar: _aplicarAsociacion,
+  );
+
+  Future<ResultadoAplicacion> _aplicarAsociacion(
+    FilaRemota fila,
+    ResultadoEntidad resultado,
+  ) async {
+    final id = fila['id']! as String;
+    final local = await _db.productoresDao.asociacionPorId(id);
+    final sello = MapeadorAsociacion.selloDe(fila);
+
+    if (local != null && local.syncStatus == SyncStatus.pending) {
+      resultado.conflictos.add(
+        Conflicto(
+          entidad: MapeadorAsociacion.entidad,
+          id: id,
+          motivo: motivoLocalPendiente,
+        ),
+      );
+      return ResultadoAplicacion.conflicto;
+    }
+    // isAtSameMomentAs y no ==: dos DateTime del mismo instante no son iguales
+    // en Dart si uno es UTC y el otro local.
+    if (local != null &&
+        (local.serverUpdatedAt?.isAtSameMomentAs(sello) ?? false)) {
+      return ResultadoAplicacion.sinCambios;
+    }
+
+    await _db.productoresDao.aplicarAsociacionRemota(
+      MapeadorAsociacion.deRemoto(fila),
+    );
+    return ResultadoAplicacion.aplicada;
   }
 
   // --- Productores -----------------------------------------------------

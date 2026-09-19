@@ -5,6 +5,19 @@ import 'tema.dart';
 import 'widgets/comunes.dart';
 import 'widgets/mazorca.dart';
 
+/// Mínimo pero no vacío de contenido: 8 caracteres, con letras y números. Nada
+/// de mayúsculas ni símbolos obligatorios — lo pide quien va a usar esto en el
+/// campo, no un banco.
+String? _validarClaveNueva(String? valor) {
+  final texto = valor ?? '';
+  if (texto.isEmpty) return 'Campo obligatorio';
+  if (texto.length < 8) return 'Mínimo 8 caracteres';
+  final tieneLetra = RegExp('[A-Za-z]').hasMatch(texto);
+  final tieneNumero = RegExp('[0-9]').hasMatch(texto);
+  if (!tieneLetra || !tieneNumero) return 'Use letras y números';
+  return null;
+}
+
 /// Crear la cuenta desde una instalación **que ya tiene datos**.
 ///
 /// No registra una cuenta nueva: vincula la sesión anónima que ya existe, para
@@ -78,6 +91,7 @@ class _CrearCuentaScreenState extends State<CrearCuentaScreen> {
                 controlador: _clave,
                 etiqueta: 'Contraseña',
                 clave: const Key('campo_clave'),
+                validador: _validarClaveNueva,
               ),
               const SizedBox(height: 14),
               _CampoClave(
@@ -184,6 +198,10 @@ class _IniciarSesionScreenState extends State<IniciarSesionScreen> {
                 controlador: _clave,
                 etiqueta: 'Contraseña',
                 clave: const Key('campo_clave'),
+                // Aquí no se exige el formato nuevo: la cuenta pudo crearse
+                // antes de este cambio, y lo que valida la clave de verdad es
+                // el servidor, no este formulario.
+                validador: campoRequerido,
               ),
               if (_error != null) ...[
                 const SizedBox(height: 16),
@@ -297,13 +315,13 @@ class _CampoClave extends StatelessWidget {
     required this.controlador,
     required this.etiqueta,
     required this.clave,
-    this.validador,
+    required this.validador,
   });
 
   final TextEditingController controlador;
   final String etiqueta;
   final Key clave;
-  final String? Function(String?)? validador;
+  final String? Function(String?) validador;
 
   @override
   Widget build(BuildContext context) {
@@ -315,13 +333,7 @@ class _CampoClave extends StatelessWidget {
         labelText: etiqueta,
         prefixIcon: const Icon(Icons.lock_outline),
       ),
-      validator:
-          validador ??
-          (valor) {
-            if ((valor ?? '').isEmpty) return 'Campo obligatorio';
-            if (valor!.length < 6) return 'Mínimo 6 caracteres';
-            return null;
-          },
+      validator: validador,
     );
   }
 }

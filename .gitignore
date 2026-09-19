@@ -50,3 +50,5 @@ app.*.map.json
 # Entregables: se publican en Releases, no en el repositorio
 *.apk
 *.aab
+.vercel
+.env*
