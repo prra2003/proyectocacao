@@ -116,7 +116,7 @@ class MapeadorDiagnostico {
       loteId: Value(fila['lote_id']! as String),
       fecha: Value(_fecha(fila['fecha'])!),
       // La foto es una ruta del dispositivo: viaja el dato, no el archivo. Subir
-      // imágenes es harina de otro costal (Supabase Storage).
+      // imágenes es harina de otro costal (Google Drive).
       fotoPath: Value(fila['foto_path'] as String?),
       estadoFenologico: Value(
         EstadoFenologico.values.byName(fila['estado_fenologico']! as String),

@@ -1,5 +1,5 @@
 /// Catálogo inicial de asociaciones (RF-23), igual en toda instalación y en
-/// Supabase (mismos ids fijos: ver `supabase/schema.sql`), para que el
+/// el servidor (mismos ids fijos: ver `backend/Codigo.gs`), para que el
 /// productor tenga opciones desde el primer arranque, sin señal.
 const asociacionesSemilla = [
   (id: 'a0000001-0000-4000-8000-000000000001', nombre: 'FEDECACAO'),

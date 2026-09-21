@@ -86,70 +86,31 @@ class SyncService {
 
   var _enCurso = false;
 
-  /// Convierte la sesión anónima en una cuenta con correo y contraseña.
-  ///
-  /// El `auth.uid()` no cambia, así que **los datos ya subidos siguen siendo
-  /// de la misma cuenta**: no hay que mover ni reasignar una sola fila. Después
-  /// sincroniza, por si algo quedó pendiente.
-  Future<SyncResult> vincularCuenta({
-    required String correo,
-    required String clave,
-  }) async {
-    try {
-      final uid = await _api.vincularCorreo(correo: correo, clave: clave);
-      await _db.syncDao.guardarAuthUid(uid);
-      await _db.syncDao.guardarCorreo(correo);
-      // Con la confirmación activada, el correo queda pendiente hasta que la
-      // persona abre el enlace. La app tiene que decirlo, no dar por hecho que
-      // los datos ya están respaldados.
-      await refrescarEstadoCuenta();
-    } on ErrorRemoto catch (e) {
-      return SyncResult.fallo(e.mensaje);
-    }
-    return sincronizar();
-  }
-
-  /// Entra con una cuenta existente en una instalación nueva y baja sus datos.
+  /// Entra con la cuenta de Google y baja lo que haya en el servidor.
   ///
   /// Marca la descarga inicial como pendiente **antes** de sincronizar: hasta
   /// que termine, la interfaz no puede ofrecer crear un perfil, o quedarían dos
   /// productores bajo la misma cuenta.
   ///
-  /// Con [reemplazarDatosLocales] se usa desde una instalación que **ya tiene
+  /// Con [reemplazarDatosLocales] se usa desde un teléfono que **ya tiene
   /// datos** y quiere cambiar de cuenta. El borrado ocurre **después** de que
-  /// el servidor acepta las credenciales: si el correo o la clave están mal, no
-  /// se toca nada.
-  Future<SyncResult> entrarConCuenta({
-    required String correo,
-    required String clave,
+  /// Google y el servidor aceptan: si algo falla, no se toca nada.
+  Future<SyncResult> entrarConGoogle({
     bool reemplazarDatosLocales = false,
   }) async {
     try {
-      final uid = await _api.iniciarSesion(correo: correo, clave: clave);
+      final sesion = await _api.entrarConGoogle();
       if (reemplazarDatosLocales) await borrarDatosLocales(_db);
-      await _db.syncDao.guardarAuthUid(uid);
-      await _db.syncDao.guardarCorreo(correo);
-      // Si pudo entrar, el correo estaba confirmado.
-      await _db.syncDao.guardarCorreoConfirmado(confirmado: true);
+      await _db.syncDao.guardarSesionRemota(
+        usuarioRemoto: sesion.usuarioId,
+        correo: sesion.correo,
+        token: sesion.token,
+      );
       await _db.syncDao.empezarDescargaInicial();
     } on ErrorRemoto catch (e) {
       return SyncResult.fallo(e.mensaje);
     }
     return sincronizar();
-  }
-
-  /// Vuelve a preguntar al servidor si el correo ya fue confirmado.
-  ///
-  /// Es lo que hay detrás del botón "Ya confirmé": la persona abre el enlace en
-  /// el correo, vuelve a la app y toca ahí.
-  Future<bool> refrescarEstadoCuenta() async {
-    try {
-      final confirmado = await _api.correoConfirmado();
-      await _db.syncDao.guardarCorreoConfirmado(confirmado: confirmado);
-      return confirmado;
-    } on ErrorRemoto catch (_) {
-      return false;
-    }
   }
 
   /// Cierra la sesión y **borra los datos de este teléfono**.
@@ -173,11 +134,14 @@ class SyncService {
 
     final entidades = <ResultadoEntidad>[];
     try {
-      // La sesión es infraestructura: si el productor ya entró con su correo se
-      // usa esa; si no, se abre una anónima sola, sin pantalla de login. Sin
-      // sesión no se sube nada, porque el RLS del servidor cuelga de
-      // `auth.uid()`.
-      final authUid = await _api.asegurarSesion();
+      // Sin cuenta no hay servidor: el trabajo se guarda en el teléfono y ya.
+      // No es un error ni algo que reintentar, así que la cinta no se pone en
+      // rojo: simplemente no hay nada que sincronizar.
+      final authUid = await _api.usuarioActual();
+      if (authUid == null) {
+        estado.value = const SyncState();
+        return SyncResult.fallo('Sin cuenta: los datos quedan en el teléfono');
+      }
       await _db.syncDao.guardarAuthUid(authUid);
 
       // El orden es el del árbol: un padre nunca puede ir después de su hijo.
@@ -198,6 +162,15 @@ class SyncService {
       estado.value = SyncState(
         estado: EstadoSync.ok,
         lastSyncAt: DateTime.now(),
+        ultimoResultado: resultado,
+      );
+      return resultado;
+    } on SesionVencida catch (e) {
+      // Reintentar no arregla nada: hay que pedirle la cuenta a la persona.
+      await _db.syncDao.olvidarCuenta();
+      final resultado = SyncResult.fallo(e.mensaje, entidades: entidades);
+      estado.value = estado.value.copiaCon(
+        estado: EstadoSync.error,
         ultimoResultado: resultado,
       );
       return resultado;

@@ -1,46 +1,52 @@
 /// Una fila tal como viaja por la red: JSON plano en snake_case.
 typedef FilaRemota = Map<String, Object?>;
 
+/// Quién entró: identidad permanente de la cuenta y su correo.
+///
+/// Con Google, [usuarioId] es el `sub`: un número que identifica a esa persona
+/// para siempre, aunque cambie de correo. Es lo que marca de quién es cada
+/// fila, el lugar que antes ocupaba el `auth.uid()` de Supabase.
+class SesionRemota {
+  const SesionRemota({
+    required this.usuarioId,
+    required this.correo,
+    this.token,
+  });
+
+  final String usuarioId;
+  final String correo;
+
+  /// Sesión del servidor, si la implementación usa una. Se guarda en el
+  /// teléfono para no tener que pedir la cuenta de Google en cada arranque.
+  final String? token;
+}
+
 /// Contrato con el backend.
 ///
-/// La lógica de sincronización habla solo con esta interfaz, así que cambiar la
-/// implementación falsa por Supabase no toca ni la UI, ni los repositorios, ni
-/// los DAOs, ni el [SyncService].
+/// La lógica de sincronización habla solo con esta interfaz, así que cambiar
+/// de servidor no toca ni la UI, ni los repositorios, ni los DAOs, ni el
+/// [SyncService].
+///
+/// **Sin cuenta no hay servidor.** Antes existía una sesión anónima que
+/// respaldaba aunque nadie hubiera entrado. Con la cuenta de Google eso ya no
+/// es posible: quien no entra trabaja solo contra el teléfono. La app funciona
+/// igual —el campo no espera a la nube—, pero no hay respaldo, y la interfaz
+/// tiene que decirlo con todas las letras.
 abstract interface class ApiRemota {
-  /// Devuelve el `auth.uid()` de la sesión actual, abriendo una **anónima**
-  /// solo si no hay ninguna.
+  /// Identidad de la sesión abierta, o `null` si nadie ha entrado.
   ///
-  /// El orden importa: si el productor ya entró con su correo, esa sesión es la
-  /// que manda. Abrir una anónima encima lo dejaría mirando datos de otra
-  /// cuenta.
-  Future<String> asegurarSesion();
+  /// No abre ninguna pantalla ni pide nada: es una pregunta, no una acción.
+  Future<String?> usuarioActual();
 
-  /// Convierte la sesión anónima actual en una cuenta con correo y contraseña,
-  /// **conservando el mismo `auth.uid()`**.
+  /// Pide la cuenta de Google y abre sesión en el servidor.
   ///
-  /// Esto es lo que salva los datos ya subidos: como el uid no cambia, las
-  /// filas remotas siguen perteneciendo a la misma cuenta y las políticas de
-  /// seguridad del servidor siguen encajando sin tocar una sola fila. Registrar
-  /// una cuenta nueva (`signUp`) crearía otro uid y dejaría los datos huérfanos.
-  Future<String> vincularCorreo({
-    required String correo,
-    required String clave,
-  });
+  /// Es lo único que muestra una pantalla de Google, así que solo se llama
+  /// cuando la persona tocó el botón de entrar.
+  Future<SesionRemota> entrarConGoogle();
 
-  /// Entra con una cuenta ya existente. Devuelve su `auth.uid()`.
-  Future<String> iniciarSesion({
-    required String correo,
-    required String clave,
-  });
-
+  /// Cierra la sesión. Si el servidor no contesta, se olvida igual: en el
+  /// teléfono la sesión tiene que quedar cerrada aunque no haya señal.
   Future<void> cerrarSesion();
-
-  /// ¿La cuenta tiene un correo ya confirmado?
-  ///
-  /// Con la confirmación activada en el servidor, vincular el correo lo deja
-  /// **pendiente** hasta que la persona abre el enlace: hasta ese momento no
-  /// puede entrar desde otro teléfono.
-  Future<bool> correoConfirmado();
 
   /// Filas de [entidad] ordenadas por `(updated_at, id)` ascendente.
   ///
@@ -74,4 +80,12 @@ class ErrorRemoto implements Exception {
 
   @override
   String toString() => 'ErrorRemoto: $mensaje';
+}
+
+/// La sesión del servidor venció: hay que volver a entrar con Google.
+///
+/// Se distingue de los demás fallos porque no se arregla reintentando: la app
+/// tiene que pedirle la cuenta a la persona otra vez.
+class SesionVencida extends ErrorRemoto {
+  const SesionVencida([super.mensaje = 'La sesión venció, vuelva a entrar']);
 }

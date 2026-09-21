@@ -1,0 +1,873 @@
+<title>Recorrido de la App del Cacao</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap">
+<style>
+:root{
+  --cafe-osc:#33200F; --cafe:#7A4A2B; --cafe-lote:#7B4B2C; --verde:#3D7A3F; --verde-cl:#DCEBD8;
+  --maduro:#C26A1E; --crema:#FBF2EA; --durazno:#FFD9C7; --blanco:#FFFFFF; --gris:#6E5A4C;
+  --borde:#C9B3A3; --fondo:#EFE4D6; --tinta:#2A1A0D; --aviso:#FFF4C2;
+  --ok:#2F7A3C; --medio:#B8860B; --falta:#9B3B2A;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--fondo);color:var(--tinta);font-family:Roboto,system-ui,sans-serif;font-size:16px;padding-inline:16px;padding-block:0 50px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[data-x]:focus-visible{outline:3px solid var(--maduro);outline-offset:2px}
+a{color:var(--cafe)}
+
+/* Cabecera */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--cafe-osc);color:#fff;margin-inline:-16px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.top h1{font-family:Fraunces,Georgia,serif;font-size:1.25rem;margin:0;font-weight:600}
+.top .modos{display:flex;gap:6px;background:rgba(255,255,255,.12);border-radius:999px;padding:4px}
+.top .modos button{border:0;background:none;color:#fff;border-radius:999px;padding:7px 14px;font-weight:500;opacity:.75}
+.top .modos button[aria-pressed="true"]{background:var(--maduro);opacity:1;font-weight:700}
+
+.envoltura{max-width:1180px;margin:0 auto}
+.recorrido{display:grid;gap:26px;grid-template-columns:230px 390px minmax(0,1fr);align-items:start;padding-top:24px}
+
+/* Índice de pantallas */
+.indice{position:sticky;top:90px;display:grid;gap:18px}
+.grupo h2{font-size:.76rem;letter-spacing:.09em;text-transform:uppercase;color:var(--gris);margin:0 0 8px}
+.grupo{display:grid;gap:6px}
+.grupo button{text-align:left;border:0;background:none;border-radius:12px;padding:9px 12px;font-weight:500;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.grupo button:hover{background:rgba(122,74,43,.1)}
+.grupo button[aria-pressed="true"]{background:var(--cafe);color:#fff;font-weight:700}
+.grupo .n{font-size:.75rem;opacity:.7}
+
+/* Teléfono */
+.marco{display:grid;gap:12px;position:sticky;top:90px}
+.telefono{width:100%;max-width:390px;height:740px;background:#1c130c;border-radius:44px;padding:12px;box-shadow:0 30px 60px -20px rgba(51,32,15,.5);margin:0 auto}
+.pantalla{position:relative;height:100%;border-radius:34px;overflow:hidden;background:var(--crema)}
+.vista{position:absolute;inset:0;overflow-y:auto;display:flex;flex-direction:column}
+.estado-tel{display:flex;justify-content:space-between;font-size:13px;padding:10px 22px 0;font-weight:500}
+[data-x]{cursor:pointer;position:relative;transition:box-shadow .15s}
+.pistas [data-x]::after{content:"";position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--maduro);box-shadow:0 0 0 2px #fff;z-index:3;pointer-events:none}
+.pistas [data-x].lleva::after{content:"›";width:18px;height:18px;color:#fff;font-size:14px;font-weight:700;display:grid;place-items:center;line-height:1}
+[data-x].activo{box-shadow:0 0 0 4px var(--maduro)!important;border-radius:14px}
+.mandos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.mandos button{border:1.5px solid var(--cafe);background:#fff;color:var(--cafe);border-radius:999px;padding:9px 16px;font-weight:700}
+.mandos button[disabled]{opacity:.4;cursor:default}
+.mandos .guia{background:var(--verde);border-color:var(--verde);color:#fff}
+.grad{background:linear-gradient(135deg,#2F7A3C 0%,#5A5A30 55%,#7A4A2B 100%);color:#fff}
+
+
+/* Iconos */
+.ic{width:1.15em;height:1.15em;flex:none;vertical-align:-.19em;stroke-width:1.7}
+.ic-pod{width:1.5em;height:2em;vertical-align:-.45em}
+.ico .ic,.circ .ic{width:24px;height:24px}
+.avatar .ic{width:30px;height:30px}
+.estado-tel .ic{width:15px;height:15px;stroke-width:1.5}
+.estado-tel span{display:inline-flex;gap:6px;align-items:center}
+.nav .ic{width:23px;height:23px}
+.fab .ic{width:36px;height:36px;stroke-width:2.1}
+.atras .ic,.basura .ic{width:23px;height:23px}
+.pin{color:#B2402B}
+.pin .ic{width:46px;height:46px;stroke-width:1.6;fill:#fff}
+.tf .ic{stroke-width:1.6}
+.btn-grande,.btn-linea,.opcion,.agregar,.fab-ext,.chip{display:inline-flex;align-items:center;justify-content:center;gap:9px}
+.btn-grande,.btn-linea{width:100%}
+.registro .circ .ic{stroke-width:1.6}
+.lote>div{display:flex;align-items:center;gap:9px}
+.cinta .ic{width:22px;height:22px}
+.aviso-gps .ic{vertical-align:-.15em}
+
+/* Piezas de la app */
+.bienv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px 26px;text-align:center}
+.bienv h2{font-size:1.75rem;margin:6px 0 0;line-height:1.15}
+.bienv p{margin:0;opacity:.92;line-height:1.45}
+.btn-grande{width:100%;border:0;border-radius:18px;padding:16px;font-weight:700;font-size:1.02rem}
+.btn-blanco{background:#fff;color:var(--cafe-osc)}
+.btn-maduro{background:var(--maduro);color:#fff}
+.btn-verde{background:var(--verde);color:#fff}
+.btn-cafe{background:var(--cafe);color:#fff}
+.btn-texto{background:none;border:0;color:#fff;font-weight:700;text-decoration:underline;padding:8px}
+.chico{font-size:.85rem;opacity:.85}
+.form{padding:16px 18px 30px;display:grid;gap:15px}
+.campo label{display:block;font-weight:700;margin-bottom:7px;font-size:.95rem}
+.tf{background:#fff;border:1.5px solid var(--borde);border-radius:14px;padding:13px;color:var(--gris);display:flex;justify-content:space-between;gap:8px}
+.tf.lleno{color:var(--tinta)}
+.aviso-gps{background:#fff;border-radius:16px;padding:14px;line-height:1.4;color:var(--gris)}
+.aviso-gps b{color:var(--tinta)}
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cab{padding:8px 18px 22px;border-radius:0 0 30px 30px}
+.finca{display:flex;align-items:center;gap:14px;padding:18px 6px}
+.finca h2{margin:0;font-size:1.5rem}
+.finca small{font-size:.98rem;opacity:.9}
+.cinta{background:rgba(255,255,255,.18);border-radius:16px;padding:13px 16px;display:flex;gap:10px;align-items:center;font-weight:500}
+.indicadores{background:#fff;color:var(--tinta);border-radius:22px;margin-top:14px;padding:16px 8px;display:grid;grid-template-columns:repeat(3,1fr);text-align:center}
+.ind .ico{width:44px;height:44px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-size:21px}
+.ind b{display:block;font-size:1.4rem}
+.ind span{color:var(--gris);font-size:.88rem}
+.seccion{display:flex;justify-content:space-between;align-items:center;padding:20px 20px 8px}
+.seccion h3{margin:0;font-size:1.2rem}
+.agregar{border:0;background:none;color:var(--cafe);font-weight:700;padding:6px 8px}
+.lotes{display:grid;gap:12px;padding:0 16px 130px}
+.lote{border-radius:22px;padding:18px 20px;color:#fff;display:grid;gap:6px}
+.lote h4{margin:0;font-size:1.25rem}
+.lote .sub{opacity:.85;font-size:.93rem}
+.nav{position:absolute;left:0;right:0;bottom:0;height:78px;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:0 44px;box-shadow:0 -4px 14px rgba(0,0,0,.05);z-index:2}
+.nav button{border:0;background:none;display:grid;justify-items:center;font-weight:500;color:var(--gris);font-size:.88rem;gap:2px}
+.nav button.sel{color:var(--cafe);font-weight:700}
+.nav .ic{font-size:21px}
+.fab{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);width:82px;height:82px;border-radius:50%;background:var(--maduro);color:#fff;border:6px solid var(--crema);font-size:40px;line-height:1;z-index:4;display:grid;place-items:center}
+.fab-lbl{position:absolute;bottom:11px;left:50%;transform:translateX(-50%);font-size:.76rem;font-weight:700;color:var(--maduro);z-index:4}
+.barra{display:flex;align-items:center;gap:14px;padding:12px 16px 6px}
+.barra h2{margin:0;font-size:1.45rem;flex:1}
+.atras,.basura{border:0;background:none;font-size:23px;padding:4px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid #E3CFC2}
+.tabs button{border:0;background:none;padding:13px 4px;font-weight:700;color:var(--gris);border-bottom:3px solid transparent}
+.tabs button.sel{color:var(--cafe);border-color:var(--cafe)}
+.tarjeta{background:#fff;border-radius:22px;margin:14px;padding:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{background:var(--durazno);border-radius:999px;padding:8px 13px;font-weight:500}
+.prod{display:flex;gap:12px;align-items:center;font-weight:700;font-size:1.05rem}
+.circ{width:44px;height:44px;border-radius:50%;background:var(--durazno);display:grid;place-items:center;flex:none;font-size:20px}
+.registro{display:flex;gap:14px;padding:12px 18px;align-items:center}
+.registro b{display:block;font-size:1.05rem}
+.registro span{color:var(--gris);font-size:.91rem}
+.fab-ext{position:absolute;right:16px;bottom:18px;border:0;border-radius:18px;background:#8B4E26;color:#fff;font-weight:700;padding:15px 20px;font-size:1.02rem}
+.panel-tab[hidden]{display:none}
+.capa{position:absolute;inset:0;background:rgba(20,12,6,.5);display:flex;z-index:6}
+.capa.abajo{align-items:flex-end}
+.capa.centro{align-items:center;justify-content:center;padding:14px}
+.hoja{background:var(--crema);width:100%;border-radius:28px 28px 0 0;padding:22px 18px 28px;display:grid;gap:14px}
+.hoja h3,.dlg h3{margin:0;font-size:1.25rem;text-align:center}
+.opcion{background:#fff;border:1.5px solid var(--borde);border-radius:18px;padding:17px;font-weight:700;display:flex;gap:12px;align-items:center;justify-content:center}
+.dlg{background:#fff;width:100%;max-height:94%;overflow:auto;border-radius:26px;padding:20px 18px;display:grid;gap:13px}
+.opciones{display:flex;flex-wrap:wrap;gap:8px}
+.op{border:1.5px solid var(--cafe);border-radius:999px;padding:9px 13px;background:#fff;color:var(--cafe);font-weight:500}
+.op.sel{background:var(--verde);border-color:var(--verde);color:#fff}
+.nota{background:#fff;border:1.5px solid var(--borde);border-radius:14px;padding:13px;min-height:68px;color:var(--gris)}
+.pie-dlg{display:flex;justify-content:flex-end;gap:10px;align-items:center}
+.pie-dlg .cancelar{border:0;background:none;color:var(--cafe);font-weight:700;padding:12px}
+.pie-dlg .aceptar{border:0;background:var(--maduro);color:#fff;border-radius:14px;padding:12px 20px;font-weight:700}
+.foto{display:flex;gap:10px}
+.foto button{flex:1;border:1.5px solid var(--cafe);background:#fff;color:var(--cafe);border-radius:14px;padding:12px;font-weight:700}
+.cab-simple{padding:18px 20px 20px}
+.cab-simple h2{margin:0;font-size:1.5rem}
+.fila{display:flex;align-items:center;gap:14px}
+.avatar{width:62px;height:62px;border-radius:50%;background:var(--verde-cl);display:grid;place-items:center;font-size:28px;flex:none}
+.btn-linea{width:100%;margin-top:14px;border:1.5px solid #8C7466;background:none;border-radius:16px;padding:12px;font-weight:700;color:var(--cafe)}
+.texto-suave{color:var(--gris);line-height:1.45;margin:10px 0 0}
+.mapa{flex:1;position:relative;background:#CFE0C0;overflow:hidden;min-height:360px}
+.mapa svg{position:absolute;inset:0;width:100%;height:100%}
+.pin{position:absolute;left:50%;top:52%;transform:translate(-50%,-100%);font-size:42px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.3))}
+.globo{position:absolute;left:14px;right:14px;top:14px;background:rgba(255,255,255,.94);border-radius:16px;padding:12px 14px;line-height:1.35;text-align:center}
+.acciones-mapa{padding:14px;display:grid;gap:10px;background:var(--crema)}
+
+/* Panel de explicación */
+.explica{position:sticky;top:90px;background:#fff;border-radius:24px;padding:24px;box-shadow:0 14px 34px -18px rgba(51,32,15,.45);display:grid;gap:14px}
+.ruta{font-size:.76rem;letter-spacing:.08em;text-transform:uppercase;color:var(--maduro);font-weight:700}
+.explica h3{font-family:Fraunces,Georgia,serif;margin:0;font-size:1.6rem;line-height:1.15;color:var(--cafe-osc);text-wrap:balance}
+.explica p{margin:0;line-height:1.6}
+.bloque{border-left:3px solid var(--durazno);padding-left:14px;display:grid;gap:6px}
+.bloque .et{font-size:.76rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);font-weight:700}
+.estado{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:5px 12px;font-size:.87rem;font-weight:700;width:fit-content}
+.e-ok{background:#E2F0E0;color:var(--ok)}
+.e-medio{background:#FBEFD2;color:var(--medio)}
+.e-falta{background:#F7DED8;color:var(--falta)}
+code{background:#F3E8DE;border-radius:6px;padding:2px 7px;font-size:.88rem;word-break:break-all}
+.ir-lista{display:flex;flex-wrap:wrap;gap:8px}
+.ir-lista button{border:1.5px solid var(--verde);background:#fff;color:var(--verde);border-radius:999px;padding:8px 14px;font-weight:700}
+
+/* Requisitos */
+.requisitos{padding:28px 0;display:grid;gap:22px}
+.requisitos h2{font-family:Fraunces,Georgia,serif;font-size:1.9rem;margin:0;color:var(--cafe-osc)}
+.resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tarj-res{background:#fff;border-radius:18px;padding:16px}
+.tarj-res b{display:block;font-size:2rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.tabla{width:100%;overflow-x:auto}
+table{border-collapse:collapse;width:100%;background:#fff;border-radius:18px;overflow:hidden;min-width:620px}
+th,td{text-align:left;padding:13px 16px;border-bottom:1px solid #EADCD0;vertical-align:top;line-height:1.45}
+th{background:#F6EBE1;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;color:var(--gris)}
+tr:last-child td{border-bottom:0}
+td .ver{border:0;background:none;color:var(--cafe);font-weight:700;text-decoration:underline;padding:0}
+.leyenda{display:flex;gap:10px;flex-wrap:wrap}
+
+@media (max-width:1080px){
+  .recorrido{grid-template-columns:1fr;max-width:560px;margin:0 auto}
+  .indice,.marco,.explica{position:static}
+  .indice{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));display:grid}
+  .telefono{height:700px}
+}
+@media (max-width:440px){
+  .telefono{padding:6px;border-radius:30px;height:660px}
+  .pantalla{border-radius:24px}
+  .nav{padding:0 26px}
+  .top h1{font-size:1.05rem}
+}
+/* Ajustes finales */
+.fab-ext{left:auto!important;width:auto;display:inline-flex}
+.circ .ic-pod{width:26px;height:34px}
+.agregar{padding:6px 4px}
+.chip .ic{width:19px;height:19px}
+.opcion{padding:16px}
+.mandos button{display:inline-flex;align-items:center;gap:8px}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mazorca" viewBox="0 0 110 150">
+    <path d="M55 20 C58 12 62 7 70 4" stroke="#5B8C3E" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M55 18 C86 18 100 60 96 92 C92 124 74 146 55 146 C36 146 18 124 14 92 C10 60 24 18 55 18Z" fill="#F4F0E8"/>
+    <path d="M55 18 C86 18 100 60 96 92 C92 124 74 146 55 146" fill="#E2D7C6"/>
+    <g stroke="#B9A88F" stroke-width="2.5" fill="none" stroke-linecap="round">
+      <path d="M55 22 C44 50 42 110 55 142"/><path d="M55 22 C66 50 68 110 55 142"/>
+      <path d="M50 24 C28 50 26 112 48 140"/><path d="M60 24 C82 50 84 112 62 140"/>
+    </g>
+  </symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 10.5V20h11v-9.5"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c3.2 3.6 5.2 6.4 5.2 8.9A5.2 5.2 0 1 1 6.8 12.4c0-2.5 2-5.3 5.2-8.9Z"/></symbol>
+  <symbol id="i-scissors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17.5" r="2.4"/><circle cx="7" cy="6.5" r="2.4"/><path d="M8.9 8.3 19 18.5M19 5.5 8.9 15.7"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 4.5C9.6 4.5 4.5 9.2 4.5 17c0 .9.1 1.7.3 2.5"/><path d="M19.5 4.5c0 8.5-4.6 13-12.5 14.5"/></symbol>
+  <symbol id="i-basket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h16l-1.6 9.4a1.6 1.6 0 0 1-1.6 1.3H7.2a1.6 1.6 0 0 1-1.6-1.3Z"/><path d="M8.6 9.5 12 3.5l3.4 6"/></symbol>
+  <symbol id="i-tree" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 6.5 11h11Z"/><path d="M12 8.5 5.5 17h13Z"/><path d="M12 17v3.5"/></symbol>
+  <symbol id="i-hill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19.5 9 10l4.2 6M11.5 19.5l4-6.5 5.5 6.5Z"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5h3.2l1.6-2.2h6.4l1.6 2.2H20v10H4Z"/><circle cx="12" cy="13.2" r="3.2"/></symbol>
+  <symbol id="i-imagen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5.5" width="16" height="13" rx="2"/><path d="m6.5 16 3.5-4 3 3.2 2.5-2.7 3 3.5"/><circle cx="9" cy="9.5" r="1.2"/></symbol>
+  <symbol id="i-escudo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5.5 6v6c0 4 2.8 7 6.5 8.5 3.7-1.5 6.5-4.5 6.5-8.5V6Z"/><path d="m9.2 12 2 2 3.6-3.8"/></symbol>
+  <symbol id="i-telefono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5h3l1.3 3.4-2 1.5a10.5 10.5 0 0 0 4.8 4.8l1.5-2 3.4 1.3v3c0 1-.8 1.8-1.8 1.7C11 17.8 6.2 13 5.8 6.3a1.7 1.7 0 0 1 1.7-1.8Z"/></symbol>
+  <symbol id="i-lapiz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 19.5h3L19 8a2.1 2.1 0 0 0-3-3L4.5 16.5Z"/><path d="m14.5 6.5 3 3"/></symbol>
+  <symbol id="i-basura" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 6.5h13M9.5 6.5V4.8h5v1.7M7 6.5l.9 12.2a1.4 1.4 0 0 0 1.4 1.3h5.4a1.4 1.4 0 0 0 1.4-1.3L17 6.5"/></symbol>
+  <symbol id="i-calendario" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M4 10.5h16M8.5 4v4M15.5 4v4"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c4-4.6 6-8 6-10.4A6 6 0 0 0 6 10.6C6 13 8 16.4 12 21Z"/><circle cx="12" cy="10.4" r="2.3"/></symbol>
+  <symbol id="i-brujula" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="m15 9-1.8 4.2L9 15l1.8-4.2Z"/></symbol>
+  <symbol id="i-nube-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 18.5h9.2a3.8 3.8 0 0 0 .4-7.6 5.4 5.4 0 0 0-10.3-1A3.9 3.9 0 0 0 7.5 18.5Z"/><path d="m10 14 1.8 1.8 3.4-3.6"/></symbol>
+  <symbol id="i-nube-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 18.5h9.2a3.8 3.8 0 0 0 2.6-6.6M15.6 8.4a5.4 5.4 0 0 0-8.8 2.5 3.9 3.9 0 0 0 .7 7.6"/><path d="M4.5 4.5 19.5 19.5"/></symbol>
+  <symbol id="i-mira" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></symbol>
+  <symbol id="i-mas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></symbol>
+  <symbol id="i-atras" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5.5M11 5.5 4.5 12l6.5 6.5"/></symbol>
+  <symbol id="i-abajo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></symbol>
+  <symbol id="i-brote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5v-7"/><path d="M12 13.5C12 9.6 9.4 7 5.5 7c0 3.9 2.6 6.5 6.5 6.5Z"/><path d="M12 13.5c0-3.3 2.2-5.5 5.5-5.5 0 3.3-2.2 5.5-5.5 5.5Z"/></symbol>
+  <symbol id="i-area" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="10" rx="1.5"/></symbol>
+  <symbol id="i-reloj" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.3V12l3 1.8"/></symbol>
+  <symbol id="i-senal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h2.5M9.5 19.5V15M15 19.5V10.5M20.5 19.5V5.5" stroke-width="2.4"/><path d="M4 19.5V17" stroke-width="2.4"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.5a13 13 0 0 1 17 0M7 13a8 8 0 0 1 10 0"/><circle cx="12" cy="17.5" r="1.3" fill="currentColor"/></symbol>
+  <symbol id="i-bateria" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="16" height="8" rx="2"/><path d="M21 11v2"/><rect x="5" y="10" width="10" height="4" rx="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-avion" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.5h2l1 7 7 2.5v1.8l-7-1.2-.6 4.4 2.6 1.6v1.4L12 20l-4-.5v-1.4l2.6-1.6-.6-4.4-7 1.2V11.5l7-2.5Z"/></symbol>
+</svg>
+
+<header class="top">
+  <h1>Red Nacional de Cacao · Recorrido de la app</h1>
+  <div class="modos" role="group" aria-label="Secciones">
+    <button id="mRecorrido" aria-pressed="true">Recorrido</button>
+    <button id="mRequisitos" aria-pressed="false">Requisitos</button>
+  </div>
+</header>
+
+<div class="envoltura">
+<div class="recorrido" id="vistaRecorrido">
+
+  <!-- Índice -->
+  <nav class="indice" id="indice">
+    <div class="grupo">
+      <h2>Entrada y registro</h2>
+      <button data-ir="bienvenida">Bienvenida</button>
+      <button data-ir="datos">Mis datos</button>
+      <button data-ir="finca">Mi finca</button>
+      <button data-ir="mapa">Mapa GPS</button>
+      <button data-ir="fincas">Mis fincas</button>
+    </div>
+    <div class="grupo">
+      <h2>Día a día</h2>
+      <button data-ir="inicio">Inicio</button>
+      <button data-ir="nuevoLote">Nuevo lote</button>
+      <button data-ir="lote">Detalle del lote</button>
+      <button data-ir="elegir">Anotar: lote</button>
+      <button data-ir="anotar">Anotar: qué</button>
+      <button data-ir="labor">Registrar labor</button>
+      <button data-ir="cosecha">Registrar cosecha</button>
+      <button data-ir="estado">Estado del lote</button>
+    </div>
+    <div class="grupo">
+      <h2>Cuenta y respaldo</h2>
+      <button data-ir="perfil">Mi perfil</button>
+      <button data-ir="crearCuenta">Crear cuenta</button>
+      <button data-ir="entrar">Iniciar sesión</button>
+      <button data-ir="sinSenal">Sin señal</button>
+    </div>
+  </nav>
+
+  <!-- Teléfono -->
+  <div class="marco">
+    <div class="telefono">
+      <div class="pantalla pistas" id="pantalla">
+
+        <div class="vista grad" data-vista="bienvenida" hidden>
+          <div class="bienv">
+            <div data-x="logo" tabindex="0"><svg width="100" height="136" aria-label="Mazorca de cacao"><use href="#mazorca"/></svg></div>
+            <h2 data-x="bienvenida" tabindex="0">Red Nacional de Cacao</h2>
+            <p>Lleve el control de su finca, sus lotes y sus cosechas.<br>Funciona sin señal.</p>
+            <button class="btn-grande btn-blanco" data-x="comenzar">Comenzar registro</button>
+            <p class="chico">Solo le pediremos su nombre y los datos de la finca.</p>
+            <button class="btn-texto" data-x="yaTengo">Ya tengo cuenta</button>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="datos" hidden>
+          <div class="grad cab-simple"><div class="estado-tel" style="padding:0 0 10px"><span>9:00</span><span><svg class="ic" aria-hidden="true"><use href="#i-senal"/></svg><svg class="ic" aria-hidden="true"><use href="#i-wifi"/></svg><svg class="ic" aria-hidden="true"><use href="#i-bateria"/></svg></span></div><h2>Mis datos</h2><div class="chico" data-x="paso1">Paso 1 de 2</div></div>
+          <div class="form">
+            <div class="campo" data-x="nombreProd" tabindex="0"><label>Nombre completo</label><div class="tf lleno">Diego Parra</div></div>
+            <div class="campo" data-x="tipoDoc" tabindex="0"><label>Tipo de documento</label><div class="tf lleno">Cédula de ciudadanía <span><svg class="ic" aria-hidden="true"><use href="#i-abajo"/></svg></span></div></div>
+            <div class="campo" data-x="numDoc" tabindex="0"><label>Número de documento</label><div class="tf lleno">1 098 765 432</div></div>
+            <div class="campo" data-x="telefono" tabindex="0"><label>Teléfono</label><div class="tf lleno">300 123 4567</div></div>
+            <div class="campo" data-x="correoProd" tabindex="0"><label>Correo</label><div class="tf">Opcional</div></div>
+            <div class="campo" data-x="asociacion" tabindex="0"><label>Asociación</label><div class="tf lleno">FEDECACAO <span><svg class="ic" aria-hidden="true"><use href="#i-abajo"/></svg></span></div></div>
+            <div class="campo" data-x="otraAsoc" tabindex="0"><label>Nombre de la asociación</label><div class="tf">Solo si escoge «Otra (especificar)»</div></div>
+            <button class="btn-grande btn-maduro" data-x="crearPerfil">Crear perfil</button>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="finca" hidden>
+          <div class="grad cab-simple"><div class="estado-tel" style="padding:0 0 10px"><span>9:01</span><span><svg class="ic" aria-hidden="true"><use href="#i-senal"/></svg><svg class="ic" aria-hidden="true"><use href="#i-wifi"/></svg><svg class="ic" aria-hidden="true"><use href="#i-bateria"/></svg></span></div><h2>Mi finca</h2><div class="chico" data-x="paso2">Paso 2 de 2</div></div>
+          <div class="form">
+            <div class="campo" data-x="nombreFinca" tabindex="0"><label>Nombre de la finca</label><div class="tf lleno">La Esperanza</div></div>
+            <div class="campo" data-x="municipio" tabindex="0"><label>Municipio</label><div class="tf lleno">San Vicente de Chucurí</div></div>
+            <div class="campo" data-x="departamento" tabindex="0"><label>Departamento</label><div class="tf lleno">Santander</div></div>
+            <div class="aviso-gps" data-x="gpsOpcional" tabindex="0"><b>Ubicación GPS (opcional)</b><br>Sirve para el clima y para ubicar la finca en el mapa de la Red. El GPS funciona sin señal; el mapa necesita internet.</div>
+            <button class="btn-grande btn-cafe" data-x="marcarMapa"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg> Marcar en el mapa</button>
+            <div class="dos">
+              <div class="campo" data-x="latlon" tabindex="0"><label>Latitud</label><div class="tf lleno">6.88123</div></div>
+              <div class="campo"><label>Longitud</label><div class="tf lleno">-73.41234</div></div>
+            </div>
+            <button class="btn-grande btn-maduro" data-x="registrarFinca">Registrar finca</button>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="mapa" hidden>
+          <div class="barra"><button class="atras" data-x="atras"><svg class="ic" aria-hidden="true"><use href="#i-atras"/></svg></button><h2>Ubicación de la finca</h2></div>
+          <div class="mapa" data-x="mapa" tabindex="0">
+            <svg viewBox="0 0 360 440" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect width="360" height="440" fill="#D6E6C6"/>
+              <path d="M-10 120 C80 90 140 160 220 130 S340 70 380 110 L380 -10 L-10 -10Z" fill="#BFD7A8"/>
+              <path d="M-10 330 C60 300 150 360 240 320 S350 300 380 330 L380 460 L-10 460Z" fill="#C4DBAE"/>
+              <path d="M40 440 C90 350 70 260 160 210 S300 150 380 60" stroke="#8FC1E3" stroke-width="12" fill="none"/>
+              <path d="M-10 250 L380 290" stroke="#fff" stroke-width="7"/>
+              <path d="M200 -10 L170 460" stroke="#F4EBDD" stroke-width="5"/>
+              <text x="22" y="236" font-size="13" fill="#5B6B4E" font-family="Roboto">Vía a San Vicente</text>
+            </svg>
+            <div class="globo">Toque el mapa para marcar la finca.<br>6.88123, -73.41234</div>
+            <div class="pin"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg></div>
+          </div>
+          <div class="acciones-mapa">
+            <button class="btn-grande btn-verde" data-x="gps"><svg class="ic" aria-hidden="true"><use href="#i-mira"/></svg> Estoy en la finca</button>
+            <button class="btn-grande btn-cafe" data-x="usarPunto">Usar este punto</button>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="fincas" hidden>
+          <div class="grad cab-simple"><div class="estado-tel" style="padding:0 0 10px"><span>9:10</span><span><svg class="ic" aria-hidden="true"><use href="#i-senal"/></svg><svg class="ic" aria-hidden="true"><use href="#i-wifi"/></svg><svg class="ic" aria-hidden="true"><use href="#i-bateria"/></svg></span></div><h2>Mis fincas</h2></div>
+          <div class="tarjeta" data-x="tarjetaFinca" tabindex="0">
+            <b style="font-size:1.2rem">La Esperanza</b>
+            <p style="margin:10px 0 0"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg> San Vicente de Chucurí, Santander</p>
+            <p style="margin:6px 0 0;color:var(--gris)"><svg class="ic" aria-hidden="true"><use href="#i-brujula"/></svg> 6.8812, -73.4123</p>
+            <button class="btn-linea"><svg class="ic" aria-hidden="true"><use href="#i-lapiz"/></svg> Editar la finca</button>
+          </div>
+          <div class="tarjeta">
+            <b style="font-size:1.2rem">El Progreso</b>
+            <p style="margin:10px 0 0"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg> Landázuri, Santander</p>
+            <p style="margin:6px 0 0;color:var(--gris)"><svg class="ic" aria-hidden="true"><use href="#i-brujula"/></svg> 6.2185, -73.8102</p>
+            <button class="btn-linea"><svg class="ic" aria-hidden="true"><use href="#i-lapiz"/></svg> Editar la finca</button>
+          </div>
+          <div style="padding:0 14px 30px"><button class="btn-grande btn-cafe" data-x="agregarOtraFinca"><svg class="ic" aria-hidden="true"><use href="#i-mas"/></svg> Agregar otra finca</button></div>
+        </div>
+
+        <div class="vista" data-vista="inicio">
+          <div class="cab grad">
+            <div class="estado-tel" style="padding:4px 4px 0"><span>9:02</span><span><svg class="ic" aria-hidden="true"><use href="#i-senal"/></svg><svg class="ic" aria-hidden="true"><use href="#i-wifi"/></svg><svg class="ic" aria-hidden="true"><use href="#i-bateria"/></svg></span></div>
+            <div class="finca" data-x="finca" tabindex="0">
+              <svg width="38" height="52" aria-hidden="true"><use href="#mazorca"/></svg>
+              <div><h2>La Esperanza</h2><small>San Vicente de Chucurí</small></div>
+            </div>
+            <div class="cinta" data-x="cinta" tabindex="0"><svg class="ic" aria-hidden="true"><use href="#i-nube-ok"/></svg> Todo guardado y enviado</div>
+            <div class="indicadores">
+              <div class="ind" data-x="kg" tabindex="0"><div class="ico" style="background:#FBE3D0"><svg class="ic" aria-hidden="true"><use href="#i-basket"/></svg></div><b>125.5</b><span>kg en 2026</span></div>
+              <div class="ind" data-x="numLotes" tabindex="0"><div class="ico" style="background:#DCEBD8"><svg class="ic" aria-hidden="true"><use href="#i-tree"/></svg></div><b>2</b><span>lotes</span></div>
+              <div class="ind" data-x="hectareas" tabindex="0"><div class="ico" style="background:#EDE3DA"><svg class="ic" aria-hidden="true"><use href="#i-hill"/></svg></div><b>4</b><span>hectáreas</span></div>
+            </div>
+          </div>
+          <div class="seccion"><h3>Mis lotes</h3><button class="agregar" data-x="agregarLote"><svg class="ic" aria-hidden="true"><use href="#i-mas"/></svg> Agregar</button></div>
+          <div class="lotes">
+            <div class="lote" style="background:var(--cafe-lote)" data-x="tarjetaLote" tabindex="0">
+              <h4>Lote 1</h4><div class="sub">CCN-51 · 2.5 ha · 6 años</div>
+              <div data-x="ultimaLabor"><svg class="ic" aria-hidden="true"><use href="#i-drop"/></svg> Riego, hoy</div>
+              <div><svg class="ic" aria-hidden="true"><use href="#i-basket"/></svg> 125.5 kg en 2026</div>
+            </div>
+            <div class="lote" style="background:var(--verde)">
+              <h4>Lote El Guamo</h4><div class="sub">ICS-95 · 1.5 ha · 3 años</div>
+              <div><svg class="ic" aria-hidden="true"><use href="#i-scissors"/></svg> Poda, hace 5 días</div>
+              <div><svg class="ic" aria-hidden="true"><use href="#i-basket"/></svg> Sin cosechas en 2026</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="nuevoLote" hidden>
+          <div class="capa centro">
+            <div class="dlg">
+              <h3 data-x="dlgLote" tabindex="0">Nuevo lote</h3>
+              <div class="campo" data-x="nombreLote" tabindex="0"><label>Nombre del lote</label><div class="tf lleno">Lote 1</div></div>
+              <div class="campo" data-x="areaLote" tabindex="0"><label>Área sembrada</label><div class="tf lleno">2.5 <span style="color:var(--gris)">ha</span></div></div>
+              <div class="campo" data-x="variedad" tabindex="0"><label>Variedad de cacao</label>
+                <div class="opciones"><span class="op sel">CCN-51</span><span class="op">ICS-95</span><span class="op">ICS-1</span><span class="op">TCS-01</span><span class="op">FEAR-5</span><span class="op">Criollo</span></div>
+              </div>
+              <div class="campo" data-x="siembra" tabindex="0"><label>Fecha de siembra</label><div class="tf lleno"><svg class="ic" aria-hidden="true"><use href="#i-calendario"/></svg> 15 mar 2020</div></div>
+              <div class="pie-dlg"><button class="cancelar">Cancelar</button><button class="aceptar" data-x="guardarLote">Guardar</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="lote" hidden>
+          <div class="estado-tel"><span>11:44</span><span><svg class="ic" aria-hidden="true"><use href="#i-senal"/></svg><svg class="ic" aria-hidden="true"><use href="#i-wifi"/></svg><svg class="ic" aria-hidden="true"><use href="#i-bateria"/></svg></span></div>
+          <div class="barra"><button class="atras" data-x="atras"><svg class="ic" aria-hidden="true"><use href="#i-atras"/></svg></button><h2>Lote 1</h2><button class="basura" data-x="borrarLote"><svg class="ic" aria-hidden="true"><use href="#i-basura"/></svg></button></div>
+          <div class="tabs">
+            <button class="sel" data-x="tabLabores" data-tab="labores">Labores</button>
+            <button data-x="tabCosechas" data-tab="cosechas">Cosechas</button>
+            <button data-x="tabEstado" data-tab="estado">Estado</button>
+          </div>
+          <div class="tarjeta">
+            <div class="chips" data-x="datosLote" tabindex="0">
+              <span class="chip"><svg class="ic" aria-hidden="true"><use href="#i-brote"/></svg> CCN-51</span><span class="chip"><svg class="ic" aria-hidden="true"><use href="#i-area"/></svg> 2.5 ha</span><span class="chip"><svg class="ic" aria-hidden="true"><use href="#i-reloj"/></svg> 6 años</span>
+            </div>
+            <div class="prod" data-x="produccion" tabindex="0"><span class="circ"><svg class="ic ic-pod" aria-hidden="true"><use href="#mazorca"/></svg></span>Producción 2026: 125.5 kg</div>
+          </div>
+          <div class="panel-tab" data-panel="labores">
+            <div class="registro" data-x="registroLabor" tabindex="0"><span class="circ"><svg class="ic" aria-hidden="true"><use href="#i-leaf"/></svg></span><div><b>Fertilización</b><span>30 ago 2026 · Abono orgánico, 2 kg por árbol</span></div></div>
+            <div class="registro"><span class="circ"><svg class="ic" aria-hidden="true"><use href="#i-drop"/></svg></span><div><b>Riego</b><span>17 sep 2026</span></div></div>
+          </div>
+          <div class="panel-tab" data-panel="cosechas" hidden>
+            <div class="registro" data-x="registroCosecha" tabindex="0"><span class="circ"><svg class="ic" aria-hidden="true"><use href="#i-basket"/></svg></span><div><b>80 kg</b><span>12 ago 2026 · Secado al sol 5 días</span></div></div>
+            <div class="registro"><span class="circ"><svg class="ic" aria-hidden="true"><use href="#i-basket"/></svg></span><div><b>45.5 kg</b><span>2 jul 2026 · Cacao en baba</span></div></div>
+          </div>
+          <div class="panel-tab" data-panel="estado" hidden>
+            <div class="registro" data-x="registroEstado" tabindex="0"><span class="circ"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg></span><div><b>Floración</b><span>5 sep 2026 · Buena floración, sin monilla</span></div></div>
+          </div>
+          <button class="fab-ext" data-x="fabLabor" id="fabLote"><svg class="ic" aria-hidden="true"><use href="#i-mas"/></svg><span id="fabLoteTxt">Labor</span></button>
+        </div>
+
+        <div class="vista" data-vista="elegir" hidden>
+          <div class="cab grad" style="opacity:.5"><div class="finca"><div><h2>La Esperanza</h2></div></div></div>
+          <div class="capa abajo">
+            <div class="hoja">
+              <h3 data-x="enCualLote" tabindex="0">¿En cuál lote?</h3>
+              <button class="opcion" data-x="lote1">Lote 1</button>
+              <button class="opcion">Lote El Guamo</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="anotar" hidden>
+          <div class="cab grad" style="opacity:.5"><div class="finca"><div><h2>La Esperanza</h2></div></div></div>
+          <div class="capa abajo">
+            <div class="hoja">
+              <h3 data-x="queAnotar" tabindex="0">¿Qué va a anotar en Lote 1?</h3>
+              <button class="opcion" data-x="unaLabor"><svg class="ic" aria-hidden="true"><use href="#i-leaf"/></svg> Una labor</button>
+              <button class="opcion" data-x="unaCosecha"><svg class="ic" aria-hidden="true"><use href="#i-basket"/></svg> Una cosecha</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="labor" hidden>
+          <div class="capa centro">
+            <div class="dlg">
+              <h3 data-x="dlgLabor" tabindex="0">Registrar labor</h3>
+              <div class="opciones" data-x="tipoLabor" tabindex="0">
+                <span class="op">Poda</span><span class="op sel">Fertilización</span><span class="op">Control fitosanitario</span><span class="op">Riego</span><span class="op">Otra labor</span>
+              </div>
+              <div class="campo" data-x="fechaLabor" tabindex="0"><label>Fecha de la labor</label><div class="tf lleno"><svg class="ic" aria-hidden="true"><use href="#i-calendario"/></svg> 17 sep 2026</div></div>
+              <div class="campo" data-x="obsLabor" tabindex="0"><label>Observaciones</label><div class="nota">Qué se hizo, con qué producto, dosis...</div></div>
+              <div class="pie-dlg"><button class="cancelar">Cancelar</button><button class="aceptar" data-x="registrarLabor">Registrar</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="cosecha" hidden>
+          <div class="capa centro">
+            <div class="dlg">
+              <h3 data-x="dlgCosecha" tabindex="0">Registrar cosecha</h3>
+              <div class="campo" data-x="cantidad" tabindex="0"><label>Cantidad</label><div class="tf lleno">80 <span style="color:var(--gris)">kg</span></div></div>
+              <div class="campo" data-x="fechaCosecha" tabindex="0"><label>Fecha de la cosecha</label><div class="tf lleno"><svg class="ic" aria-hidden="true"><use href="#i-calendario"/></svg> 17 sep 2026</div></div>
+              <div class="campo" data-x="obsCosecha" tabindex="0"><label>Observaciones</label><div class="nota">Cacao en baba, seco, calidad...</div></div>
+              <div class="pie-dlg"><button class="cancelar">Cancelar</button><button class="aceptar" data-x="registrarCosecha">Registrar</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="estado" hidden>
+          <div class="capa centro">
+            <div class="dlg">
+              <h3 data-x="dlgEstado" tabindex="0">Estado del lote</h3>
+              <div class="opciones" data-x="fenologia" tabindex="0">
+                <span class="op">Vegetativo</span><span class="op sel">Floración</span><span class="op">Cuajado</span><span class="op">Fructificación</span><span class="op">Maduración</span><span class="op">Cosecha</span>
+              </div>
+              <div class="campo" data-x="fechaEstado" tabindex="0"><label>Fecha del diagnóstico</label><div class="tf lleno"><svg class="ic" aria-hidden="true"><use href="#i-calendario"/></svg> 17 sep 2026</div></div>
+              <div class="foto" data-x="fotoEstado" tabindex="0"><button><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg> Foto</button><button><svg class="ic" aria-hidden="true"><use href="#i-imagen"/></svg> Galería</button></div>
+              <div class="campo" data-x="notasEstado" tabindex="0"><label>Notas</label><div class="nota">Qué se ve en el lote: manchas, monilla, escoba...</div></div>
+              <div class="pie-dlg"><button class="cancelar">Cancelar</button><button class="aceptar" data-x="guardarEstado">Guardar</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="perfil" hidden>
+          <div class="grad cab-simple"><div class="estado-tel" style="padding:0 0 12px"><span>6:42</span><span><svg class="ic" aria-hidden="true"><use href="#i-senal"/></svg><svg class="ic" aria-hidden="true"><use href="#i-wifi"/></svg><svg class="ic" aria-hidden="true"><use href="#i-bateria"/></svg></span></div><h2>Mi perfil</h2></div>
+          <div class="tarjeta" data-x="productor" tabindex="0">
+            <div class="fila"><span class="avatar"><svg class="ic" aria-hidden="true"><use href="#i-person"/></svg></span><div><b style="font-size:1.2rem">Diego Parra</b><div style="color:var(--gris)">Productor de cacao</div></div></div>
+            <p style="margin:12px 0 0"><svg class="ic" aria-hidden="true"><use href="#i-telefono"/></svg> 300 123 4567</p>
+            <button class="btn-linea" data-x="editarDatos"><svg class="ic" aria-hidden="true"><use href="#i-lapiz"/></svg> Editar mis datos</button>
+          </div>
+          <div class="tarjeta" data-x="cuenta" tabindex="0">
+            <div class="fila"><span class="avatar" style="width:50px;height:50px;font-size:22px"><svg class="ic" aria-hidden="true"><use href="#i-escudo"/></svg></span><b>diego.cacao@finca.co</b></div>
+            <p class="texto-suave">Sus datos están respaldados. Puede entrar con este correo desde otro teléfono.</p>
+            <button class="btn-linea" data-x="cerrarSesion">Cerrar sesión</button>
+          </div>
+          <div class="tarjeta" data-x="fincaPerfil" tabindex="0" style="margin-bottom:120px">
+            <b style="font-size:1.2rem">La Esperanza</b>
+            <p style="margin:10px 0 0"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg> San Vicente de Chucurí, Santander</p>
+            <p style="margin:6px 0 0;color:var(--gris)"><svg class="ic" aria-hidden="true"><use href="#i-brujula"/></svg> 6.8812, -73.4123</p>
+            <button class="btn-linea" data-x="verFincas">Ver mis fincas (2)</button>
+            <button class="btn-linea" data-x="editarFinca"><svg class="ic" aria-hidden="true"><use href="#i-lapiz"/></svg> Editar la finca</button>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="crearCuenta" hidden>
+          <div class="grad cab-simple"><div class="estado-tel" style="padding:0 0 10px"><span>6:45</span><span><svg class="ic" aria-hidden="true"><use href="#i-senal"/></svg><svg class="ic" aria-hidden="true"><use href="#i-wifi"/></svg><svg class="ic" aria-hidden="true"><use href="#i-bateria"/></svg></span></div><h2>Crear cuenta</h2></div>
+          <div class="form">
+            <div class="aviso-gps" data-x="porQueCuenta" tabindex="0">Con una cuenta puede recuperar su finca en otro teléfono si pierde este. Sus datos actuales no se pierden.</div>
+            <div class="campo" data-x="correoCuenta" tabindex="0"><label>Correo</label><div class="tf lleno">diego.cacao@finca.co</div></div>
+            <div class="campo" data-x="clave" tabindex="0"><label>Contraseña</label><div class="tf">••••••</div></div>
+            <div class="campo"><label>Repita la contraseña</label><div class="tf">••••••</div></div>
+            <button class="btn-grande btn-maduro" data-x="botonCrearCuenta">Crear cuenta</button>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="entrar" hidden>
+          <div class="grad cab-simple"><div class="estado-tel" style="padding:0 0 10px"><span>7:10</span><span><svg class="ic" aria-hidden="true"><use href="#i-senal"/></svg><svg class="ic" aria-hidden="true"><use href="#i-wifi"/></svg><svg class="ic" aria-hidden="true"><use href="#i-bateria"/></svg></span></div><h2>Iniciar sesión</h2></div>
+          <div class="form">
+            <div class="aviso-gps" data-x="porQueEntrar" tabindex="0">Entre con la cuenta que creó en su otro teléfono. Bajaremos su finca, sus lotes y sus registros.</div>
+            <div class="campo" data-x="correoEntrar" tabindex="0"><label>Correo</label><div class="tf lleno">diego.cacao@finca.co</div></div>
+            <div class="campo"><label>Contraseña</label><div class="tf">••••••</div></div>
+            <button class="btn-grande btn-maduro" data-x="botonEntrar">Entrar</button>
+            <div class="aviso-gps" data-x="recuperando" tabindex="0" style="text-align:center"><svg class="ic" aria-hidden="true"><use href="#i-reloj"/></svg> <b>Recuperando sus datos…</b><br>Estamos bajando su finca, sus lotes y sus registros. Puede tardar un momento.</div>
+          </div>
+        </div>
+
+        <div class="vista" data-vista="sinSenal" hidden>
+          <div class="cab grad">
+            <div class="estado-tel" style="padding:4px 4px 0"><span>15:20</span><span><svg class="ic" aria-hidden="true"><use href="#i-avion"/></svg><svg class="ic" aria-hidden="true"><use href="#i-bateria"/></svg></span></div>
+            <div class="finca"><svg width="38" height="52" aria-hidden="true"><use href="#mazorca"/></svg><div><h2>La Esperanza</h2><small>San Vicente de Chucurí</small></div></div>
+            <div class="cinta" data-x="cintaPendiente" tabindex="0" style="background:rgba(194,106,30,.85)"><svg class="ic" aria-hidden="true"><use href="#i-nube-off"/></svg> 3 cambios sin enviar · Enviar</div>
+            <div class="indicadores">
+              <div class="ind"><div class="ico" style="background:#FBE3D0"><svg class="ic" aria-hidden="true"><use href="#i-basket"/></svg></div><b>205.5</b><span>kg en 2026</span></div>
+              <div class="ind"><div class="ico" style="background:#DCEBD8"><svg class="ic" aria-hidden="true"><use href="#i-tree"/></svg></div><b>2</b><span>lotes</span></div>
+              <div class="ind"><div class="ico" style="background:#EDE3DA"><svg class="ic" aria-hidden="true"><use href="#i-hill"/></svg></div><b>4</b><span>hectáreas</span></div>
+            </div>
+          </div>
+          <div class="seccion"><h3>Mis lotes</h3><button class="agregar"><svg class="ic" aria-hidden="true"><use href="#i-mas"/></svg> Agregar</button></div>
+          <div class="lotes">
+            <div class="lote" style="background:var(--cafe-lote)" data-x="loteSinSenal" tabindex="0">
+              <h4>Lote 1</h4><div class="sub">CCN-51 · 2.5 ha · 6 años</div>
+              <div><svg class="ic" aria-hidden="true"><use href="#i-basket"/></svg> Cosecha de 80 kg, hoy</div>
+              <div><svg class="ic" aria-hidden="true"><use href="#i-basket"/></svg> 205.5 kg en 2026</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="barraInf">
+          <nav class="nav">
+            <button class="sel" data-x="navInicio" data-nav="inicio"><span class="ic"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg></span>Inicio</button>
+            <button data-x="navPerfil" data-nav="perfil"><span class="ic"><svg class="ic" aria-hidden="true"><use href="#i-person"/></svg></span>Perfil</button>
+          </nav>
+          <button class="fab" data-x="anotar" aria-label="Anotar"><svg class="ic" aria-hidden="true"><use href="#i-mas"/></svg></button>
+          <span class="fab-lbl">Anotar</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mandos">
+      <button id="atrasHist" disabled><svg class="ic" aria-hidden="true"><use href="#i-atras"/></svg> Atrás</button>
+      <button id="guia" class="guia">Recorrido guiado</button>
+      <button id="siguiente" hidden>Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- Explicación -->
+  <aside class="explica" aria-live="polite">
+    <span class="ruta" id="eRuta">Empiece por aquí</span>
+    <h3 id="eTit">Toque cualquier punto naranja</h3>
+    <p id="eTxt">Cada punto del teléfono tiene una explicación. Los que tienen el punto con flecha además lo llevan a otra pantalla, como en la app de verdad. También puede usar el índice de la izquierda o el recorrido guiado.</p>
+    <div class="bloque" id="bReq" hidden>
+      <span class="et">Requisito que cumple</span>
+      <span id="eReqTxt"></span>
+      <span class="estado" id="eEstado"></span>
+    </div>
+    <div class="bloque" id="bCodigo" hidden>
+      <span class="et">Dónde está en el código</span>
+      <code id="eCodigo"></code>
+    </div>
+    <div class="bloque" id="bLleva" hidden>
+      <span class="et">Desde aquí puede ir a</span>
+      <div class="ir-lista" id="eLleva"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- Requisitos -->
+<section class="requisitos" id="vistaRequisitos" hidden>
+  <h2>Requisitos del documento y cómo los cumple la app</h2>
+  <p style="max-width:70ch;line-height:1.6;margin:0">Cada fila viene del documento <strong>«Requerimientos no funcionales Cacao»</strong>. La columna «Dónde se ve» abre la pantalla de la app donde se cumple.</p>
+  <div class="resumen" id="resumen"></div>
+  <div class="leyenda">
+    <span class="estado e-ok">✓ Cumplido</span>
+    <span class="estado e-medio">◐ Parcial</span>
+    <span class="estado e-falta">✗ Falta (Fase 2)</span>
+  </div>
+  <div class="tabla"><table>
+    <thead><tr><th>Requisito</th><th>Estado</th><th>Cómo se cumple hoy</th><th>Dónde se ve</th></tr></thead>
+    <tbody id="filas"></tbody>
+  </table></div>
+</section>
+</div>
+
+<script>
+const REQ={
+ R1:{n:"Registro del productor: nombre, identificación, teléfonos, correo",e:"ok",c:"Nombre completo, tipo y número de documento (cédula, cédula de extranjería, tarjeta de identidad, NIT, pasaporte u otro), teléfono y correo."},
+ R2:{n:"Digitar la asociación a la que pertenece",e:"ok",c:"Lista para escoger: FEDECACAO, FEPCACAO, ASOMUSTIC, APROCAVILLA y AMUCAFUE, más «Sin asociación» y «Otra (especificar)» para escribir una que no esté."},
+ R3:{n:"El productor puede registrar varios lotes",e:"ok",c:"Sin límite de lotes; se ven todos en la pantalla de Inicio."},
+ R4:{n:"Editar y eliminar lotes cuando desee",e:"ok",c:"Desde el detalle del lote. Al borrarlo se borran también sus labores, cosechas y diagnósticos."},
+ R5:{n:"Código o nombre del lote",e:"ok",c:"Cada lote tiene su nombre («Lote 1», «Lote El Guamo»)."},
+ R6:{n:"Área del lote en hectáreas",e:"ok",c:"Campo «Área sembrada», con la suma de hectáreas en Inicio."},
+ R7:{n:"Variedad del cacao",e:"medio",c:"Hay 6 variedades (CCN-51, ICS-95, ICS-1, TCS-01, FEAR-5, Criollo). El documento lista 14; faltan Trinitario, TCS13, TCS19, SCC53 y las demás."},
+ R8:{n:"Edad del cultivo en años",e:"ok",c:"Se guarda la fecha de siembra y la edad se calcula sola, así nunca queda desactualizada."},
+ R9:{n:"Coordenadas de cada lote",e:"medio",c:"Las coordenadas se guardan por finca, no por lote. Latitud entre -90 y 90 y longitud entre -180 y 180, validadas."},
+ R10:{n:"Ver los lotes agrupados por finca y por productor",e:"ok",c:"Un productor puede tener varias fincas («La Esperanza», «El Progreso») y cada finca tiene sus propios lotes. La pantalla «Mis fincas» las lista todas."},
+ R11:{n:"Registro de siembra (árboles, marco de plantación, insumos)",e:"falta",c:"Solo se guarda la fecha de siembra del lote. Falta el registro completo de siembra."},
+ R12:{n:"Registro de poda",e:"medio",c:"Se anota la labor «Poda» con fecha y observaciones. Faltan el tipo de poda (formación, mantenimiento, rehabilitación) y los árboles podados."},
+ R13:{n:"Registro de fertilización",e:"medio",c:"Se anota la labor «Fertilización». El producto y la cantidad se escriben en observaciones, no en campos aparte."},
+ R14:{n:"Registro de control fitosanitario",e:"medio",c:"Se anota la labor «Control fitosanitario». Faltan incidencia en porcentaje, producto y árboles tratados."},
+ R15:{n:"Registro de cosecha con cantidad y tipo de producto",e:"medio",c:"Se guardan los kilos y la fecha; el tipo (baba, fermentado, seco) va en observaciones."},
+ R16:{n:"Totales automáticos por lote y por finca",e:"ok",c:"La app suma sola los kilos del lote y de la finca en el año, sin que nadie haga cuentas."},
+ R17:{n:"Evidencia fotográfica",e:"medio",c:"Hay foto en el diagnóstico del lote (cámara o galería). Falta foto en labores y cosechas."},
+ R18:{n:"Historial completo del lote",e:"medio",c:"Se ve todo el historial, pero separado en tres pestañas: Labores, Cosechas y Estado. Falta una sola lista en orden de fechas."},
+ R19:{n:"Filtrar por tipo de actividad, fechas o productor",e:"falta",c:"Todavía no hay filtros; las listas salen de la más reciente a la más antigua."},
+ R20:{n:"Generar PDF o Excel de los reportes",e:"falta",c:"Pendiente para la Fase 2."},
+ R21:{n:"Información integrada en un módulo centralizado",e:"ok",c:"Todo (productor, finca, lotes, labores, cosechas, diagnósticos) queda en una sola base de datos que se sincroniza con el servidor."},
+ R22:{n:"Indicadores de gestión",e:"medio",c:"Hay producción total del año, número de lotes y hectáreas. Falta el rendimiento por hectárea (kg/ha)."},
+ R23:{n:"Cada productor ve solo su información",e:"ok",c:"El servidor filtra por el usuario de la cuenta: nadie puede ver las fincas de otro productor."}
+};
+
+const X = {
+  logo:{p:"Bienvenida",t:"La mazorca de la Red",x:"La mazorca de cacao es el símbolo de la aplicación; está dibujada con código, no es una imagen, para que la app pese menos.",cod:"lib/ui/widgets/mazorca.dart"},
+  bienvenida:{p:"Bienvenida",t:"La primera pantalla",x:"Es lo primero que ve quien instala la app: «Lleve el control de su finca, sus lotes y sus cosechas. Funciona sin señal». Solo aparece mientras no haya un productor registrado.",cod:"lib/ui/bienvenida_screen.dart"},
+  comenzar:{p:"Bienvenida",t:"Comenzar registro",x:"Empieza el registro de dos pasos: primero sus datos, después la finca. Todo funciona sin internet.",cod:"lib/ui/bienvenida_screen.dart",ir:"datos",req:"R1"},
+  yaTengo:{p:"Bienvenida",t:"Ya tengo cuenta",x:"Para quien cambió de celular. Entra con su correo y contraseña y la app baja de nuevo su finca, sus lotes y sus registros.",cod:"lib/ui/cuenta_screens.dart",ir:"entrar"},
+  paso1:{p:"Mis datos",t:"Paso 1 de 2",x:"El registro son dos pantallas cortas. Mostrar el paso evita que la persona sienta que el formulario no se acaba.",cod:"lib/ui/editar_productor_screen.dart"},
+  nombreProd:{p:"Mis datos",t:"Nombre completo",x:"Único dato obligatorio. Queda ligado a todas sus fincas, lotes y registros.",cod:"lib/ui/editar_productor_screen.dart",req:"R1"},
+  tipoDoc:{p:"Mis datos",t:"Tipo de documento",x:"Lista para escoger: Cédula de ciudadanía, Cédula de extranjería, Tarjeta de identidad, NIT, Pasaporte u Otro. Se escoge tocando, no escribiendo.",cod:"Pantalla nueva · todavía no está en GitHub",req:"R1"},
+  numDoc:{p:"Mis datos",t:"Número de documento",x:"La identificación del productor que pide el documento del SENA. Es lo que permite cruzar la información con los registros de la asociación.",cod:"Pantalla nueva · todavía no está en GitHub",req:"R1"},
+  asociacion:{p:"Mis datos",t:"Asociación",x:"Lista con las asociaciones cargadas en la app (FEDECACAO, FEPCACAO, ASOMUSTIC, APROCAVILLA, AMUCAFUE), más «Sin asociación» y «Otra (especificar)».",cod:"Pantalla nueva · todavía no está en GitHub",req:"R2"},
+  otraAsoc:{p:"Mis datos",t:"Nombre de la asociación",x:"Aparece solo cuando escoge «Otra (especificar)», para no dejar por fuera a las asociaciones que no están en la lista.",cod:"Pantalla nueva · todavía no está en GitHub",req:"R2"},
+  telefono:{p:"Mis datos",t:"Teléfono",x:"Para que la asociación o el técnico lo contacten.",cod:"lib/ui/editar_productor_screen.dart",req:"R1"},
+  correoProd:{p:"Mis datos",t:"Correo",x:"Opcional en el registro. Se vuelve importante solo cuando crea la cuenta de respaldo.",cod:"lib/ui/editar_productor_screen.dart",req:"R1"},
+  crearPerfil:{p:"Mis datos",t:"Crear perfil",x:"Guarda el productor en el celular y pasa al paso 2.",cod:"lib/ui/editar_productor_screen.dart",ir:"finca"},
+  paso2:{p:"Mi finca",t:"Paso 2 de 2",x:"La última pantalla del registro. Después de esto ya se puede anotar.",cod:"lib/ui/editar_finca_screen.dart"},
+  nombreFinca:{p:"Mi finca",t:"Nombre de la finca",x:"Como usted le dice a su finca. Aparece arriba en Inicio.",cod:"lib/ui/editar_finca_screen.dart"},
+  municipio:{p:"Mi finca",t:"Municipio",x:"Sirve para agrupar productores por zona y, más adelante, para el clima.",cod:"lib/ui/editar_finca_screen.dart"},
+  departamento:{p:"Mi finca",t:"Departamento",x:"Junto con el municipio ubica la finca aunque no se marque el GPS.",cod:"lib/ui/editar_finca_screen.dart"},
+  gpsOpcional:{p:"Mi finca",t:"Ubicación GPS (opcional)",x:"Es opcional a propósito: si no hay señal ni ganas de marcar el mapa, el registro sigue igual.",cod:"lib/ui/editar_finca_screen.dart",req:"R9"},
+  marcarMapa:{p:"Mi finca",t:"Marcar en el mapa",x:"Abre el mapa para señalar la finca sin escribir números.",cod:"lib/ui/mapa_screen.dart",ir:"mapa",req:"R9"},
+  latlon:{p:"Mi finca",t:"Latitud y longitud",x:"Se llenan solas desde el mapa. La app valida que la latitud vaya de -90 a 90 y la longitud de -180 a 180, como pide el documento.",cod:"lib/ui/editar_finca_screen.dart",req:"R9"},
+  registrarFinca:{p:"Mi finca",t:"Registrar finca",x:"Guarda la finca y lleva a Inicio, donde ya se pueden agregar lotes.",cod:"lib/ui/editar_finca_screen.dart",ir:"inicio"},
+  mapa:{p:"Mapa",t:"El mapa",x:"Mapa de OpenStreetMap: se toca el punto donde queda la finca y el alfiler se mueve ahí. Necesita internet solo para ver las imágenes del mapa.",cod:"lib/ui/mapa_screen.dart",req:"R9"},
+  gps:{p:"Mapa",t:"Estoy en la finca",x:"Toma la ubicación del GPS del celular. El GPS funciona sin señal de datos, así que sirve estando en el campo.",cod:"lib/ui/mapa_screen.dart",req:"R9"},
+  usarPunto:{p:"Mapa",t:"Usar este punto",x:"Guarda las coordenadas en la finca y regresa al formulario.",cod:"lib/ui/mapa_screen.dart",ir:"finca",req:"R9"},
+  tarjetaFinca:{p:"Mis fincas",t:"Una finca de la lista",x:"Cada finca muestra su nombre, el municipio y departamento, las coordenadas si las marcó, y el botón para editarla.",cod:"Pantalla nueva · todavía no está en GitHub",req:"R10"},
+  agregarOtraFinca:{p:"Mis fincas",t:"Agregar otra finca",x:"Un mismo productor puede tener varias fincas, cada una con sus propios lotes. Si todavía no tiene ninguna, la pantalla dice «Sin fincas todavía» y ofrece «Agregar finca».",cod:"Pantalla nueva · todavía no está en GitHub",ir:"finca",req:"R10"},
+  verFincas:{p:"Perfil",t:"Ver mis fincas (2)",x:"Abre la lista de fincas. Cuando solo hay una, el botón dice «Ver mi finca».",cod:"Pantalla nueva · todavía no está en GitHub",ir:"fincas",req:"R10"},
+  atras:{p:"Todas",t:"Volver",x:"Regresa a la pantalla anterior sin perder lo que llevaba escrito.",ir:"inicio"},
+  finca:{p:"Inicio",t:"Cabecera de la finca",x:"Nombre de la finca y municipio, siempre visibles, para saber de qué finca son los datos.",cod:"lib/ui/inicio_screen.dart"},
+  cinta:{p:"Inicio",t:"Cinta de sincronización",x:"Dice si todo quedó enviado al servidor o cuántos cambios faltan. Al terminar de enviar avisa cuántos registros subieron y bajaron: «Todo al día: 3 enviados, 0 recibidos».",cod:"lib/ui/widgets/estado_sync.dart",ir:"sinSenal",req:"R21"},
+  kg:{p:"Inicio",t:"Kilos del año",x:"Suma automática de todas las cosechas del año en toda la finca.",cod:"lib/data/repositories/perfil_repository.dart",req:"R16"},
+  numLotes:{p:"Inicio",t:"Número de lotes",x:"Cuántos lotes tiene registrados.",cod:"lib/ui/inicio_screen.dart",req:"R22"},
+  hectareas:{p:"Inicio",t:"Hectáreas",x:"Suma del área sembrada de todos los lotes.",cod:"lib/data/repositories/perfil_repository.dart",req:"R22"},
+  agregarLote:{p:"Inicio",t:"Agregar un lote",x:"Abre el formulario de nuevo lote.",cod:"lib/ui/dialogos/dialogo_lote.dart",ir:"nuevoLote",req:"R3"},
+  tarjetaLote:{p:"Inicio",t:"Tarjeta del lote",x:"Resume el lote: variedad, área, edad, última labor y kilos del año. Es el resumen que el productor mira antes de salir al lote.",cod:"lib/ui/inicio_screen.dart",ir:"lote",req:"R10"},
+  ultimaLabor:{p:"Inicio",t:"Última labor",x:"«Riego, hoy», «Poda, hace 5 días». Convierte la fecha en algo que se entiende de una vez.",cod:"lib/ui/formato.dart"},
+  anotar:{p:"Barra de abajo",t:"Botón Anotar (+)",x:"El botón principal: grande, centrado y presente en Inicio y en Perfil, para anotar con una sola mano.",cod:"lib/ui/cascaron_screen.dart",ir:"elegir"},
+  navInicio:{p:"Barra de abajo",t:"Inicio",x:"Resumen de la finca y los lotes.",cod:"lib/ui/cascaron_screen.dart",ir:"inicio"},
+  navPerfil:{p:"Barra de abajo",t:"Perfil",x:"Datos del productor, de la finca y de la cuenta.",cod:"lib/ui/cascaron_screen.dart",ir:"perfil"},
+  dlgLote:{p:"Nuevo lote",t:"Formulario del lote",x:"Cuatro datos y listo: nombre, área, variedad y fecha de siembra.",cod:"lib/ui/dialogos/dialogo_lote.dart",req:"R5"},
+  nombreLote:{p:"Nuevo lote",t:"Nombre del lote",x:"Hace las veces del código de lote del documento: «Lote 001», «El Guamo», como el productor lo llame.",cod:"lib/ui/dialogos/dialogo_lote.dart",req:"R5"},
+  areaLote:{p:"Nuevo lote",t:"Área sembrada",x:"En hectáreas. Con esto la app suma el total de la finca y podrá calcular el rendimiento por hectárea.",cod:"lib/ui/dialogos/dialogo_lote.dart",req:"R6"},
+  variedad:{p:"Nuevo lote",t:"Variedad de cacao",x:"Se escoge tocando, no escribiendo. Hoy hay seis variedades; el documento pide catorce.",cod:"lib/ui/dialogos/dialogo_lote.dart",req:"R7"},
+  siembra:{p:"Nuevo lote",t:"Fecha de siembra",x:"Se guarda la fecha, no la edad: así la edad se recalcula sola cada año.",cod:"lib/ui/dialogos/dialogo_lote.dart",req:"R8"},
+  guardarLote:{p:"Nuevo lote",t:"Guardar",x:"Crea el lote en el celular y lo muestra en Inicio, esté o no esté conectado.",cod:"lib/data/daos/daos.dart",ir:"inicio",req:"R3"},
+  borrarLote:{p:"Lote",t:"Borrar el lote",x:"Borra el lote con sus labores, cosechas y diagnósticos, previa confirmación. Por dentro es un «borrado suave»: queda marcado como borrado para poder avisarle al servidor.",cod:"lib/data/local/database.dart",req:"R4"},
+  tabLabores:{p:"Lote",t:"Pestaña Labores",x:"Podas, fertilizaciones, controles y riegos del lote, del más reciente al más antiguo.",cod:"lib/ui/lote_detalle_screen.dart",tab:"labores",req:"R18"},
+  tabCosechas:{p:"Lote",t:"Pestaña Cosechas",x:"Cada entrega sacada del lote, con kilos y fecha.",cod:"lib/ui/lote_detalle_screen.dart",tab:"cosechas",req:"R15"},
+  tabEstado:{p:"Lote",t:"Pestaña Estado",x:"Diagnósticos del cultivo con foto: floración, cuajado, monilla, escoba de bruja.",cod:"lib/ui/lote_detalle_screen.dart",tab:"estado",req:"R17"},
+  datosLote:{p:"Lote",t:"Datos del lote",x:"Variedad, área y edad. La edad sale de la fecha de siembra.",cod:"lib/ui/lote_detalle_screen.dart",req:"R8"},
+  produccion:{p:"Lote",t:"Producción del año",x:"Suma de las cosechas del lote en el año en curso, calculada por la base de datos.",cod:"lib/data/daos/daos.dart",req:"R16"},
+  registroLabor:{p:"Lote",t:"Una labor anotada",x:"Tipo de labor, fecha y observación. Se puede borrar si quedó mal.",cod:"lib/ui/lote_detalle_screen.dart",req:"R12"},
+  registroCosecha:{p:"Lote",t:"Una cosecha anotada",x:"Kilos, fecha y observación (baba, fermentado, seco).",cod:"lib/ui/lote_detalle_screen.dart",req:"R15"},
+  registroEstado:{p:"Lote",t:"Un diagnóstico",x:"Etapa del cultivo, notas y foto guardada en el celular.",cod:"lib/ui/lote_detalle_screen.dart",req:"R17"},
+  fabLabor:{p:"Lote",t:"Botón de la pestaña",x:"Cambia según la pestaña: Labor, Cosecha o Diagnóstico. Así se anota sin salir del lote.",cod:"lib/ui/lote_detalle_screen.dart",ir:"labor"},
+  enCualLote:{p:"Anotar",t:"¿En cuál lote?",x:"Primera pregunta del botón +. Si solo hay un lote, la app se salta este paso.",cod:"lib/ui/cascaron_screen.dart"},
+  lote1:{p:"Anotar",t:"Escoger el lote",x:"Toca el lote donde trabajó.",cod:"lib/ui/cascaron_screen.dart",ir:"anotar"},
+  queAnotar:{p:"Anotar",t:"¿Qué va a anotar?",x:"Dos opciones grandes, sin letra menuda.",cod:"lib/ui/cascaron_screen.dart"},
+  unaLabor:{p:"Anotar",t:"Una labor",x:"Podas, abonadas, riegos y controles de plagas.",cod:"lib/ui/dialogos/dialogo_actividad.dart",ir:"labor",req:"R12"},
+  unaCosecha:{p:"Anotar",t:"Una cosecha",x:"Los kilos que sacó del lote.",cod:"lib/ui/dialogos/dialogo_cosecha.dart",ir:"cosecha",req:"R15"},
+  dlgLabor:{p:"Registrar labor",t:"Registrar labor",x:"Tres datos: qué hizo, cuándo y una observación. Pensado para llenarlo en menos de un minuto.",cod:"lib/ui/dialogos/dialogo_actividad.dart",req:"R12"},
+  tipoLabor:{p:"Registrar labor",t:"Tipo de labor",x:"Poda, Fertilización, Control fitosanitario, Riego u Otra labor. Cubre los tres procesos del documento, pero sin sus subtipos.",cod:"lib/ui/formato.dart",req:"R13"},
+  fechaLabor:{p:"Registrar labor",t:"Fecha de la labor",x:"Viene con la de hoy; se puede cambiar si se anota días después.",cod:"lib/ui/widgets/selector_fecha.dart"},
+  obsLabor:{p:"Registrar labor",t:"Observaciones",x:"Aquí caben producto, dosis y responsable. El documento pide campos aparte para eso: es la decisión de diseño más discutible y por eso se les pregunta a los cacaoteros.",cod:"lib/ui/dialogos/dialogo_actividad.dart",req:"R13"},
+  registrarLabor:{p:"Registrar labor",t:"Registrar",x:"Guarda en el celular de inmediato y marca el registro como «pendiente de enviar» hasta que haya internet.",cod:"lib/data/daos/daos.dart",ir:"lote",req:"R21"},
+  dlgCosecha:{p:"Registrar cosecha",t:"Registrar cosecha",x:"Lo mismo que la labor, pero para el cacao recogido.",cod:"lib/ui/dialogos/dialogo_cosecha.dart",req:"R15"},
+  cantidad:{p:"Registrar cosecha",t:"Cantidad",x:"Kilos cosechados. Si no es un número válido, la app avisa antes de guardar.",cod:"lib/ui/dialogos/dialogo_cosecha.dart",req:"R15"},
+  fechaCosecha:{p:"Registrar cosecha",t:"Fecha de la cosecha",x:"Define a qué año suman los kilos.",cod:"lib/ui/widgets/selector_fecha.dart",req:"R16"},
+  obsCosecha:{p:"Registrar cosecha",t:"Observaciones",x:"Cacao en baba, fermentado, seco o notas de calidad. El documento pide que sea un campo propio.",cod:"lib/ui/dialogos/dialogo_cosecha.dart",req:"R15"},
+  registrarCosecha:{p:"Registrar cosecha",t:"Registrar",x:"Guarda la cosecha y actualiza los totales del lote y de la finca al instante.",cod:"lib/data/daos/daos.dart",ir:"inicio",req:"R16"},
+  dlgEstado:{p:"Estado del lote",t:"Estado del lote",x:"Diagnóstico sencillo, sin inteligencia artificial: la persona dice qué ve y adjunta la foto.",cod:"lib/ui/dialogos/dialogo_diagnostico.dart",req:"R17"},
+  fenologia:{p:"Estado del lote",t:"Etapa del cultivo",x:"Vegetativo, Floración, Cuajado, Fructificación, Maduración o Cosecha.",cod:"lib/ui/formato.dart",req:"R17"},
+  fechaEstado:{p:"Estado del lote",t:"Fecha del diagnóstico",x:"El día en que revisó el lote.",cod:"lib/ui/widgets/selector_fecha.dart"},
+  fotoEstado:{p:"Estado del lote",t:"Foto o galería",x:"La foto se copia a la carpeta de la app, así no se pierde si borran la galería. Hoy vive solo en el celular; subirla al servidor queda para la Fase 2.",cod:"lib/ui/dialogos/dialogo_diagnostico.dart",req:"R17"},
+  notasEstado:{p:"Estado del lote",t:"Notas",x:"Manchas, monilla, escoba de bruja, mazorcas dañadas.",cod:"lib/ui/dialogos/dialogo_diagnostico.dart",req:"R17"},
+  guardarEstado:{p:"Estado del lote",t:"Guardar",x:"Deja el diagnóstico con su foto en la pestaña Estado.",cod:"lib/data/daos/daos.dart",ir:"lote",req:"R17"},
+  productor:{p:"Perfil",t:"Datos del productor",x:"Nombre y teléfono. Los datos de identidad viven aquí y no en Inicio, para que la pantalla principal quede libre para el trabajo diario.",cod:"lib/ui/perfil_screen.dart",req:"R1"},
+  editarDatos:{p:"Perfil",t:"Editar mis datos",x:"Corrige nombre, teléfono o correo.",cod:"lib/ui/editar_productor_screen.dart",ir:"datos",req:"R1"},
+  cuenta:{p:"Perfil",t:"Cuenta de respaldo",x:"Tiene tres estados: sin cuenta, pendiente de confirmar el correo, y confirmada. Aquí se ve el estado confirmado.",cod:"lib/ui/perfil_screen.dart",ir:"crearCuenta",req:"R23"},
+  cerrarSesion:{p:"Perfil",t:"Cerrar sesión",x:"Borra los datos de este celular y avisa antes si hay cambios sin enviar. Sirve para prestar el celular o para probar la recuperación.",cod:"lib/data/sync/sync_service.dart"},
+  fincaPerfil:{p:"Perfil",t:"Datos de la finca",x:"Nombre, municipio, departamento y coordenadas.",cod:"lib/ui/perfil_screen.dart",req:"R10"},
+  editarFinca:{p:"Perfil",t:"Editar la finca",x:"Vuelve al formulario de la finca, incluido el mapa.",cod:"lib/ui/editar_finca_screen.dart",ir:"finca"},
+  porQueCuenta:{p:"Crear cuenta",t:"Para qué sirve la cuenta",x:"La app explica antes de pedir datos. Por dentro, la cuenta anónima que ya tenía el celular se convierte en cuenta con correo, así que nada de lo anotado se pierde.",cod:"lib/data/sync/api_supabase.dart",req:"R23"},
+  correoCuenta:{p:"Crear cuenta",t:"Correo",x:"Debe ser real: llega un mensaje de confirmación y, sin abrirlo, no se puede entrar desde otro teléfono.",cod:"lib/ui/cuenta_screens.dart",req:"R1"},
+  clave:{p:"Crear cuenta",t:"Contraseña",x:"Mínimo 6 caracteres y se escribe dos veces.",cod:"lib/ui/cuenta_screens.dart"},
+  botonCrearCuenta:{p:"Crear cuenta",t:"Crear cuenta",x:"Respalda en el servidor lo que ya estaba anotado en el celular.",cod:"lib/data/sync/sync_service.dart",ir:"perfil",req:"R21"},
+  porQueEntrar:{p:"Iniciar sesión",t:"Entrar en otro teléfono",x:"Este es el caso que más preocupa: el celular se dañó o se perdió. Con el correo y la contraseña se recupera todo lo que alcanzó a enviarse.",cod:"lib/ui/cuenta_screens.dart",req:"R23"},
+  correoEntrar:{p:"Iniciar sesión",t:"Correo de la cuenta",x:"El mismo con el que creó la cuenta y que confirmó.",cod:"lib/ui/cuenta_screens.dart"},
+  botonEntrar:{p:"Iniciar sesión",t:"Entrar",x:"Avisa antes si el teléfono ya tenía datos, porque se reemplazan por los de la cuenta.",cod:"lib/data/sync/sync_service.dart",req:"R23"},
+  recuperando:{p:"Iniciar sesión",t:"Recuperando sus datos",x:"Mientras baja la información, la app bloquea el registro para que no se mezclen datos nuevos con los que están llegando.",cod:"lib/ui/cuenta_screens.dart",req:"R21"},
+  cintaPendiente:{p:"Sin señal",t:"Cambios sin enviar",x:"Así se ve la app en el monte: se anotó una cosecha sin señal y la cinta avisa que hay 3 cambios pendientes. Al volver la señal se envían solos; el botón «Enviar» es para no esperar.",cod:"lib/data/sync/sync_service.dart",req:"R21"},
+  loteSinSenal:{p:"Sin señal",t:"El dato ya está ahí",x:"Los 80 kg recién anotados ya suman en el lote y en la finca, aunque todavía no hayan llegado al servidor. El celular manda: el servidor solo respalda.",cod:"lib/data/local/database.dart",req:"R21"}
+};
+
+const $=id=>document.getElementById(id);
+const pantalla=$('pantalla'), barra=$('barraInf');
+const vistas=[...document.querySelectorAll('[data-vista]')];
+const conBarra=['inicio','perfil','sinSenal'];
+const nombrePantalla={};
+document.querySelectorAll('#indice button').forEach(b=>nombrePantalla[b.dataset.ir]=b.textContent);
+const vistaDe={};
+document.querySelectorAll('[data-x]').forEach(el=>{
+  const v=el.closest('[data-vista]'); if(v) vistaDe[el.dataset.x]=v.dataset.vista;
+  if(X[el.dataset.x] && X[el.dataset.x].ir) el.classList.add('lleva');
+});
+let actual=null, vistaActual='inicio', historia=[];
+
+function mostrarVista(v,{guardar=true}={}){
+  if(guardar && v!==vistaActual) historia.push(vistaActual);
+  vistaActual=v;
+  vistas.forEach(el=>el.hidden=el.dataset.vista!==v);
+  barra.hidden=!conBarra.includes(v);
+  document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('sel',b.dataset.nav===v));
+  document.querySelectorAll('#indice button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.ir===v)));
+  const vis=vistas.find(el=>el.dataset.vista===v); if(vis) vis.scrollTop=0;
+  $('atrasHist').disabled=!historia.length;
+}
+function mostrarTab(t){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('sel',b.dataset.tab===t));
+  document.querySelectorAll('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==t);
+  $('fabLoteTxt').textContent=({labores:'Labor',cosechas:'Cosecha',estado:'Diagnóstico'})[t];
+  X.fabLabor.ir={labores:'labor',cosechas:'cosecha',estado:'estado'}[t];
+}
+function nombreEstado(e){return {ok:'✓ Cumplido',medio:'◐ Parcial',falta:'✗ Falta (Fase 2)'}[e]}
+
+function explicar(k,{navegar=true}={}){
+  const d=X[k]; if(!d) return;
+  const destino=vistaDe[k];
+  if(destino && destino!==vistaActual) mostrarVista(destino);
+  if(d.tab) mostrarTab(d.tab);
+  if(navegar && d.ir) mostrarVista(d.ir);
+  actual=k;
+  document.querySelectorAll('.activo').forEach(a=>a.classList.remove('activo'));
+  const el=document.querySelector(`[data-x="${k}"]`); if(el) el.classList.add('activo');
+  $('eRuta').textContent=d.p;
+  $('eTit').textContent=d.t;
+  $('eTxt').textContent=d.x;
+  const r=d.req?REQ[d.req]:null;
+  $('bReq').hidden=!r;
+  if(r){ $('eReqTxt').textContent=d.req+' · '+r.n+'. '+r.c;
+    const es=$('eEstado'); es.className='estado e-'+r.e; es.textContent=nombreEstado(r.e); }
+  $('bCodigo').hidden=!d.cod; if(d.cod) $('eCodigo').textContent=d.cod;
+  const lleva=$('eLleva'); lleva.innerHTML='';
+  const destinos=new Set();
+  document.querySelectorAll(`[data-vista="${vistaActual}"] [data-x]`).forEach(e2=>{
+    const o=X[e2.dataset.x]; if(o&&o.ir&&o.ir!==vistaActual) destinos.add(o.ir);
+  });
+  destinos.forEach(v=>{const b=document.createElement('button');b.textContent=nombrePantalla[v]||v;b.onclick=()=>mostrarVista(v);lleva.append(b)});
+  $('bLleva').hidden=!destinos.size;
+  if(window.innerWidth<=1080) document.querySelector('.explica').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+pantalla.addEventListener('click',e=>{
+  const el=e.target.closest('[data-x]'); if(!el) return;
+  e.stopPropagation(); explicar(el.dataset.x);
+});
+pantalla.addEventListener('keydown',e=>{
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-x]')){e.preventDefault();explicar(e.target.dataset.x)}
+});
+$('indice').onclick=e=>{const b=e.target.closest('[data-ir]'); if(b) mostrarVista(b.dataset.ir)};
+$('atrasHist').onclick=()=>{const v=historia.pop(); if(v) mostrarVista(v,{guardar:false}); $('atrasHist').disabled=!historia.length};
+
+/* Recorrido guiado */
+const GUIA=['bienvenida','comenzar','nombreProd','tipoDoc','numDoc','asociacion','otraAsoc','crearPerfil','nombreFinca','gpsOpcional','marcarMapa','gps','usarPunto','registrarFinca','agregarLote','nombreLote','areaLote','variedad','siembra','guardarLote','tarjetaLote','datosLote','tabLabores','tabCosechas','tabEstado','anotar','lote1','unaLabor','tipoLabor','obsLabor','registrarLabor','fabLabor','cantidad','registrarCosecha','fotoEstado','cinta','cintaPendiente','loteSinSenal','navPerfil','verFincas','tarjetaFinca','agregarOtraFinca','cuenta','porQueCuenta','botonCrearCuenta','porQueEntrar','botonEntrar'];
+let paso=-1;
+function irPaso(i){
+  paso=i;
+  const k=GUIA[paso];
+  explicar(k,{navegar:false});
+  $('guia').textContent=`Paso ${paso+1} de ${GUIA.length}`;
+  $('siguiente').hidden=false;
+  $('siguiente').textContent = paso===GUIA.length-1 ? 'Terminar' : 'Siguiente →';
+}
+$('guia').onclick=()=>{ if(paso<0||paso>=GUIA.length-1) irPaso(0); else irPaso(paso); };
+$('siguiente').onclick=()=>{
+  if(paso>=GUIA.length-1){paso=-1;$('guia').textContent='Recorrido guiado';$('siguiente').hidden=true;return}
+  irPaso(paso+1);
+};
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea')) return;
+  if(e.key==='ArrowRight'&&paso>=0&&paso<GUIA.length-1) irPaso(paso+1);
+  if(e.key==='ArrowLeft'&&paso>0) irPaso(paso-1);
+});
+
+/* Requisitos */
+const filas=$('filas');
+const cuentas={ok:0,medio:0,falta:0};
+Object.entries(REQ).forEach(([id,r])=>{
+  cuentas[r.e]++;
+  const donde=Object.entries(X).filter(([,d])=>d.req===id).map(([k])=>k);
+  const tr=document.createElement('tr');
+  const td1=document.createElement('td'); td1.innerHTML=`<strong>${id}</strong><br>${r.n}`;
+  const td2=document.createElement('td'); const sp=document.createElement('span'); sp.className='estado e-'+r.e; sp.textContent=nombreEstado(r.e); td2.append(sp);
+  const td3=document.createElement('td'); td3.textContent=r.c;
+  const td4=document.createElement('td');
+  if(donde.length){
+    const b=document.createElement('button'); b.className='ver'; b.textContent=X[donde[0]].p+' → '+X[donde[0]].t;
+    b.onclick=()=>{verRecorrido();explicar(donde[0],{navegar:false});window.scrollTo({top:0,behavior:'smooth'})};
+    td4.append(b);
+  } else td4.textContent='—';
+  tr.append(td1,td2,td3,td4); filas.append(tr);
+});
+const total=Object.keys(REQ).length;
+$('resumen').innerHTML=`
+  <div class="tarj-res"><b style="color:var(--ok)">${cuentas.ok}</b>requisitos cumplidos de ${total}</div>
+  <div class="tarj-res"><b style="color:var(--medio)">${cuentas.medio}</b>cumplidos en parte</div>
+  <div class="tarj-res"><b style="color:var(--falta)">${cuentas.falta}</b>pendientes para la Fase 2</div>
+  <div class="tarj-res"><b>${Math.round((cuentas.ok+cuentas.medio*0.5)/total*100)}%</b>de avance (lo parcial cuenta medio)</div>`;
+
+function verRecorrido(){$('vistaRecorrido').hidden=false;$('vistaRequisitos').hidden=true;$('mRecorrido').setAttribute('aria-pressed','true');$('mRequisitos').setAttribute('aria-pressed','false')}
+function verRequisitos(){$('vistaRecorrido').hidden=true;$('vistaRequisitos').hidden=false;$('mRecorrido').setAttribute('aria-pressed','false');$('mRequisitos').setAttribute('aria-pressed','true')}
+$('mRecorrido').onclick=verRecorrido; $('mRequisitos').onclick=verRequisitos;
+
+mostrarVista('inicio',{guardar:false});
+</script>

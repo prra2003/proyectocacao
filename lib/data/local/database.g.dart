@@ -5188,6 +5188,17 @@ class $SesionTable extends Sesion with TableInfo<$SesionTable, SesionLocal> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _tokenNubeMeta = const VerificationMeta(
+    'tokenNube',
+  );
+  @override
+  late final GeneratedColumn<String> tokenNube = GeneratedColumn<String>(
+    'token_nube',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _descargaInicialMeta = const VerificationMeta(
     'descargaInicial',
   );
@@ -5210,6 +5221,7 @@ class $SesionTable extends Sesion with TableInfo<$SesionTable, SesionLocal> {
     authUid,
     correo,
     correoConfirmado,
+    tokenNube,
     descargaInicial,
   ];
   @override
@@ -5256,6 +5268,12 @@ class $SesionTable extends Sesion with TableInfo<$SesionTable, SesionLocal> {
         ),
       );
     }
+    if (data.containsKey('token_nube')) {
+      context.handle(
+        _tokenNubeMeta,
+        tokenNube.isAcceptableOrUnknown(data['token_nube']!, _tokenNubeMeta),
+      );
+    }
     if (data.containsKey('descarga_inicial')) {
       context.handle(
         _descargaInicialMeta,
@@ -5294,6 +5312,10 @@ class $SesionTable extends Sesion with TableInfo<$SesionTable, SesionLocal> {
         DriftSqlType.bool,
         data['${effectivePrefix}correo_confirmado'],
       )!,
+      tokenNube: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}token_nube'],
+      ),
       descargaInicial: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}descarga_inicial'],
@@ -5323,6 +5345,12 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
   /// datos están respaldados.
   final bool correoConfirmado;
 
+  /// Sesión del servidor (no el token de Google).
+  ///
+  /// El token de Google dura una hora; esta sesión dura meses. Guardarla es lo
+  /// que evita tener que pedir la cuenta en cada arranque de la app.
+  final String? tokenNube;
+
   /// ¿Ya terminó la primera descarga tras entrar con una cuenta existente?
   ///
   /// Arranca en `true` porque una instalación normal no espera nada. Solo
@@ -5336,6 +5364,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
     this.authUid,
     this.correo,
     required this.correoConfirmado,
+    this.tokenNube,
     required this.descargaInicial,
   });
   @override
@@ -5350,6 +5379,9 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
       map['correo'] = Variable<String>(correo);
     }
     map['correo_confirmado'] = Variable<bool>(correoConfirmado);
+    if (!nullToAbsent || tokenNube != null) {
+      map['token_nube'] = Variable<String>(tokenNube);
+    }
     map['descarga_inicial'] = Variable<bool>(descargaInicial);
     return map;
   }
@@ -5365,6 +5397,9 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
           ? const Value.absent()
           : Value(correo),
       correoConfirmado: Value(correoConfirmado),
+      tokenNube: tokenNube == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tokenNube),
       descargaInicial: Value(descargaInicial),
     );
   }
@@ -5380,6 +5415,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
       authUid: serializer.fromJson<String?>(json['authUid']),
       correo: serializer.fromJson<String?>(json['correo']),
       correoConfirmado: serializer.fromJson<bool>(json['correoConfirmado']),
+      tokenNube: serializer.fromJson<String?>(json['tokenNube']),
       descargaInicial: serializer.fromJson<bool>(json['descargaInicial']),
     );
   }
@@ -5392,6 +5428,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
       'authUid': serializer.toJson<String?>(authUid),
       'correo': serializer.toJson<String?>(correo),
       'correoConfirmado': serializer.toJson<bool>(correoConfirmado),
+      'tokenNube': serializer.toJson<String?>(tokenNube),
       'descargaInicial': serializer.toJson<bool>(descargaInicial),
     };
   }
@@ -5402,6 +5439,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
     Value<String?> authUid = const Value.absent(),
     Value<String?> correo = const Value.absent(),
     bool? correoConfirmado,
+    Value<String?> tokenNube = const Value.absent(),
     bool? descargaInicial,
   }) => SesionLocal(
     id: id ?? this.id,
@@ -5409,6 +5447,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
     authUid: authUid.present ? authUid.value : this.authUid,
     correo: correo.present ? correo.value : this.correo,
     correoConfirmado: correoConfirmado ?? this.correoConfirmado,
+    tokenNube: tokenNube.present ? tokenNube.value : this.tokenNube,
     descargaInicial: descargaInicial ?? this.descargaInicial,
   );
   SesionLocal copyWithCompanion(SesionCompanion data) {
@@ -5420,6 +5459,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
       correoConfirmado: data.correoConfirmado.present
           ? data.correoConfirmado.value
           : this.correoConfirmado,
+      tokenNube: data.tokenNube.present ? data.tokenNube.value : this.tokenNube,
       descargaInicial: data.descargaInicial.present
           ? data.descargaInicial.value
           : this.descargaInicial,
@@ -5434,6 +5474,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
           ..write('authUid: $authUid, ')
           ..write('correo: $correo, ')
           ..write('correoConfirmado: $correoConfirmado, ')
+          ..write('tokenNube: $tokenNube, ')
           ..write('descargaInicial: $descargaInicial')
           ..write(')'))
         .toString();
@@ -5446,6 +5487,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
     authUid,
     correo,
     correoConfirmado,
+    tokenNube,
     descargaInicial,
   );
   @override
@@ -5457,6 +5499,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
           other.authUid == this.authUid &&
           other.correo == this.correo &&
           other.correoConfirmado == this.correoConfirmado &&
+          other.tokenNube == this.tokenNube &&
           other.descargaInicial == this.descargaInicial);
 }
 
@@ -5466,6 +5509,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
   final Value<String?> authUid;
   final Value<String?> correo;
   final Value<bool> correoConfirmado;
+  final Value<String?> tokenNube;
   final Value<bool> descargaInicial;
   const SesionCompanion({
     this.id = const Value.absent(),
@@ -5473,6 +5517,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
     this.authUid = const Value.absent(),
     this.correo = const Value.absent(),
     this.correoConfirmado = const Value.absent(),
+    this.tokenNube = const Value.absent(),
     this.descargaInicial = const Value.absent(),
   });
   SesionCompanion.insert({
@@ -5481,6 +5526,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
     this.authUid = const Value.absent(),
     this.correo = const Value.absent(),
     this.correoConfirmado = const Value.absent(),
+    this.tokenNube = const Value.absent(),
     this.descargaInicial = const Value.absent(),
   }) : usuarioId = Value(usuarioId);
   static Insertable<SesionLocal> custom({
@@ -5489,6 +5535,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
     Expression<String>? authUid,
     Expression<String>? correo,
     Expression<bool>? correoConfirmado,
+    Expression<String>? tokenNube,
     Expression<bool>? descargaInicial,
   }) {
     return RawValuesInsertable({
@@ -5497,6 +5544,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
       if (authUid != null) 'auth_uid': authUid,
       if (correo != null) 'correo': correo,
       if (correoConfirmado != null) 'correo_confirmado': correoConfirmado,
+      if (tokenNube != null) 'token_nube': tokenNube,
       if (descargaInicial != null) 'descarga_inicial': descargaInicial,
     });
   }
@@ -5507,6 +5555,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
     Value<String?>? authUid,
     Value<String?>? correo,
     Value<bool>? correoConfirmado,
+    Value<String?>? tokenNube,
     Value<bool>? descargaInicial,
   }) {
     return SesionCompanion(
@@ -5515,6 +5564,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
       authUid: authUid ?? this.authUid,
       correo: correo ?? this.correo,
       correoConfirmado: correoConfirmado ?? this.correoConfirmado,
+      tokenNube: tokenNube ?? this.tokenNube,
       descargaInicial: descargaInicial ?? this.descargaInicial,
     );
   }
@@ -5537,6 +5587,9 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
     if (correoConfirmado.present) {
       map['correo_confirmado'] = Variable<bool>(correoConfirmado.value);
     }
+    if (tokenNube.present) {
+      map['token_nube'] = Variable<String>(tokenNube.value);
+    }
     if (descargaInicial.present) {
       map['descarga_inicial'] = Variable<bool>(descargaInicial.value);
     }
@@ -5551,6 +5604,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
           ..write('authUid: $authUid, ')
           ..write('correo: $correo, ')
           ..write('correoConfirmado: $correoConfirmado, ')
+          ..write('tokenNube: $tokenNube, ')
           ..write('descargaInicial: $descargaInicial')
           ..write(')'))
         .toString();
@@ -9530,6 +9584,7 @@ typedef $$SesionTableCreateCompanionBuilder = SesionCompanion Function({
   Value<String?> authUid,
   Value<String?> correo,
   Value<bool> correoConfirmado,
+  Value<String?> tokenNube,
   Value<bool> descargaInicial,
 });
 typedef $$SesionTableUpdateCompanionBuilder = SesionCompanion Function({
@@ -9538,6 +9593,7 @@ typedef $$SesionTableUpdateCompanionBuilder = SesionCompanion Function({
   Value<String?> authUid,
   Value<String?> correo,
   Value<bool> correoConfirmado,
+  Value<String?> tokenNube,
   Value<bool> descargaInicial,
 });
 
@@ -9572,6 +9628,11 @@ class $$SesionTableFilterComposer
 
   ColumnFilters<bool> get correoConfirmado => $composableBuilder(
     column: $table.correoConfirmado,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tokenNube => $composableBuilder(
+    column: $table.tokenNube,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9615,6 +9676,11 @@ class $$SesionTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get tokenNube => $composableBuilder(
+    column: $table.tokenNube,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get descargaInicial => $composableBuilder(
     column: $table.descargaInicial,
     builder: (column) => ColumnOrderings(column),
@@ -9646,6 +9712,9 @@ class $$SesionTableAnnotationComposer
     column: $table.correoConfirmado,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get tokenNube =>
+      $composableBuilder(column: $table.tokenNube, builder: (column) => column);
 
   GeneratedColumn<bool> get descargaInicial => $composableBuilder(
     column: $table.descargaInicial,
@@ -9689,6 +9758,7 @@ class $$SesionTableTableManager
                 Value<String?> authUid = const Value.absent(),
                 Value<String?> correo = const Value.absent(),
                 Value<bool> correoConfirmado = const Value.absent(),
+                Value<String?> tokenNube = const Value.absent(),
                 Value<bool> descargaInicial = const Value.absent(),
               }) => SesionCompanion(
                 id: id,
@@ -9696,6 +9766,7 @@ class $$SesionTableTableManager
                 authUid: authUid,
                 correo: correo,
                 correoConfirmado: correoConfirmado,
+                tokenNube: tokenNube,
                 descargaInicial: descargaInicial,
               ),
           createCompanionCallback:
@@ -9705,6 +9776,7 @@ class $$SesionTableTableManager
                 Value<String?> authUid = const Value.absent(),
                 Value<String?> correo = const Value.absent(),
                 Value<bool> correoConfirmado = const Value.absent(),
+                Value<String?> tokenNube = const Value.absent(),
                 Value<bool> descargaInicial = const Value.absent(),
               }) => SesionCompanion.insert(
                 id: id,
@@ -9712,6 +9784,7 @@ class $$SesionTableTableManager
                 authUid: authUid,
                 correo: correo,
                 correoConfirmado: correoConfirmado,
+                tokenNube: tokenNube,
                 descargaInicial: descargaInicial,
               ),
           withReferenceMapper: (p0) => p0

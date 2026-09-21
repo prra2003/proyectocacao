@@ -87,56 +87,74 @@ void main() {
     return (productor: productor, finca: finca, lote: lote);
   }
 
-  group('vincular la cuenta', () {
-    test('conserva el auth.uid() y los datos ya subidos', () async {
+  group('entrar con Google', () {
+    test('sin cuenta no se sube nada; al entrar, todo queda a su nombre',
+        () async {
       final a = await instalar();
       await sembrarFinca(a);
-      await a.sync.sincronizar();
 
-      final uidAnonimo = a.api.uid;
-      expect(uidAnonimo, isNotNull);
-      expect(servidor.duenoDe('productores', a.api.filasDe('productores').single['id']! as String),
-          uidAnonimo);
+      // Antes de entrar no hay servidor que valga: el trabajo se queda en el
+      // teléfono. Esto es lo que cambió al salir de Supabase, donde una sesión
+      // anónima respaldaba sin que nadie entrara.
+      final sinCuenta = await a.sync.sincronizar();
+      expect(sinCuenta.ok, isFalse);
+      expect(a.api.uid, isNull);
+      expect(a.api.filasDe('productores'), isEmpty);
 
-      final resultado = await a.sync.vincularCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
-
+      final resultado = await a.sync.entrarConGoogle();
       expect(resultado.ok, isTrue);
-      // Lo que salva los datos: el uid es el mismo de antes.
-      expect(a.api.uid, uidAnonimo);
-      expect(a.api.correo, 'diego@finca.co');
-      final sesion = await a.db.syncDao.sesionActual();
-      expect(sesion!.authUid, uidAnonimo);
-      expect(sesion.correo, 'diego@finca.co');
-      // Y las filas siguen a nombre de la misma cuenta.
+
+      final uid = a.api.uid;
+      expect(uid, isNotNull);
+      // Lo anotado antes de entrar no se pierde: sube con la primera
+      // sincronización y queda a nombre de la cuenta.
+      expect(a.api.filasDe('productores'), hasLength(1));
       expect(
-        servidor.duenoDe('fincas', a.api.filasDe('fincas').single['id']! as String),
-        uidAnonimo,
+        servidor.duenoDe(
+          'productores',
+          a.api.filasDe('productores').single['id']! as String,
+        ),
+        uid,
       );
+      expect(
+        servidor.duenoDe(
+          'fincas',
+          a.api.filasDe('fincas').single['id']! as String,
+        ),
+        uid,
+      );
+
+      final sesion = await a.db.syncDao.sesionActual();
+      expect(sesion!.authUid, uid);
+      expect(sesion.correo, 'productor@gmail.com');
+      // El token se guarda: sin él habría que pedir la cuenta en cada arranque.
+      expect(sesion.tokenNube, isNotNull);
     });
 
-    test('un correo ya usado no fusiona nada y avisa', () async {
+    test('la misma cuenta desde otro teléfono es la misma cuenta', () async {
       final a = await instalar();
       await sembrarFinca(a);
-      await a.sync.sincronizar();
-      await a.sync.vincularCuenta(correo: 'diego@finca.co', clave: 'cacao1234');
-      // La persona abre el enlace del correo (Supabase exige confirmarlo).
-      servidor.confirmarCorreo('diego@finca.co');
+      await a.sync.entrarConGoogle();
 
-      final otra = await instalar();
-      await otra.sync.sincronizar();
-      final resultado = await otra.sync.vincularCuenta(
-        correo: 'diego@finca.co',
-        clave: 'otraClave1',
-      );
+      final b = await instalar();
+      await b.sync.entrarConGoogle();
+
+      // Mismo correo de Google, misma identidad: es lo que hace posible
+      // recuperar los datos en un equipo nuevo.
+      expect(b.api.uid, a.api.uid);
+    });
+
+    test('si la persona cierra la ventana de Google, no cambia nada', () async {
+      final a = await instalar();
+      await sembrarFinca(a);
+      a.api.googleCancela = true;
+
+      final resultado = await a.sync.entrarConGoogle();
 
       expect(resultado.ok, isFalse);
-      expect(resultado.error, 'ese correo ya tiene una cuenta');
-      // La instalación sigue con su cuenta anónima, sin mezclar nada.
-      expect((await otra.db.syncDao.sesionActual())!.correo, isNull);
-      expect(otra.api.uid, isNot(a.api.uid));
+      expect(resultado.error, contains('canceló'));
+      expect((await a.db.syncDao.sesionActual())!.authUid, isNull);
+      expect(a.api.filasDe('productores'), isEmpty);
     });
   });
 
@@ -145,18 +163,13 @@ void main() {
       final a = await instalar();
       final ids = await sembrarFinca(a);
       await a.sync.sincronizar();
-      await a.sync.vincularCuenta(correo: 'diego@finca.co', clave: 'cacao1234');
-      // La persona abre el enlace del correo (Supabase exige confirmarlo).
-      servidor.confirmarCorreo('diego@finca.co');
+      await a.sync.entrarConGoogle();
 
       final b = await instalar();
       // Antes de entrar, el teléfono B no sabe nada.
       expect(await b.perfil.watchProductor().first, isNull);
 
-      final resultado = await b.sync.entrarConCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
+      final resultado = await b.sync.entrarConGoogle();
 
       expect(resultado.ok, isTrue);
       expect(b.api.uid, a.api.uid, reason: 'la misma cuenta remota');
@@ -187,9 +200,7 @@ void main() {
       final a = await instalar();
       await sembrarFinca(a);
       await a.sync.sincronizar();
-      await a.sync.vincularCuenta(correo: 'diego@finca.co', clave: 'cacao1234');
-      // La persona abre el enlace del correo (Supabase exige confirmarlo).
-      servidor.confirmarCorreo('diego@finca.co');
+      await a.sync.entrarConGoogle();
 
       final b = await instalar();
       // Instalación normal: nada bloquea.
@@ -198,10 +209,7 @@ void main() {
       // Si la descarga falla, el bloqueo se mantiene: no se puede registrar
       // hasta saber si la cuenta ya tenía datos.
       b.api.fallosEnDescarga = 1;
-      final fallido = await b.sync.entrarConCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
+      final fallido = await b.sync.entrarConGoogle();
       expect(fallido.ok, isFalse);
       expect((await b.db.syncDao.sesionActual())!.descargaInicial, isFalse);
       expect(await b.perfil.watchProductor().first, isNull);
@@ -212,33 +220,25 @@ void main() {
       expect(await b.perfil.watchProductor().first, isNotNull);
     });
 
-    test('entrar con credenciales malas no bloquea ni cambia nada', () async {
+    test('si Google no deja entrar, el registro no queda bloqueado', () async {
       final b = await instalar();
-      final resultado = await b.sync.entrarConCuenta(
-        correo: 'nadie@finca.co',
-        clave: 'noexiste',
-      );
+      b.api.googleCancela = true;
+      final resultado = await b.sync.entrarConGoogle();
 
       expect(resultado.ok, isFalse);
-      expect(resultado.error, 'correo o contraseña incorrectos');
       final sesion = await b.db.syncDao.sesionActual();
       expect(sesion!.correo, isNull);
       expect(sesion.descargaInicial, isTrue);
     });
 
-    test('sincronizar después de entrar no abre otra sesión anónima', () async {
+    test('sincronizar después de entrar mantiene la misma cuenta', () async {
       final a = await instalar();
       await sembrarFinca(a);
       await a.sync.sincronizar();
-      await a.sync.vincularCuenta(correo: 'diego@finca.co', clave: 'cacao1234');
-      // La persona abre el enlace del correo (Supabase exige confirmarlo).
-      servidor.confirmarCorreo('diego@finca.co');
+      await a.sync.entrarConGoogle();
 
       final b = await instalar();
-      await b.sync.entrarConCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
+      await b.sync.entrarConGoogle();
       final uidTrasEntrar = b.api.uid;
 
       await b.sync.sincronizar();
@@ -257,14 +257,9 @@ void main() {
       a = await instalar();
       ids = await sembrarFinca(a);
       await a.sync.sincronizar();
-      await a.sync.vincularCuenta(correo: 'diego@finca.co', clave: 'cacao1234');
-      // La persona abre el enlace del correo (Supabase exige confirmarlo).
-      servidor.confirmarCorreo('diego@finca.co');
+      await a.sync.entrarConGoogle();
       b = await instalar();
-      await b.sync.entrarConCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
+      await b.sync.entrarConGoogle();
     });
 
     test('A crea una cosecha y B la recibe', () async {
@@ -409,17 +404,12 @@ void main() {
       final a = await instalar();
       final ids = await sembrarFinca(a);
       await a.sync.sincronizar();
-      await a.sync.vincularCuenta(correo: 'diego@finca.co', clave: 'cacao1234');
-      // La persona abre el enlace del correo (Supabase exige confirmarlo).
-      servidor.confirmarCorreo('diego@finca.co');
+      await a.sync.entrarConGoogle();
 
-      // Una instalación de otra persona, con su propia cuenta.
+      // Una instalación de otra persona: otra cuenta de Google, otro correo.
       final ajena = await instalar();
-      await ajena.sync.sincronizar();
-      await ajena.sync.vincularCuenta(
-        correo: 'otra@finca.co',
-        clave: 'otraClave1',
-      );
+      ajena.api.correoDeGoogle = 'vecina@gmail.com';
+      await ajena.sync.entrarConGoogle();
 
       // No baja nada de la cuenta de Diego.
       final resultado = await ajena.sync.sincronizar();
@@ -452,71 +442,12 @@ void main() {
     });
   });
 
-  group('confirmación del correo', () {
-    test('vincular deja el correo pendiente y no se puede entrar todavía',
-        () async {
-      final a = await instalar();
-      await sembrarFinca(a);
-      await a.sync.sincronizar();
-
-      await a.sync.vincularCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
-
-      // La cuenta existe, pero el correo no está confirmado: la app no puede
-      // decir que los datos están respaldados.
-      final sesion = await a.db.syncDao.sesionActual();
-      expect(sesion!.correo, 'diego@finca.co');
-      expect(sesion.correoConfirmado, isFalse);
-
-      // Y desde otro teléfono todavía no se entra.
-      final b = await instalar();
-      final intento = await b.sync.entrarConCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
-      expect(intento.ok, isFalse);
-      expect(await b.perfil.watchProductor().first, isNull);
-    });
-
-    test('al abrir el enlace, "ya confirmé" lo detecta y ya se puede entrar',
-        () async {
-      final a = await instalar();
-      await sembrarFinca(a);
-      await a.sync.sincronizar();
-      await a.sync.vincularCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
-
-      servidor.confirmarCorreo('diego@finca.co');
-      final confirmado = await a.sync.refrescarEstadoCuenta();
-
-      expect(confirmado, isTrue);
-      expect((await a.db.syncDao.sesionActual())!.correoConfirmado, isTrue);
-
-      final b = await instalar();
-      final entrada = await b.sync.entrarConCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
-      expect(entrada.ok, isTrue);
-      expect(await b.perfil.watchProductor().first, isNotNull);
-    });
-  });
-
   group('cerrar sesión', () {
     test('borra los datos del teléfono pero conserva su identidad', () async {
       final a = await instalar();
       await sembrarFinca(a);
       await a.sync.sincronizar();
-      await a.sync.vincularCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
-      servidor.confirmarCorreo('diego@finca.co');
-      await a.sync.refrescarEstadoCuenta();
+      await a.sync.entrarConGoogle();
 
       await a.sync.cerrarSesion();
 
@@ -538,19 +469,12 @@ void main() {
       final a = await instalar();
       final ids = await sembrarFinca(a);
       await a.sync.sincronizar();
-      await a.sync.vincularCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
-      servidor.confirmarCorreo('diego@finca.co');
+      await a.sync.entrarConGoogle();
 
       await a.sync.cerrarSesion();
       expect(await a.perfil.watchProductor().first, isNull);
 
-      final vuelta = await a.sync.entrarConCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
+      final vuelta = await a.sync.entrarConGoogle();
 
       expect(vuelta.ok, isTrue);
       final productor = await a.perfil.watchProductor().first;
@@ -561,15 +485,12 @@ void main() {
   });
 
   group('cambiar de cuenta en un teléfono con datos', () {
-    test('con credenciales malas no se borra nada', () async {
+    test('si Google no deja entrar, no se borra nada', () async {
       final a = await instalar();
       await sembrarFinca(a);
+      a.api.googleCancela = true;
 
-      final resultado = await a.sync.entrarConCuenta(
-        correo: 'nadie@finca.co',
-        clave: 'noexiste',
-        reemplazarDatosLocales: true,
-      );
+      final resultado = await a.sync.entrarConGoogle(reemplazarDatosLocales: true);
 
       expect(resultado.ok, isFalse);
       // Lo local sigue intacto: el borrado ocurre después de autenticarse.
@@ -582,22 +503,14 @@ void main() {
       final dueno = await instalar();
       final ids = await sembrarFinca(dueno);
       await dueno.sync.sincronizar();
-      await dueno.sync.vincularCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-      );
-      servidor.confirmarCorreo('diego@finca.co');
+      await dueno.sync.entrarConGoogle();
 
       // Otro teléfono que ya venía usándose sin cuenta.
       final otro = await instalar();
       final suyos = await sembrarFinca(otro);
       expect(suyos.lote, isNot(ids.lote));
 
-      final resultado = await otro.sync.entrarConCuenta(
-        correo: 'diego@finca.co',
-        clave: 'cacao1234',
-        reemplazarDatosLocales: true,
-      );
+      final resultado = await otro.sync.entrarConGoogle(reemplazarDatosLocales: true);
 
       expect(resultado.ok, isTrue);
       final productor = await otro.perfil.watchProductor().first;

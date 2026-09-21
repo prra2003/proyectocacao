@@ -16,7 +16,7 @@ String nuevoId() => _uuid.v4();
 /// creada puede aparecer modificada antes de existir.
 DateTime ahora() => DateTime.now();
 
-/// Columnas que van en todas las tablas para poder sincronizar con Supabase.
+/// Columnas que van en todas las tablas para poder sincronizar con el servidor.
 ///
 /// El [id] es un UUID generado en el dispositivo (no autoincremental) para que
 /// dos celulares que crean registros sin internet no choquen al sincronizar, y
@@ -53,7 +53,7 @@ class Asociaciones extends Table with SyncColumns {
 class Productores extends Table with SyncColumns {
   /// Dueño del registro: la identidad local de esta instalación (ver [Sesion]).
   /// Es lo que sustituye al viejo "toma el primer productor vivo" y lo que se
-  /// traduce al `auth.uid()` de Supabase al subir.
+  /// traduce al identificador de la cuenta de Google al subir.
   TextColumn get usuarioId => text().nullable()();
 
   TextColumn get nombreCompleto => text()();
@@ -122,7 +122,7 @@ class Diagnosticos extends Table with SyncColumns {
 ///
 /// [usuarioId] se genera en el primer arranque y **nunca cambia**: es la clave
 /// con la que la app encuentra "su" productor aunque en la base haya varios.
-/// [authUid] es el id de la sesión anónima de Supabase, que solo existe cuando
+/// [authUid] es el identificador de la cuenta de Google, que solo existe cuando
 /// hubo red alguna vez; se guarda aparte para que la identidad local no dependa
 /// de haber tenido conexión.
 @DataClassName('SesionLocal')
@@ -142,6 +142,12 @@ class Sesion extends Table {
   /// datos están respaldados.
   BoolColumn get correoConfirmado =>
       boolean().withDefault(const Constant(false))();
+
+  /// Sesión del servidor (no el token de Google).
+  ///
+  /// El token de Google dura una hora; esta sesión dura meses. Guardarla es lo
+  /// que evita tener que pedir la cuenta en cada arranque de la app.
+  TextColumn get tokenNube => text().nullable()();
 
   /// ¿Ya terminó la primera descarga tras entrar con una cuenta existente?
   ///

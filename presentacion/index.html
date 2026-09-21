@@ -1,0 +1,629 @@
+<title>Conozca la App del Cacao</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap">
+<style>
+:root{
+  --cafe-osc:#33200F; --cafe:#7A4A2B; --cafe-lote:#7B4B2C; --verde:#3D7A3F; --verde-cl:#DCEBD8;
+  --maduro:#C26A1E; --crema:#FBF2EA; --durazno:#FFD9C7; --blanco:#FFFFFF; --gris:#6E5A4C;
+  --borde:#C9B3A3; --fondo:#EFE4D6; --tinta:#2A1A0D; --aviso:#FFF4C2;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--fondo);color:var(--tinta);font-family:Roboto,system-ui,sans-serif;font-size:17px;padding-inline:16px;padding-block:20px 60px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[data-x]:focus-visible{outline:3px solid var(--maduro);outline-offset:2px}
+.contenedor{max-width:1120px;margin:0 auto;display:grid;gap:28px;grid-template-columns:minmax(0,1fr) 390px minmax(0,1fr);align-items:start}
+.intro h1{font-family:Fraunces,Georgia,serif;font-size:2.1rem;line-height:1.1;margin:0 0 12px;color:var(--cafe-osc);text-wrap:balance}
+.intro p{line-height:1.5;margin:0 0 14px;max-width:34ch}
+.pasos{display:grid;gap:10px;margin:18px 0}
+.paso{display:flex;gap:12px;align-items:flex-start;line-height:1.4}
+.paso b{flex:none;width:30px;height:30px;border-radius:50%;background:var(--maduro);color:#fff;display:grid;place-items:center}
+.pantallas{display:flex;flex-wrap:wrap;gap:8px}
+.pantallas button{border:1.5px solid var(--cafe);background:var(--blanco);border-radius:999px;padding:8px 14px;font-weight:500;color:var(--cafe)}
+.pantallas button[aria-pressed="true"]{background:var(--cafe);color:#fff}
+
+/* Teléfono */
+.telefono{width:100%;max-width:390px;height:780px;background:#1c130c;border-radius:44px;padding:12px;box-shadow:0 30px 60px -20px rgba(51,32,15,.5);margin:0 auto}
+.pantalla{position:relative;height:100%;border-radius:34px;overflow:hidden;background:var(--crema)}
+.vista{position:absolute;inset:0;overflow-y:auto;display:flex;flex-direction:column}
+.estado-tel{display:flex;justify-content:space-between;font-size:13px;padding:10px 22px 0;font-weight:500}
+[data-x]{cursor:pointer;position:relative;transition:box-shadow .2s}
+.pistas [data-x]::after{content:"?";position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--maduro);color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px #fff;z-index:3;pointer-events:none}
+@media (prefers-reduced-motion:no-preference){.pistas [data-x]::after{animation:latido 2s infinite}}
+@keyframes latido{50%{transform:scale(1.18)}}
+[data-x].activo{box-shadow:0 0 0 4px var(--maduro)!important;border-radius:14px}
+.grad{background:linear-gradient(135deg,#2F7A3C 0%,#5A5A30 55%,#7A4A2B 100%);color:#fff}
+
+/* Bienvenida */
+.bienv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px 26px;text-align:center}
+.bienv h2{font-size:1.8rem;margin:6px 0 0;line-height:1.15}
+.bienv p{margin:0;opacity:.92;line-height:1.45}
+.btn-grande{width:100%;border:0;border-radius:18px;padding:17px;font-weight:700;font-size:1.05rem}
+.btn-blanco{background:#fff;color:var(--cafe-osc)}
+.btn-maduro{background:var(--maduro);color:#fff}
+.btn-texto{background:none;border:0;color:#fff;font-weight:700;text-decoration:underline;padding:8px}
+.chico{font-size:.85rem;opacity:.85}
+
+/* Formularios */
+.form{padding:16px 18px 30px;display:grid;gap:16px}
+.campo label{display:block;font-weight:700;margin-bottom:7px;font-size:.98rem}
+.tf{background:#fff;border:1.5px solid var(--borde);border-radius:14px;padding:14px;color:var(--gris);display:flex;justify-content:space-between;gap:8px}
+.tf.lleno{color:var(--tinta)}
+.aviso-gps{background:#fff;border-radius:16px;padding:14px;line-height:1.4;color:var(--gris)}
+.aviso-gps b{color:var(--tinta)}
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Inicio */
+.cab{padding:8px 18px 22px;border-radius:0 0 30px 30px}
+.finca{display:flex;align-items:center;gap:14px;padding:18px 6px}
+.finca h2{margin:0;font-size:1.55rem}
+.finca small{font-size:1rem;opacity:.9}
+.cinta{background:rgba(255,255,255,.18);border-radius:16px;padding:13px 16px;display:flex;gap:10px;align-items:center;font-weight:500}
+.indicadores{background:#fff;color:var(--tinta);border-radius:22px;margin-top:14px;padding:16px 8px;display:grid;grid-template-columns:repeat(3,1fr);text-align:center}
+.ind .ico{width:46px;height:46px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;font-size:22px}
+.ind b{display:block;font-size:1.45rem}
+.ind span{color:var(--gris);font-size:.9rem}
+.seccion{display:flex;justify-content:space-between;align-items:center;padding:20px 20px 8px}
+.seccion h3{margin:0;font-size:1.25rem}
+.agregar{border:0;background:none;color:var(--cafe);font-weight:700;padding:6px 8px}
+.lotes{display:grid;gap:12px;padding:0 16px 130px}
+.lote{border-radius:22px;padding:18px 20px;color:#fff;display:grid;gap:6px}
+.lote h4{margin:0;font-size:1.3rem}
+.lote .sub{opacity:.85;font-size:.95rem}
+.nav{position:absolute;left:0;right:0;bottom:0;height:80px;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:0 44px;box-shadow:0 -4px 14px rgba(0,0,0,.05);z-index:2}
+.nav button{border:0;background:none;display:grid;justify-items:center;font-weight:500;color:var(--gris);font-size:.9rem;gap:2px}
+.nav button.sel{color:var(--cafe);font-weight:700}
+.nav .ic{font-size:22px}
+.fab{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);width:84px;height:84px;border-radius:50%;background:var(--maduro);color:#fff;border:6px solid var(--crema);font-size:42px;line-height:1;z-index:4;display:grid;place-items:center}
+.fab-lbl{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:.78rem;font-weight:700;color:var(--maduro);z-index:4}
+
+/* Lote detalle */
+.barra{display:flex;align-items:center;gap:14px;padding:12px 16px 6px}
+.barra h2{margin:0;font-size:1.5rem;flex:1}
+.atras,.basura{border:0;background:none;font-size:24px;padding:4px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid #E3CFC2}
+.tabs button{border:0;background:none;padding:14px 4px;font-weight:700;color:var(--gris);border-bottom:3px solid transparent}
+.tabs button.sel{color:var(--cafe);border-color:var(--cafe)}
+.tarjeta{background:#fff;border-radius:22px;margin:14px;padding:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{background:var(--durazno);border-radius:999px;padding:8px 14px;font-weight:500}
+.prod{display:flex;gap:12px;align-items:center;font-weight:700;font-size:1.08rem}
+.circ{width:46px;height:46px;border-radius:50%;background:var(--durazno);display:grid;place-items:center;flex:none;font-size:21px}
+.registro{display:flex;gap:14px;padding:12px 18px;align-items:center}
+.registro b{display:block;font-size:1.08rem}
+.registro span{color:var(--gris);font-size:.93rem}
+.fab-ext{position:absolute;right:16px;bottom:18px;border:0;border-radius:18px;background:#8B4E26;color:#fff;font-weight:700;padding:16px 22px;font-size:1.05rem}
+.panel-tab[hidden]{display:none}
+
+/* Hojas y diálogos */
+.capa{position:absolute;inset:0;background:rgba(20,12,6,.5);display:flex;z-index:6}
+.capa.abajo{align-items:flex-end}
+.capa.centro{align-items:center;justify-content:center;padding:14px}
+.hoja{background:var(--crema);width:100%;border-radius:28px 28px 0 0;padding:22px 18px 28px;display:grid;gap:14px}
+.hoja h3,.dlg h3{margin:0;font-size:1.3rem;text-align:center}
+.opcion{background:#fff;border:1.5px solid var(--borde);border-radius:18px;padding:18px;font-weight:700;display:flex;gap:12px;align-items:center;justify-content:center}
+.dlg{background:#fff;width:100%;max-height:94%;overflow:auto;border-radius:26px;padding:20px 18px;display:grid;gap:14px}
+.opciones{display:flex;flex-wrap:wrap;gap:8px}
+.op{border:1.5px solid var(--cafe);border-radius:999px;padding:9px 14px;background:#fff;color:var(--cafe);font-weight:500}
+.op.sel{background:var(--verde);border-color:var(--verde);color:#fff}
+.nota{background:#fff;border:1.5px solid var(--borde);border-radius:14px;padding:14px;min-height:70px;color:var(--gris)}
+.pie-dlg{display:flex;justify-content:flex-end;gap:10px;align-items:center}
+.pie-dlg .cancelar{border:0;background:none;color:var(--cafe);font-weight:700;padding:12px}
+.pie-dlg .aceptar{border:0;background:var(--maduro);color:#fff;border-radius:14px;padding:13px 22px;font-weight:700}
+.foto{display:flex;gap:10px}
+.foto button{flex:1;border:1.5px solid var(--cafe);background:#fff;color:var(--cafe);border-radius:14px;padding:13px;font-weight:700}
+
+/* Perfil */
+.cab-simple{padding:18px 20px 20px}
+.cab-simple h2{margin:0;font-size:1.55rem}
+.fila{display:flex;align-items:center;gap:14px}
+.avatar{width:64px;height:64px;border-radius:50%;background:var(--verde-cl);display:grid;place-items:center;font-size:29px;flex:none}
+.btn-linea{width:100%;margin-top:14px;border:1.5px solid #8C7466;background:none;border-radius:16px;padding:12px;font-weight:700;color:var(--cafe)}
+.texto-suave{color:var(--gris);line-height:1.45;margin:10px 0 0}
+
+/* Mapa */
+.mapa{flex:1;position:relative;background:#CFE0C0;overflow:hidden;min-height:380px}
+.mapa svg{position:absolute;inset:0;width:100%;height:100%}
+.pin{position:absolute;left:50%;top:52%;transform:translate(-50%,-100%);font-size:44px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.3))}
+.globo{position:absolute;left:14px;right:14px;top:14px;background:rgba(255,255,255,.94);border-radius:16px;padding:12px 14px;line-height:1.35;text-align:center}
+.acciones-mapa{padding:14px;display:grid;gap:10px;background:var(--crema)}
+.btn-verde{background:var(--verde);color:#fff}
+.btn-cafe{background:var(--cafe);color:#fff}
+
+/* Explicación */
+.explica{position:sticky;top:20px;background:#fff;border-radius:24px;padding:22px;box-shadow:0 14px 34px -18px rgba(51,32,15,.45);display:grid;gap:14px}
+.explica .eti{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--maduro);font-weight:700}
+.explica h3{font-family:Fraunces,Georgia,serif;margin:0;font-size:1.5rem;line-height:1.15;color:var(--cafe-osc);text-wrap:balance}
+.explica p{margin:0;line-height:1.55;font-size:1.06rem}
+.ejemplo{background:var(--aviso);border-radius:14px;padding:12px 14px;line-height:1.45}
+.votos{display:flex;flex-wrap:wrap;gap:8px}
+.voto{border:1.5px solid var(--borde);background:#fff;border-radius:999px;padding:9px 14px;font-weight:500}
+.voto[aria-pressed="true"]{background:var(--cafe-osc);color:#fff;border-color:var(--cafe-osc)}
+textarea{width:100%;min-height:84px;border:1.5px solid var(--borde);border-radius:14px;padding:12px;font:inherit;resize:vertical;background:#FFFCF8;color:var(--tinta)}
+.ir{border:0;background:var(--verde);color:#fff;border-radius:14px;padding:12px 16px;font-weight:700;justify-self:start}
+.guardado{color:var(--verde);font-weight:500;font-size:.95rem;min-height:1.2em}
+.opiniones button{border:0;background:var(--cafe-osc);color:#fff;border-radius:14px;padding:12px 16px;font-weight:700}
+.lista-op{margin-top:14px;display:grid;gap:10px}
+.item-op{background:#fff;border-radius:14px;padding:12px 14px;line-height:1.4}
+.item-op small{color:var(--gris)}
+
+@media (max-width:1060px){
+  .contenedor{grid-template-columns:1fr;max-width:560px}
+  .explica{position:static}
+  .telefono{height:720px}
+}
+@media (max-width:440px){
+  .telefono{padding:6px;border-radius:30px;height:700px}
+  .pantalla{border-radius:24px}
+  .intro h1{font-size:1.7rem}
+  .nav{padding:0 26px}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mazorca" viewBox="0 0 110 150">
+    <path d="M55 20 C58 12 62 7 70 4" stroke="#5B8C3E" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M55 18 C86 18 100 60 96 92 C92 124 74 146 55 146 C36 146 18 124 14 92 C10 60 24 18 55 18Z" fill="#F4F0E8"/>
+    <path d="M55 18 C86 18 100 60 96 92 C92 124 74 146 55 146" fill="#E2D7C6"/>
+    <g stroke="#B9A88F" stroke-width="2.5" fill="none" stroke-linecap="round">
+      <path d="M55 22 C44 50 42 110 55 142"/><path d="M55 22 C66 50 68 110 55 142"/>
+      <path d="M50 24 C28 50 26 112 48 140"/><path d="M60 24 C82 50 84 112 62 140"/>
+    </g>
+  </symbol>
+</svg>
+
+<div class="contenedor">
+  <section class="intro">
+    <h1>Así funciona la app de la Red Nacional de Cacao</h1>
+    <p>Estas son las pantallas de la aplicación, tal como se ven en el celular. Queremos saber qué le sirve y qué le cambiaría.</p>
+    <div class="pasos">
+      <div class="paso"><b>1</b><span>Toque cualquier parte del teléfono que tenga el círculo naranja <strong>?</strong></span></div>
+      <div class="paso"><b>2</b><span>Lea para qué sirve.</span></div>
+      <div class="paso"><b>3</b><span>Díganos si le sirve, si no la entiende o qué le cambiaría.</span></div>
+    </div>
+    <p style="margin-bottom:8px"><strong>Ir a una pantalla:</strong></p>
+    <div class="pantallas" id="menu">
+      <button data-ir="bienvenida">Bienvenida</button>
+      <button data-ir="datos">Mis datos</button>
+      <button data-ir="finca">Mi finca</button>
+      <button data-ir="mapa">Mapa</button>
+      <button data-ir="inicio">Inicio</button>
+      <button data-ir="lote">Un lote</button>
+      <button data-ir="elegir">Anotar</button>
+      <button data-ir="perfil">Perfil</button>
+      <button data-ir="crearCuenta">Crear cuenta</button>
+    </div>
+    <div class="opiniones">
+      <p style="margin:22px 0 8px"><strong>Para el equipo:</strong> las opiniones quedan guardadas en este computador o celular.</p>
+      <button id="verOpiniones">Ver opiniones anotadas (<span id="cuenta">0</span>)</button>
+      <div class="lista-op" id="listaOp" hidden></div>
+    </div>
+  </section>
+
+  <div class="telefono">
+    <div class="pantalla pistas" id="pantalla">
+
+      <!-- BIENVENIDA -->
+      <div class="vista grad" data-vista="bienvenida" hidden>
+        <div class="bienv">
+          <div data-x="logo" tabindex="0"><svg width="104" height="142" aria-label="Mazorca de cacao"><use href="#mazorca"/></svg></div>
+          <h2 data-x="bienvenida" tabindex="0">Red Nacional de Cacao</h2>
+          <p>Lleve el control de su finca, sus lotes y sus cosechas.<br>Funciona sin señal.</p>
+          <button class="btn-grande btn-blanco" data-x="comenzar">Comenzar registro</button>
+          <p class="chico">Solo le pediremos su nombre y los datos de la finca.</p>
+          <button class="btn-texto" data-x="yaTengo">Ya tengo cuenta</button>
+        </div>
+      </div>
+
+      <!-- PASO 1: MIS DATOS -->
+      <div class="vista" data-vista="datos" hidden>
+        <div class="grad cab-simple"><div class="estado-tel" style="padding:0 0 10px"><span>9:00</span><span>📶 🔋</span></div><h2>Mis datos</h2><div class="chico" data-x="paso1">Paso 1 de 2</div></div>
+        <div class="form">
+          <div class="campo" data-x="nombreProd" tabindex="0"><label>Nombre completo</label><div class="tf lleno">Diego Parra</div></div>
+          <div class="campo" data-x="telefono" tabindex="0"><label>Teléfono</label><div class="tf lleno">300 123 4567</div></div>
+          <div class="campo" data-x="correoProd" tabindex="0"><label>Correo</label><div class="tf">Opcional</div></div>
+          <button class="btn-grande btn-maduro" data-x="crearPerfil">Crear perfil</button>
+        </div>
+      </div>
+
+      <!-- PASO 2: MI FINCA -->
+      <div class="vista" data-vista="finca" hidden>
+        <div class="grad cab-simple"><div class="estado-tel" style="padding:0 0 10px"><span>9:01</span><span>📶 🔋</span></div><h2>Mi finca</h2><div class="chico" data-x="paso2">Paso 2 de 2</div></div>
+        <div class="form">
+          <div class="campo" data-x="nombreFinca" tabindex="0"><label>Nombre de la finca</label><div class="tf lleno">La Esperanza</div></div>
+          <div class="campo" data-x="municipio" tabindex="0"><label>Municipio</label><div class="tf lleno">San Vicente de Chucurí</div></div>
+          <div class="campo" data-x="departamento" tabindex="0"><label>Departamento</label><div class="tf lleno">Santander</div></div>
+          <div class="aviso-gps" data-x="gpsOpcional" tabindex="0"><b>Ubicación GPS (opcional)</b><br>Sirve para el clima y para ubicar la finca en el mapa de la Red. El GPS funciona sin señal; el mapa necesita internet.</div>
+          <button class="btn-grande btn-cafe" data-x="marcarMapa">📍 Marcar en el mapa</button>
+          <div class="dos">
+            <div class="campo" data-x="latlon" tabindex="0"><label>Latitud</label><div class="tf lleno">6.88123</div></div>
+            <div class="campo"><label>Longitud</label><div class="tf lleno">-73.41234</div></div>
+          </div>
+          <button class="btn-grande btn-maduro" data-x="registrarFinca">Registrar finca</button>
+        </div>
+      </div>
+
+      <!-- MAPA -->
+      <div class="vista" data-vista="mapa" hidden>
+        <div class="barra"><button class="atras" data-x="atras">←</button><h2>Ubicación de la finca</h2></div>
+        <div class="mapa" data-x="mapa" tabindex="0">
+          <svg viewBox="0 0 360 440" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="360" height="440" fill="#D6E6C6"/>
+            <path d="M-10 120 C80 90 140 160 220 130 S340 70 380 110 L380 -10 L-10 -10Z" fill="#BFD7A8"/>
+            <path d="M-10 330 C60 300 150 360 240 320 S350 300 380 330 L380 460 L-10 460Z" fill="#C4DBAE"/>
+            <path d="M40 440 C90 350 70 260 160 210 S300 150 380 60" stroke="#8FC1E3" stroke-width="12" fill="none"/>
+            <path d="M-10 250 L380 290" stroke="#fff" stroke-width="7"/>
+            <path d="M200 -10 L170 460" stroke="#F4EBDD" stroke-width="5"/>
+            <text x="22" y="236" font-size="13" fill="#5B6B4E" font-family="Roboto">Vía a San Vicente</text>
+          </svg>
+          <div class="globo">Toque el mapa para marcar la finca.<br>6.88123, -73.41234</div>
+          <div class="pin">📍</div>
+        </div>
+        <div class="acciones-mapa">
+          <button class="btn-grande btn-verde" data-x="gps">📡 Estoy en la finca</button>
+          <button class="btn-grande btn-cafe" data-x="usarPunto">Usar este punto</button>
+        </div>
+      </div>
+
+      <!-- INICIO -->
+      <div class="vista" data-vista="inicio">
+        <div class="cab grad">
+          <div class="estado-tel" style="padding:4px 4px 0"><span>9:02</span><span>📶 🔋</span></div>
+          <div class="finca" data-x="finca" tabindex="0">
+            <svg width="40" height="54" aria-hidden="true"><use href="#mazorca"/></svg>
+            <div><h2>La Esperanza</h2><small>San Vicente de Chucurí</small></div>
+          </div>
+          <div class="cinta" data-x="cinta" tabindex="0">☁️ Todo guardado y enviado</div>
+          <div class="indicadores">
+            <div class="ind" data-x="kg" tabindex="0"><div class="ico" style="background:#FBE3D0">🧺</div><b>125.5</b><span>kg en 2026</span></div>
+            <div class="ind" data-x="numLotes" tabindex="0"><div class="ico" style="background:#DCEBD8">🌳</div><b>2</b><span>lotes</span></div>
+            <div class="ind" data-x="hectareas" tabindex="0"><div class="ico" style="background:#EDE3DA">⛰️</div><b>4</b><span>hectáreas</span></div>
+          </div>
+        </div>
+        <div class="seccion"><h3>Mis lotes</h3><button class="agregar" data-x="agregarLote">＋ Agregar</button></div>
+        <div class="lotes">
+          <div class="lote" style="background:var(--cafe-lote)" data-x="tarjetaLote" tabindex="0">
+            <h4>Lote 1</h4><div class="sub">CCN-51 · 2.5 ha · 6 años</div>
+            <div data-x="ultimaLabor">💧 Riego, hoy</div>
+            <div>🧺 125.5 kg en 2026</div>
+          </div>
+          <div class="lote" style="background:var(--verde)">
+            <h4>Lote El Guamo</h4><div class="sub">ICS-95 · 1.5 ha · 3 años</div>
+            <div>✂️ Poda, hace 5 días</div>
+            <div>🧺 Sin cosechas en 2026</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOTE -->
+      <div class="vista" data-vista="lote" hidden>
+        <div class="estado-tel"><span>11:44</span><span>📶 🔋</span></div>
+        <div class="barra"><button class="atras" data-x="atras">←</button><h2>Lote 1</h2><button class="basura" data-x="borrarLote">🗑️</button></div>
+        <div class="tabs">
+          <button class="sel" data-x="tabLabores" data-tab="labores">Labores</button>
+          <button data-x="tabCosechas" data-tab="cosechas">Cosechas</button>
+          <button data-x="tabEstado" data-tab="estado">Estado</button>
+        </div>
+        <div class="tarjeta">
+          <div class="chips" data-x="datosLote" tabindex="0">
+            <span class="chip">🌱 CCN-51</span><span class="chip">▭ 2.5 ha</span><span class="chip">🕒 6 años</span>
+          </div>
+          <div class="prod" data-x="produccion" tabindex="0"><span class="circ">🫘</span>Producción 2026: 125.5 kg</div>
+        </div>
+        <div class="panel-tab" data-panel="labores">
+          <div class="registro" data-x="registroLabor" tabindex="0"><span class="circ">🌿</span><div><b>Fertilización</b><span>30 ago 2026 · Abono orgánico, 2 kg por árbol</span></div></div>
+          <div class="registro"><span class="circ">💧</span><div><b>Riego</b><span>17 sep 2026</span></div></div>
+        </div>
+        <div class="panel-tab" data-panel="cosechas" hidden>
+          <div class="registro" data-x="registroCosecha" tabindex="0"><span class="circ">🧺</span><div><b>80 kg</b><span>12 ago 2026 · Secado al sol 5 días</span></div></div>
+          <div class="registro"><span class="circ">🧺</span><div><b>45.5 kg</b><span>2 jul 2026 · Cacao en baba</span></div></div>
+        </div>
+        <div class="panel-tab" data-panel="estado" hidden>
+          <div class="registro" data-x="registroEstado" tabindex="0"><span class="circ">📷</span><div><b>Floración</b><span>5 sep 2026 · Buena floración, sin monilla</span></div></div>
+        </div>
+        <button class="fab-ext" data-x="fabLabor" id="fabLote">＋ Labor</button>
+      </div>
+
+      <!-- HOJA: ¿EN CUÁL LOTE? -->
+      <div class="vista" data-vista="elegir" hidden>
+        <div class="cab grad" style="opacity:.5"><div class="finca"><div><h2>La Esperanza</h2></div></div></div>
+        <div class="capa abajo">
+          <div class="hoja">
+            <h3 data-x="enCualLote" tabindex="0">¿En cuál lote?</h3>
+            <button class="opcion" data-x="lote1">Lote 1</button>
+            <button class="opcion">Lote El Guamo</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOJA: ¿QUÉ VA A ANOTAR? -->
+      <div class="vista" data-vista="anotar" hidden>
+        <div class="cab grad" style="opacity:.5"><div class="finca"><div><h2>La Esperanza</h2></div></div></div>
+        <div class="capa abajo">
+          <div class="hoja">
+            <h3 data-x="queAnotar" tabindex="0">¿Qué va a anotar en Lote 1?</h3>
+            <button class="opcion" data-x="unaLabor">🌿 Una labor</button>
+            <button class="opcion" data-x="unaCosecha">🧺 Una cosecha</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIÁLOGO: REGISTRAR LABOR -->
+      <div class="vista" data-vista="labor" hidden>
+        <div class="capa centro">
+          <div class="dlg">
+            <h3 data-x="dlgLabor" tabindex="0">Registrar labor</h3>
+            <div class="opciones" data-x="tipoLabor" tabindex="0">
+              <span class="op">Poda</span><span class="op sel">Fertilización</span><span class="op">Control fitosanitario</span><span class="op">Riego</span><span class="op">Otra labor</span>
+            </div>
+            <div class="campo" data-x="fechaLabor" tabindex="0"><label>Fecha de la labor</label><div class="tf lleno">📅 17 sep 2026</div></div>
+            <div class="campo" data-x="obsLabor" tabindex="0"><label>Observaciones</label><div class="nota">Qué se hizo, con qué producto, dosis...</div></div>
+            <div class="pie-dlg"><button class="cancelar">Cancelar</button><button class="aceptar" data-x="registrarLabor">Registrar</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIÁLOGO: REGISTRAR COSECHA -->
+      <div class="vista" data-vista="cosecha" hidden>
+        <div class="capa centro">
+          <div class="dlg">
+            <h3 data-x="dlgCosecha" tabindex="0">Registrar cosecha</h3>
+            <div class="campo" data-x="cantidad" tabindex="0"><label>Cantidad</label><div class="tf lleno">80 <span style="color:var(--gris)">kg</span></div></div>
+            <div class="campo" data-x="fechaCosecha" tabindex="0"><label>Fecha de la cosecha</label><div class="tf lleno">📅 17 sep 2026</div></div>
+            <div class="campo" data-x="obsCosecha" tabindex="0"><label>Observaciones</label><div class="nota">Cacao en baba, seco, calidad...</div></div>
+            <div class="pie-dlg"><button class="cancelar">Cancelar</button><button class="aceptar" data-x="registrarCosecha">Registrar</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIÁLOGO: ESTADO DEL LOTE -->
+      <div class="vista" data-vista="estado" hidden>
+        <div class="capa centro">
+          <div class="dlg">
+            <h3 data-x="dlgEstado" tabindex="0">Estado del lote</h3>
+            <div class="opciones" data-x="fenologia" tabindex="0">
+              <span class="op">Vegetativo</span><span class="op sel">Floración</span><span class="op">Cuajado</span><span class="op">Fructificación</span><span class="op">Maduración</span><span class="op">Cosecha</span>
+            </div>
+            <div class="campo" data-x="fechaEstado" tabindex="0"><label>Fecha del diagnóstico</label><div class="tf lleno">📅 17 sep 2026</div></div>
+            <div class="foto" data-x="fotoEstado" tabindex="0"><button>📷 Foto</button><button>🖼️ Galería</button></div>
+            <div class="campo" data-x="notasEstado" tabindex="0"><label>Notas</label><div class="nota">Qué se ve en el lote: manchas, monilla, escoba...</div></div>
+            <div class="pie-dlg"><button class="cancelar">Cancelar</button><button class="aceptar" data-x="guardarEstado">Guardar</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PERFIL -->
+      <div class="vista" data-vista="perfil" hidden>
+        <div class="grad cab-simple"><div class="estado-tel" style="padding:0 0 12px"><span>6:42</span><span>📶 🔋</span></div><h2>Mi perfil</h2></div>
+        <div class="tarjeta" data-x="productor" tabindex="0">
+          <div class="fila"><span class="avatar">👤</span><div><b style="font-size:1.25rem">Diego Parra</b><div style="color:var(--gris)">Productor de cacao</div></div></div>
+          <p style="margin:12px 0 0">📞 300 123 4567</p>
+          <button class="btn-linea" data-x="editarDatos">✏️ Editar mis datos</button>
+        </div>
+        <div class="tarjeta" data-x="cuenta" tabindex="0">
+          <div class="fila"><span class="avatar" style="width:52px;height:52px;font-size:23px">🛡️</span><b>diego.cacao@finca.co</b></div>
+          <p class="texto-suave">Sus datos están respaldados. Puede entrar con este correo desde otro teléfono.</p>
+          <button class="btn-linea" data-x="cerrarSesion">Cerrar sesión</button>
+        </div>
+        <div class="tarjeta" data-x="fincaPerfil" tabindex="0" style="margin-bottom:120px">
+          <b style="font-size:1.25rem">La Esperanza</b>
+          <p style="margin:10px 0 0">📍 San Vicente de Chucurí, Santander</p>
+          <p style="margin:6px 0 0;color:var(--gris)">🧭 6.8812, -73.4123</p>
+          <button class="btn-linea" data-x="editarFinca">✏️ Editar la finca</button>
+        </div>
+      </div>
+
+      <!-- CREAR CUENTA -->
+      <div class="vista" data-vista="crearCuenta" hidden>
+        <div class="grad cab-simple"><div class="estado-tel" style="padding:0 0 10px"><span>6:45</span><span>📶 🔋</span></div><h2>Crear cuenta</h2></div>
+        <div class="form">
+          <div class="aviso-gps" data-x="porQueCuenta" tabindex="0">Con una cuenta puede recuperar su finca en otro teléfono si pierde este. Sus datos actuales no se pierden.</div>
+          <div class="campo" data-x="correoCuenta" tabindex="0"><label>Correo</label><div class="tf lleno">diego.cacao@finca.co</div></div>
+          <div class="campo" data-x="clave" tabindex="0"><label>Contraseña</label><div class="tf">••••••</div></div>
+          <div class="campo"><label>Repita la contraseña</label><div class="tf">••••••</div></div>
+          <button class="btn-grande btn-maduro" data-x="botonCrearCuenta">Crear cuenta</button>
+        </div>
+      </div>
+
+      <!-- Barra inferior (solo Inicio y Perfil) -->
+      <div id="barraInf">
+        <nav class="nav">
+          <button class="sel" data-x="navInicio" data-nav="inicio"><span class="ic">🏠</span>Inicio</button>
+          <button data-x="navPerfil" data-nav="perfil"><span class="ic">👤</span>Perfil</button>
+        </nav>
+        <button class="fab" data-x="anotar" aria-label="Anotar">＋</button>
+        <span class="fab-lbl">Anotar</span>
+      </div>
+    </div>
+  </div>
+
+  <aside class="explica" aria-live="polite">
+    <span class="eti" id="eEti">Toque el teléfono</span>
+    <h3 id="eTit">¿Para qué sirve cada cosa?</h3>
+    <p id="eTxt">Toque cualquier botón, tarjeta o letrero del teléfono. Aquí le contamos para qué sirve, con palabras sencillas.</p>
+    <div class="ejemplo" id="eEj" hidden></div>
+    <button class="ir" id="eIr" hidden>Ver esa pantalla →</button>
+    <div id="eOpina" hidden>
+      <p style="font-weight:700;margin-bottom:10px">¿Qué le parece?</p>
+      <div class="votos" role="group" aria-label="Su opinión">
+        <button class="voto" data-voto="Me sirve">👍 Me sirve</button>
+        <button class="voto" data-voto="No lo entiendo">🤔 No lo entiendo</button>
+        <button class="voto" data-voto="Lo cambiaría">✏️ Lo cambiaría</button>
+        <button class="voto" data-voto="No lo necesito">👎 No lo necesito</button>
+      </div>
+      <label for="comentario" style="display:block;font-weight:700;margin:14px 0 8px">¿Qué le cambiaría o agregaría?</label>
+      <textarea id="comentario" placeholder="Ej: que diga los bultos en vez de kilos"></textarea>
+      <div class="guardado" id="eGuardado"></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const X = {
+  logo:{p:"Bienvenida",t:"La mazorca de la Red",x:"La mazorca de cacao es el símbolo de la aplicación. La verá cada vez que abra la app."},
+  bienvenida:{p:"Bienvenida",t:"La primera pantalla",x:"Es lo primero que ve quien instala la app: «Lleve el control de su finca, sus lotes y sus cosechas. Funciona sin señal»."},
+  comenzar:{p:"Bienvenida",t:"Comenzar registro",x:"Si es la primera vez, toque aquí. La app le pide sus datos en el paso 1 y los de la finca en el paso 2.",e:"No necesita internet para registrarse.",ir:"datos"},
+  yaTengo:{p:"Bienvenida",t:"Ya tengo cuenta",x:"Si cambió de celular o lo perdió, entre con su correo y su contraseña. La app baja otra vez su finca, sus lotes y sus registros."},
+  paso1:{p:"Mis datos",t:"Paso 1 de 2",x:"El registro son solo dos pantallas cortas: primero usted, después su finca. Así sabe cuánto falta."},
+  nombreProd:{p:"Mis datos",t:"Nombre completo",x:"Su nombre como productor de cacao. Es el único dato obligatorio de esta pantalla."},
+  telefono:{p:"Mis datos",t:"Teléfono",x:"Para que la asociación o el técnico lo puedan contactar."},
+  correoProd:{p:"Mis datos",t:"Correo",x:"Es opcional aquí. Solo se necesita cuando quiera crear la cuenta de respaldo."},
+  crearPerfil:{p:"Mis datos",t:"Crear perfil",x:"Guarda sus datos y lo pasa al paso 2, donde registra la finca.",ir:"finca"},
+  paso2:{p:"Mi finca",t:"Paso 2 de 2",x:"La última pantalla del registro. Después de esto ya puede empezar a anotar."},
+  nombreFinca:{p:"Mi finca",t:"Nombre de la finca",x:"Como usted le dice a su finca. Aparecerá arriba en la pantalla de Inicio."},
+  municipio:{p:"Mi finca",t:"Municipio",x:"El municipio donde queda la finca."},
+  departamento:{p:"Mi finca",t:"Departamento",x:"El departamento donde queda la finca."},
+  gpsOpcional:{p:"Mi finca",t:"Ubicación GPS (opcional)",x:"Es opcional: si no la pone, la app funciona igual. Sirve para el clima y para ubicar la finca en el mapa de la Red.",e:"El GPS funciona sin señal; el mapa sí necesita internet."},
+  marcarMapa:{p:"Mi finca",t:"Marcar en el mapa",x:"Abre un mapa para señalar dónde queda la finca, sin tener que escribir números.",ir:"mapa"},
+  latlon:{p:"Mi finca",t:"Latitud y longitud",x:"Son las coordenadas de la finca. Se llenan solas cuando marca en el mapa; casi nunca hay que escribirlas."},
+  registrarFinca:{p:"Mi finca",t:"Registrar finca",x:"Guarda la finca y lo lleva a la pantalla de Inicio, donde ya puede agregar sus lotes.",ir:"inicio"},
+  mapa:{p:"Mapa",t:"El mapa",x:"Toque el mapa donde queda su finca y el alfiler se mueve a ese punto."},
+  gps:{p:"Mapa",t:"Estoy en la finca",x:"Si está parado en la finca, toque aquí y el celular pone el punto solo, usando el GPS.",e:"El celular le pedirá permiso para usar la ubicación."},
+  usarPunto:{p:"Mapa",t:"Usar este punto",x:"Guarda la ubicación que marcó y lo devuelve a la pantalla anterior.",ir:"finca"},
+  finca:{p:"Inicio",t:"Nombre de su finca",x:"Arriba siempre aparecen el nombre de su finca y el municipio, para que sepa que está en la suya."},
+  cinta:{p:"Inicio",t:"¿Ya se enviaron mis datos?",x:"Le dice si lo que anotó ya quedó respaldado en internet. Sin señal, dice cuántos cambios faltan por enviar y los manda solo cuando vuelve la señal.",e:"Puede anotar en el monte sin señal. Nada se pierde: queda guardado en el celular."},
+  kg:{p:"Inicio",t:"Kilos del año",x:"Suma todos los kilos cosechados este año en toda la finca. La app hace la cuenta sola."},
+  numLotes:{p:"Inicio",t:"Cuántos lotes tiene",x:"Muestra cuántos lotes tiene registrados."},
+  hectareas:{p:"Inicio",t:"Tamaño sembrado",x:"Suma las hectáreas de todos sus lotes."},
+  agregarLote:{p:"Inicio",t:"Agregar un lote",x:"Para registrar otra parte de la finca. Le pide nombre, área sembrada, variedad de cacao (CCN-51, ICS-95, ICS-1, TCS-01, FEAR-5, Criollo) y fecha de siembra."},
+  tarjetaLote:{p:"Inicio",t:"Tarjeta del lote",x:"Cada lote tiene su tarjeta de color con la variedad, el área, la edad, la última labor y los kilos del año. Tóquela para ver todo el lote.",ir:"lote"},
+  ultimaLabor:{p:"Inicio",t:"Lo último que hizo",x:"Le recuerda la última labor del lote y hace cuánto fue: hoy, ayer, hace 5 días. Así sabe si ya toca volver a abonar."},
+  anotar:{p:"Barra de abajo",t:"El botón Anotar (＋)",x:"Es el botón más importante. Desde Inicio o Perfil lo toca para anotar una labor o una cosecha.",e:"Es grande y está en el centro para encontrarlo fácil con una mano.",ir:"elegir"},
+  navInicio:{p:"Barra de abajo",t:"Inicio",x:"Lo lleva al resumen de su finca y sus lotes.",ir:"inicio"},
+  navPerfil:{p:"Barra de abajo",t:"Perfil",x:"Aquí están sus datos, los de la finca y su cuenta.",ir:"perfil"},
+  atras:{p:"Todas",t:"Volver",x:"La flecha lo regresa a la pantalla anterior.",ir:"inicio"},
+  borrarLote:{p:"Lote",t:"Borrar el lote",x:"Borra el lote y también sus labores, cosechas y diagnósticos. La app le pregunta primero, porque esto no se puede deshacer."},
+  tabLabores:{p:"Lote",t:"Labores",x:"La lista de trabajos hechos en este lote: podas, abonadas, riegos y controles. El más reciente aparece primero.",tab:"labores"},
+  tabCosechas:{p:"Lote",t:"Cosechas",x:"Cada entrega que saque del lote, con los kilos y la fecha. Todo suma a la producción del año.",tab:"cosechas"},
+  tabEstado:{p:"Lote",t:"Estado",x:"Para anotar cómo está el cultivo (floración, cuajado, monilla, escoba de bruja) y guardar una foto.",tab:"estado"},
+  datosLote:{p:"Lote",t:"Datos del lote",x:"Variedad, área sembrada y edad de los árboles. La edad se calcula sola desde la fecha de siembra."},
+  produccion:{p:"Lote",t:"Producción del año",x:"Los kilos cosechados en este lote durante el año."},
+  registroLabor:{p:"Lote",t:"Una labor anotada",x:"Muestra qué hizo, la fecha y la observación que escribió. Si se equivocó, la puede borrar."},
+  registroCosecha:{p:"Lote",t:"Una cosecha anotada",x:"Los kilos, la fecha y la observación, por ejemplo si fue cacao en baba o seco."},
+  registroEstado:{p:"Lote",t:"Un diagnóstico con foto",x:"Guarda en qué etapa está el cultivo, sus notas y la foto que tomó ese día. Sirve para mostrársela al técnico."},
+  fabLabor:{p:"Lote",t:"Agregar en este lote",x:"Anota directamente en este lote. El botón cambia según la pestaña: Labor, Cosecha o Diagnóstico.",ir:"labor"},
+  enCualLote:{p:"Anotar",t:"¿En cuál lote?",x:"Al tocar el botón ＋, la app primero pregunta en qué lote trabajó. Si solo tiene un lote, se salta esta pregunta."},
+  lote1:{p:"Anotar",t:"Escoger el lote",x:"Toque el lote donde hizo el trabajo.",ir:"anotar"},
+  queAnotar:{p:"Anotar",t:"¿Qué va a anotar?",x:"Dos opciones grandes, sin letra menuda: una labor o una cosecha."},
+  unaLabor:{p:"Anotar",t:"Una labor",x:"Para podas, abonadas, riegos y controles de plagas.",ir:"labor"},
+  unaCosecha:{p:"Anotar",t:"Una cosecha",x:"Para anotar los kilos que sacó del lote.",ir:"cosecha"},
+  dlgLabor:{p:"Registrar labor",t:"Registrar labor",x:"Toda la labor se anota en una sola pantalla, con tres cosas: qué hizo, cuándo y una observación."},
+  tipoLabor:{p:"Registrar labor",t:"Tipo de labor",x:"Toque el trabajo que hizo: Poda, Fertilización, Control fitosanitario, Riego u Otra labor. No hay que escribir.",e:"¿Falta alguna labor que usted hace seguido? Díganos cuál."},
+  fechaLabor:{p:"Registrar labor",t:"Fecha de la labor",x:"Viene con la fecha de hoy. Si se le olvidó anotar, puede escoger otro día en el calendario."},
+  obsLabor:{p:"Registrar labor",t:"Observaciones",x:"Aquí escribe lo demás: qué se hizo, con qué producto y qué dosis. No es obligatorio.",e:"¿Preferiría campos aparte para el producto y la cantidad, en vez de escribirlo todo junto?"},
+  registrarLabor:{p:"Registrar labor",t:"Registrar",x:"Queda guardado de una vez en el celular, con o sin señal. Cuando haya internet, se envía solo.",ir:"lote"},
+  dlgCosecha:{p:"Registrar cosecha",t:"Registrar cosecha",x:"Lo mismo que la labor, pero para el cacao que sacó del lote."},
+  cantidad:{p:"Registrar cosecha",t:"Cantidad",x:"Los kilos que cosechó. La app suma esta cantidad al total del lote y al de la finca.",e:"¿Le sirve en kilos o preferiría arrobas o bultos?"},
+  fechaCosecha:{p:"Registrar cosecha",t:"Fecha de la cosecha",x:"El día en que recogió el cacao. Viene puesta la de hoy."},
+  obsCosecha:{p:"Registrar cosecha",t:"Observaciones",x:"Para anotar si fue cacao en baba, seco, o cómo quedó la calidad."},
+  registrarCosecha:{p:"Registrar cosecha",t:"Registrar",x:"Guarda la cosecha y actualiza los kilos del año en la pantalla de Inicio.",ir:"inicio"},
+  dlgEstado:{p:"Estado del lote",t:"Estado del lote",x:"Se abre desde la pestaña Estado y sirve para dejar constancia de cómo se ve el cultivo."},
+  fenologia:{p:"Estado del lote",t:"Etapa del cultivo",x:"Escoja cómo está el lote: Vegetativo, Floración, Cuajado, Fructificación, Maduración o Cosecha."},
+  fechaEstado:{p:"Estado del lote",t:"Fecha del diagnóstico",x:"El día en que revisó el lote."},
+  fotoEstado:{p:"Estado del lote",t:"Foto o galería",x:"Tome la foto con la cámara o escoja una que ya tenga. Queda guardada en el celular junto al registro.",e:"La foto es lo que más le sirve al técnico para ver monilla o escoba de bruja."},
+  notasEstado:{p:"Estado del lote",t:"Notas",x:"Para describir qué se ve: manchas, monilla, escoba de bruja, mazorcas dañadas."},
+  guardarEstado:{p:"Estado del lote",t:"Guardar",x:"Guarda el diagnóstico con su foto en la pestaña Estado del lote.",ir:"lote"},
+  productor:{p:"Perfil",t:"Sus datos",x:"Su nombre y teléfono como productor de cacao."},
+  editarDatos:{p:"Perfil",t:"Editar mis datos",x:"Para corregir su nombre, su teléfono o su correo.",ir:"datos"},
+  cuenta:{p:"Perfil",t:"Su cuenta (respaldo)",x:"Con una cuenta sus datos quedan respaldados. Si pierde o cambia el celular, entra con el mismo correo y recupera todo.",e:"Le llega un correo para confirmar. Hasta que lo abra, no podrá entrar desde otro teléfono.",ir:"crearCuenta"},
+  cerrarSesion:{p:"Perfil",t:"Cerrar sesión",x:"Saca su cuenta de este celular y borra los datos de aquí. Si hay algo sin enviar, la app le avisa antes para que no lo pierda."},
+  fincaPerfil:{p:"Perfil",t:"Su finca",x:"Nombre de la finca, municipio, departamento y la ubicación que marcó en el mapa."},
+  editarFinca:{p:"Perfil",t:"Editar la finca",x:"Para cambiar el nombre, el municipio o volver a marcar la finca en el mapa.",ir:"finca"},
+  porQueCuenta:{p:"Crear cuenta",t:"¿Para qué la cuenta?",x:"La app le explica antes de pedirle nada: la cuenta sirve para recuperar la finca en otro teléfono. Lo que ya anotó no se pierde."},
+  correoCuenta:{p:"Crear cuenta",t:"Correo",x:"Debe ser un correo de verdad, porque ahí le llega el mensaje para confirmar la cuenta.",e:"Si no tiene correo, ¿usaría el de un familiar o el de la asociación?"},
+  clave:{p:"Crear cuenta",t:"Contraseña",x:"Mínimo 6 letras o números. Se escribe dos veces para no equivocarse."},
+  botonCrearCuenta:{p:"Crear cuenta",t:"Crear cuenta",x:"Crea la cuenta y respalda lo que ya tenía anotado. Después le llega el correo de confirmación.",ir:"perfil"}
+};
+
+const pantalla=document.getElementById('pantalla');
+const barra=document.getElementById('barraInf');
+const vistas=[...document.querySelectorAll('[data-vista]')];
+const conBarra=['inicio','perfil'];
+let actual=null;
+
+function leer(){try{return JSON.parse(localStorage.getItem('opinionesCacao')||'{}')}catch(e){return {}}}
+function escribir(o){try{localStorage.setItem('opinionesCacao',JSON.stringify(o))}catch(e){}}
+let opiniones=leer();
+
+function mostrarVista(v){
+  vistas.forEach(el=>el.hidden=el.dataset.vista!==v);
+  barra.hidden=!conBarra.includes(v);
+  document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('sel',b.dataset.nav===v));
+  document.querySelectorAll('#menu button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ir===v));
+  const vis=vistas.find(el=>el.dataset.vista===v); if(vis) vis.scrollTop=0;
+}
+function mostrarTab(t){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('sel',b.dataset.tab===t));
+  document.querySelectorAll('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==t);
+  document.getElementById('fabLote').textContent='＋ '+({labores:'Labor',cosechas:'Cosecha',estado:'Diagnóstico'})[t];
+  X.fabLabor.ir={labores:'labor',cosechas:'cosecha',estado:'estado'}[t];
+}
+
+const $=id=>document.getElementById(id);
+function explicar(el){
+  const k=el.dataset.x, d=X[k]; if(!d) return;
+  document.querySelectorAll('.activo').forEach(a=>a.classList.remove('activo'));
+  el.classList.add('activo'); actual=k;
+  if(d.tab) mostrarTab(d.tab);
+  $('eEti').textContent='Pantalla: '+d.p;
+  $('eTit').textContent=d.t; $('eTxt').textContent=d.x;
+  $('eEj').hidden=!d.e; $('eEj').textContent=d.e?('💡 '+d.e):'';
+  $('eIr').hidden=!d.ir;
+  $('eOpina').hidden=false;
+  const o=opiniones[k]||{};
+  document.querySelectorAll('.voto').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.voto===o.voto)));
+  $('comentario').value=o.texto||''; $('eGuardado').textContent='';
+  if(window.innerWidth<=1060) document.querySelector('.explica').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+pantalla.addEventListener('click',e=>{
+  const el=e.target.closest('[data-x]'); if(!el) return;
+  e.stopPropagation(); explicar(el);
+});
+pantalla.addEventListener('keydown',e=>{
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-x]')){e.preventDefault();explicar(e.target)}
+});
+$('eIr').onclick=()=>{const d=X[actual]; if(d&&d.ir){mostrarVista(d.ir); if(window.innerWidth<=1060) document.querySelector('.telefono').scrollIntoView({behavior:'smooth'})}};
+document.getElementById('menu').onclick=e=>{const b=e.target.closest('[data-ir]'); if(b) mostrarVista(b.dataset.ir)};
+
+function guardar(){
+  if(!actual) return;
+  const voto=document.querySelector('.voto[aria-pressed="true"]')?.dataset.voto||'';
+  const texto=$('comentario').value.trim();
+  if(!voto&&!texto){delete opiniones[actual]} else opiniones[actual]={voto,texto,fecha:new Date().toLocaleString('es-CO')};
+  escribir(opiniones); $('eGuardado').textContent='✓ Opinión guardada'; contar(); if(!$('listaOp').hidden) pintarLista();
+}
+document.querySelectorAll('.voto').forEach(b=>b.onclick=()=>{
+  const ya=b.getAttribute('aria-pressed')==='true';
+  document.querySelectorAll('.voto').forEach(v=>v.setAttribute('aria-pressed','false'));
+  b.setAttribute('aria-pressed',String(!ya)); guardar();
+});
+let t; $('comentario').addEventListener('input',()=>{clearTimeout(t);t=setTimeout(guardar,500)});
+
+function contar(){$('cuenta').textContent=Object.keys(opiniones).length}
+function pintarLista(){
+  const l=$('listaOp'); l.innerHTML='';
+  const ks=Object.keys(opiniones);
+  if(!ks.length){l.innerHTML='<div class="item-op">Todavía no hay opiniones.</div>';return}
+  ks.forEach(k=>{
+    const o=opiniones[k], d=X[k]; const div=document.createElement('div'); div.className='item-op';
+    const b=document.createElement('b'); b.textContent=d.p+' → '+d.t; div.append(b);
+    if(o.voto){div.append(document.createElement('br'),'Opinión: '+o.voto)}
+    if(o.texto){div.append(document.createElement('br'),'«'+o.texto+'»')}
+    const s=document.createElement('small'); s.textContent=' '+o.fecha; div.append(document.createElement('br'),s);
+    l.append(div);
+  });
+  const c=document.createElement('button'); c.textContent='Copiar todo para enviarlo';
+  c.onclick=async()=>{
+    const txt=ks.map(k=>`${X[k].p} → ${X[k].t}: ${opiniones[k].voto||''}${opiniones[k].texto?' — '+opiniones[k].texto:''}`).join('\n');
+    try{await navigator.clipboard.writeText(txt);c.textContent='✓ Copiado'}catch(e){c.textContent='No se pudo copiar'}
+  };
+  const r=document.createElement('button'); r.textContent='Borrar opiniones'; r.style.background='#9B3B2A';
+  r.onclick=()=>{if(confirm('¿Borrar todas las opiniones de este equipo?')){opiniones={};escribir(opiniones);contar();pintarLista()}};
+  const f=document.createElement('div'); f.style.cssText='display:flex;gap:8px;flex-wrap:wrap'; f.append(c,r); l.append(f);
+}
+$('verOpiniones').onclick=()=>{const l=$('listaOp'); l.hidden=!l.hidden; if(!l.hidden) pintarLista()};
+
+mostrarVista('inicio'); contar();
+</script>

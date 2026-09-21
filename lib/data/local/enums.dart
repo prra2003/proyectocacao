@@ -1,4 +1,4 @@
-/// Estado de sincronización de cada registro con Supabase.
+/// Estado de sincronización de cada registro con el servidor.
 enum SyncStatus { pending, synced, error }
 
 /// Tipo de documento de identidad del productor.

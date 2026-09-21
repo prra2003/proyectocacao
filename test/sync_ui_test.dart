@@ -22,6 +22,9 @@ void main() {
     repo = PerfilRepository(db, usuarioId: usuarioId);
     api = ApiRemotaFalsa();
     sync = SyncService(baseDatos: db, apiRemota: api, usuarioLocal: usuarioId);
+    // La cinta solo tiene algo que contar cuando hay cuenta: sin ella no hay
+    // servidor a donde enviar.
+    await sync.entrarConGoogle();
 
     final productorId = await repo.guardarProductor(
       nombreCompleto: 'Diego Parra',

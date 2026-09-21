@@ -41,7 +41,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -50,6 +50,11 @@ class AppDatabase extends _$AppDatabase {
       // `desde < 2` porque `createTable` usa la definición actual), la tabla
       // `productores` existe desde la v1: cualquier versión anterior a esta le
       // falta este par de columnas, sin excepción.
+      // La sesión del servidor reemplaza a la de Supabase: hay que guardarla
+      // en algún lado o el productor tendría que entrar con Google cada vez.
+      if (desde < 7 && desde >= 2) {
+        await m.addColumn(sesion, sesion.tokenNube);
+      }
       if (desde < 6) {
         await m.addColumn(productores, productores.tipoDocumento);
         await m.addColumn(productores, productores.numeroDocumento);
@@ -110,7 +115,7 @@ class AppDatabase extends _$AppDatabase {
 }
 
 /// Ids fijos y ya `synced`: son el mismo catálogo en toda instalación y en
-/// Supabase (ver `supabase/schema.sql`), así que no hay nada que subir por
+/// el servidor (ver `backend/Codigo.gs`), así que no hay nada que subir por
 /// esto y `insertOrIgnore` lo vuelve seguro de repetir en cada arranque.
 Future<void> _sembrarAsociaciones(AppDatabase db) async {
   final momento = ahora();

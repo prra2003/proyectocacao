@@ -30,6 +30,9 @@ void main() {
       apiRemota: api,
       usuarioLocal: usuarioId,
     );
+    // Sin cuenta no hay servidor: estos tests ejercitan la sincronización, así
+    // que entran una vez y ya.
+    await sync.entrarConGoogle();
   });
   tearDown(() => db.close());
 
