@@ -114,7 +114,7 @@ cambio mal hecho se nota tarde y duele.
 
 - **No** subir la APK ni la carpeta `build/` al repositorio. Las versiones se
   publican en *Releases* de GitHub.
-- **No** poner la llave `service_role` de Supabase en el código. La publicable
+- **No** poner la llave `service_role` de Google Apps Script en el código. La publicable
   sí, es pública por diseño; la otra se salta toda la seguridad.
 - **No** borrar filas de verdad. Todo borrado es suave (`deleted_at`), o los
   demás teléfonos nunca se enteran.
@@ -133,9 +133,9 @@ cambio mal hecho se nota tarde y duele.
 
 ---
 
-## 7. Supabase mientras somos varios
+## 7. Google Apps Script mientras somos varios
 
-Por ahora todos apuntamos al **mismo proyecto** de Supabase, así que los datos de
+Por ahora todos apuntamos al **mismo proyecto** de Google Apps Script, así que los datos de
 prueba se ven entre nosotros. No pasa nada en esta etapa.
 
 Cuando alguien vaya a cambiar el `schema.sql`, mejor que cree su propio proyecto
