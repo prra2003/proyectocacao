@@ -5,6 +5,7 @@ import '../data/sync/sync_service.dart';
 import 'editar_finca_screen.dart';
 import 'editar_productor_screen.dart';
 import 'tema.dart';
+import 'widgets/comunes.dart';
 import 'widgets/mazorca.dart';
 
 /// Lo primero que se ve al instalar la app.
@@ -105,7 +106,13 @@ class BienvenidaScreen extends StatelessWidget {
               // registrarse otra vez, sino bajar lo que ya existe. No hace
               // falta navegar a ninguna parte: Google abre su propia ventana.
               TextButton(
-                onPressed: () => sync.entrarConGoogle(),
+                // Si algo falla hay que decirlo: un botón que no responde deja
+                // a la persona sin saber si tocó mal o si no hay señal.
+                onPressed: () async {
+                  final resultado = await sync.entrarConGoogle();
+                  if (!context.mounted || resultado.ok) return;
+                  avisar(context, resultado.error ?? 'No se pudo entrar');
+                },
                 child: const Text(
                   'Ya tengo cuenta',
                   style: TextStyle(

@@ -146,8 +146,44 @@ class ApiAppsScript implements ApiRemota {
   List<FilaRemota> _filasDe(Map<String, Object?> respuesta) {
     final crudas = (respuesta['filas'] as List?) ?? const [];
     return crudas
-        .map((fila) => Map<String, Object?>.from(fila as Map))
+        .map((fila) => normalizar(Map<String, Object?>.from(fila as Map)))
         .toList(growable: false);
+  }
+
+  /// Columnas que el resto de la app espera como número.
+  ///
+  /// Se enumeran a mano a propósito: convertir "todo lo que parezca número"
+  /// volvería enteros el teléfono y el documento, que son texto aunque solo
+  /// tengan dígitos, y perdería el cero de la izquierda.
+  static const columnasNumericas = <String>{
+    'area_sembrada_ha',
+    'latitud',
+    'longitud',
+    'cantidad_kg',
+  };
+
+  /// Devuelve la fila a los tipos que espera la app.
+  ///
+  /// La hoja de cálculo solo guarda texto, así que todo llega como cadena y
+  /// **una celda vacía llega como `''`, no como nulo**. Sin esta traducción,
+  /// un `deleted_at` vacío rompe `DateTime.parse` y la sincronización se cae
+  /// entera en la primera fila.
+  static FilaRemota normalizar(FilaRemota fila) {
+    final salida = <String, Object?>{};
+    fila.forEach((columna, valor) {
+      if (valor is String) {
+        if (valor.isEmpty) {
+          salida[columna] = null;
+          return;
+        }
+        if (columnasNumericas.contains(columna)) {
+          salida[columna] = num.tryParse(valor) ?? valor;
+          return;
+        }
+      }
+      salida[columna] = valor;
+    });
+    return salida;
   }
 
   /// La hoja de cálculo guarda texto. Las fechas viajan en ISO-8601 UTC y los
