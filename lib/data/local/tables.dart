@@ -61,6 +61,11 @@ class Productores extends Table with SyncColumns {
   TextColumn get email => text().nullable()();
   TextColumn get asociacionId =>
       text().nullable().references(Asociaciones, #id)();
+
+  /// Documento de identidad. Nullable a nivel de base para que la migración no
+  /// rompa filas ya existentes; el formulario es quien lo exige.
+  TextColumn get tipoDocumento => textEnum<TipoDocumento>().nullable()();
+  TextColumn get numeroDocumento => text().nullable()();
 }
 
 @DataClassName('Finca')

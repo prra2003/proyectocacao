@@ -21,6 +21,8 @@ class MapeadorProductor {
     'telefono': fila.telefono,
     'email': fila.email,
     'asociacion_id': fila.asociacionId,
+    'tipo_documento': fila.tipoDocumento?.name,
+    'numero_documento': fila.numeroDocumento,
     'created_at': fila.createdAt.toUtc().toIso8601String(),
     'deleted_at': fila.deletedAt?.toUtc().toIso8601String(),
   };
@@ -36,6 +38,8 @@ class MapeadorProductor {
       telefono: Value(fila['telefono'] as String?),
       email: Value(fila['email'] as String?),
       asociacionId: Value(fila['asociacion_id'] as String?),
+      tipoDocumento: Value(_tipoDocumento(fila['tipo_documento'])),
+      numeroDocumento: Value(fila['numero_documento'] as String?),
       createdAt: Value(_fecha(fila['created_at'])!),
       updatedAt: Value(sello),
       deletedAt: Value(_fecha(fila['deleted_at'])),
@@ -50,4 +54,9 @@ class MapeadorProductor {
 
   static DateTime? _fecha(Object? valor) =>
       valor == null ? null : DateTime.parse(valor as String).toLocal();
+
+  static TipoDocumento? _tipoDocumento(Object? valor) {
+    if (valor == null) return null;
+    return TipoDocumento.values.asNameMap()[valor as String];
+  }
 }

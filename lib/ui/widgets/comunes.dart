@@ -191,6 +191,28 @@ void avisar(BuildContext context, String mensaje) {
 String? campoRequerido(String? valor) =>
     (valor == null || valor.trim().isEmpty) ? 'Campo obligatorio' : null;
 
+/// Solo letras (con tildes/ñ), espacios, guiones y apóstrofes: para nombres de
+/// persona, donde un número casi siempre es un error de digitación.
+final _soloLetrasPatron = RegExp(r"^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$");
+
+String? soloLetras(String? valor) {
+  final texto = (valor ?? '').trim();
+  if (texto.isEmpty) return 'Campo obligatorio';
+  if (!_soloLetrasPatron.hasMatch(texto)) return 'Solo letras, sin números';
+  return null;
+}
+
+/// Solo dígitos (con un '+' inicial opcional, para el indicativo de país). El
+/// campo puede quedar vacío: quien no ponga nada no está obligado a hacerlo.
+final _soloNumerosPatron = RegExp(r'^\+?[0-9]+$');
+
+String? soloNumerosOpcional(String? valor) {
+  final texto = (valor ?? '').trim();
+  if (texto.isEmpty) return null;
+  if (!_soloNumerosPatron.hasMatch(texto)) return 'Solo números';
+  return null;
+}
+
 String? textoONulo(String texto) => texto.trim().isEmpty ? null : texto.trim();
 
 /// Convierte lo que se escribe en campo ("2,5") a número.

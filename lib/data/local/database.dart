@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import '../daos/daos.dart';
+import 'asociaciones_semilla.dart';
 import 'enums.dart';
 import 'tables.dart';
 
@@ -40,11 +41,19 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, desde, hasta) async {
+      // A diferencia de `sesion`/`syncMeta` (que nacen ya completas en la rama
+      // `desde < 2` porque `createTable` usa la definición actual), la tabla
+      // `productores` existe desde la v1: cualquier versión anterior a esta le
+      // falta este par de columnas, sin excepción.
+      if (desde < 6) {
+        await m.addColumn(productores, productores.tipoDocumento);
+        await m.addColumn(productores, productores.numeroDocumento);
+      }
       if (desde < 5 && desde >= 2) {
         await m.addColumn(sesion, sesion.correoConfirmado);
       }
@@ -95,8 +104,31 @@ class AppDatabase extends _$AppDatabase {
     beforeOpen: (details) async {
       // SQLite no aplica las llaves foráneas si no se activan por conexión.
       await customStatement('PRAGMA foreign_keys = ON');
+      await _sembrarAsociaciones(this);
     },
   );
+}
+
+/// Ids fijos y ya `synced`: son el mismo catálogo en toda instalación y en
+/// Supabase (ver `supabase/schema.sql`), así que no hay nada que subir por
+/// esto y `insertOrIgnore` lo vuelve seguro de repetir en cada arranque.
+Future<void> _sembrarAsociaciones(AppDatabase db) async {
+  final momento = ahora();
+  for (final semilla in asociacionesSemilla) {
+    await db
+        .into(db.asociaciones)
+        .insert(
+          AsociacionesCompanion.insert(
+            id: Value(semilla.id),
+            nombre: semilla.nombre,
+            municipio: '',
+            departamento: '',
+            updatedAt: Value(momento),
+            syncStatus: const Value(SyncStatus.synced),
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+  }
 }
 
 /// Borra **todos los datos** de esta instalación, dejando la identidad local.

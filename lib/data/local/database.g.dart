@@ -772,6 +772,26 @@ class $ProductoresTable extends Productores
     ),
   );
   @override
+  late final GeneratedColumnWithTypeConverter<TipoDocumento?, String>
+  tipoDocumento = GeneratedColumn<String>(
+    'tipo_documento',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<TipoDocumento?>($ProductoresTable.$convertertipoDocumenton);
+  static const VerificationMeta _numeroDocumentoMeta = const VerificationMeta(
+    'numeroDocumento',
+  );
+  @override
+  late final GeneratedColumn<String> numeroDocumento = GeneratedColumn<String>(
+    'numero_documento',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
   List<GeneratedColumn> get $columns => [
     id,
     createdAt,
@@ -785,6 +805,8 @@ class $ProductoresTable extends Productores
     telefono,
     email,
     asociacionId,
+    tipoDocumento,
+    numeroDocumento,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -872,6 +894,15 @@ class $ProductoresTable extends Productores
         ),
       );
     }
+    if (data.containsKey('numero_documento')) {
+      context.handle(
+        _numeroDocumentoMeta,
+        numeroDocumento.isAcceptableOrUnknown(
+          data['numero_documento']!,
+          _numeroDocumentoMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -931,6 +962,16 @@ class $ProductoresTable extends Productores
         DriftSqlType.string,
         data['${effectivePrefix}asociacion_id'],
       ),
+      tipoDocumento: $ProductoresTable.$convertertipoDocumenton.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}tipo_documento'],
+        ),
+      ),
+      numeroDocumento: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}numero_documento'],
+      ),
     );
   }
 
@@ -941,6 +982,14 @@ class $ProductoresTable extends Productores
 
   static JsonTypeConverter2<SyncStatus, String, String> $convertersyncStatus =
       const EnumNameConverter<SyncStatus>(SyncStatus.values);
+  static JsonTypeConverter2<TipoDocumento, String, String>
+  $convertertipoDocumento = const EnumNameConverter<TipoDocumento>(
+    TipoDocumento.values,
+  );
+  static JsonTypeConverter2<TipoDocumento?, String?, String?>
+  $convertertipoDocumenton = JsonTypeConverter2.asNullable(
+    $convertertipoDocumento,
+  );
 }
 
 class Productor extends DataClass implements Insertable<Productor> {
@@ -965,6 +1014,11 @@ class Productor extends DataClass implements Insertable<Productor> {
   final String? telefono;
   final String? email;
   final String? asociacionId;
+
+  /// Documento de identidad. Nullable a nivel de base para que la migración no
+  /// rompa filas ya existentes; el formulario es quien lo exige.
+  final TipoDocumento? tipoDocumento;
+  final String? numeroDocumento;
   const Productor({
     required this.id,
     required this.createdAt,
@@ -978,6 +1032,8 @@ class Productor extends DataClass implements Insertable<Productor> {
     this.telefono,
     this.email,
     this.asociacionId,
+    this.tipoDocumento,
+    this.numeroDocumento,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1012,6 +1068,14 @@ class Productor extends DataClass implements Insertable<Productor> {
     if (!nullToAbsent || asociacionId != null) {
       map['asociacion_id'] = Variable<String>(asociacionId);
     }
+    if (!nullToAbsent || tipoDocumento != null) {
+      map['tipo_documento'] = Variable<String>(
+        $ProductoresTable.$convertertipoDocumenton.toSql(tipoDocumento),
+      );
+    }
+    if (!nullToAbsent || numeroDocumento != null) {
+      map['numero_documento'] = Variable<String>(numeroDocumento);
+    }
     return map;
   }
 
@@ -1043,6 +1107,12 @@ class Productor extends DataClass implements Insertable<Productor> {
       asociacionId: asociacionId == null && nullToAbsent
           ? const Value.absent()
           : Value(asociacionId),
+      tipoDocumento: tipoDocumento == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tipoDocumento),
+      numeroDocumento: numeroDocumento == null && nullToAbsent
+          ? const Value.absent()
+          : Value(numeroDocumento),
     );
   }
 
@@ -1066,6 +1136,10 @@ class Productor extends DataClass implements Insertable<Productor> {
       telefono: serializer.fromJson<String?>(json['telefono']),
       email: serializer.fromJson<String?>(json['email']),
       asociacionId: serializer.fromJson<String?>(json['asociacionId']),
+      tipoDocumento: $ProductoresTable.$convertertipoDocumenton.fromJson(
+        serializer.fromJson<String?>(json['tipoDocumento']),
+      ),
+      numeroDocumento: serializer.fromJson<String?>(json['numeroDocumento']),
     );
   }
   @override
@@ -1086,6 +1160,10 @@ class Productor extends DataClass implements Insertable<Productor> {
       'telefono': serializer.toJson<String?>(telefono),
       'email': serializer.toJson<String?>(email),
       'asociacionId': serializer.toJson<String?>(asociacionId),
+      'tipoDocumento': serializer.toJson<String?>(
+        $ProductoresTable.$convertertipoDocumenton.toJson(tipoDocumento),
+      ),
+      'numeroDocumento': serializer.toJson<String?>(numeroDocumento),
     };
   }
 
@@ -1102,6 +1180,8 @@ class Productor extends DataClass implements Insertable<Productor> {
     Value<String?> telefono = const Value.absent(),
     Value<String?> email = const Value.absent(),
     Value<String?> asociacionId = const Value.absent(),
+    Value<TipoDocumento?> tipoDocumento = const Value.absent(),
+    Value<String?> numeroDocumento = const Value.absent(),
   }) => Productor(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -1117,6 +1197,12 @@ class Productor extends DataClass implements Insertable<Productor> {
     telefono: telefono.present ? telefono.value : this.telefono,
     email: email.present ? email.value : this.email,
     asociacionId: asociacionId.present ? asociacionId.value : this.asociacionId,
+    tipoDocumento: tipoDocumento.present
+        ? tipoDocumento.value
+        : this.tipoDocumento,
+    numeroDocumento: numeroDocumento.present
+        ? numeroDocumento.value
+        : this.numeroDocumento,
   );
   Productor copyWithCompanion(ProductoresCompanion data) {
     return Productor(
@@ -1140,6 +1226,12 @@ class Productor extends DataClass implements Insertable<Productor> {
       asociacionId: data.asociacionId.present
           ? data.asociacionId.value
           : this.asociacionId,
+      tipoDocumento: data.tipoDocumento.present
+          ? data.tipoDocumento.value
+          : this.tipoDocumento,
+      numeroDocumento: data.numeroDocumento.present
+          ? data.numeroDocumento.value
+          : this.numeroDocumento,
     );
   }
 
@@ -1157,7 +1249,9 @@ class Productor extends DataClass implements Insertable<Productor> {
           ..write('nombreCompleto: $nombreCompleto, ')
           ..write('telefono: $telefono, ')
           ..write('email: $email, ')
-          ..write('asociacionId: $asociacionId')
+          ..write('asociacionId: $asociacionId, ')
+          ..write('tipoDocumento: $tipoDocumento, ')
+          ..write('numeroDocumento: $numeroDocumento')
           ..write(')'))
         .toString();
   }
@@ -1176,6 +1270,8 @@ class Productor extends DataClass implements Insertable<Productor> {
     telefono,
     email,
     asociacionId,
+    tipoDocumento,
+    numeroDocumento,
   );
   @override
   bool operator ==(Object other) =>
@@ -1192,7 +1288,9 @@ class Productor extends DataClass implements Insertable<Productor> {
           other.nombreCompleto == this.nombreCompleto &&
           other.telefono == this.telefono &&
           other.email == this.email &&
-          other.asociacionId == this.asociacionId);
+          other.asociacionId == this.asociacionId &&
+          other.tipoDocumento == this.tipoDocumento &&
+          other.numeroDocumento == this.numeroDocumento);
 }
 
 class ProductoresCompanion extends UpdateCompanion<Productor> {
@@ -1208,6 +1306,8 @@ class ProductoresCompanion extends UpdateCompanion<Productor> {
   final Value<String?> telefono;
   final Value<String?> email;
   final Value<String?> asociacionId;
+  final Value<TipoDocumento?> tipoDocumento;
+  final Value<String?> numeroDocumento;
   final Value<int> rowid;
   const ProductoresCompanion({
     this.id = const Value.absent(),
@@ -1222,6 +1322,8 @@ class ProductoresCompanion extends UpdateCompanion<Productor> {
     this.telefono = const Value.absent(),
     this.email = const Value.absent(),
     this.asociacionId = const Value.absent(),
+    this.tipoDocumento = const Value.absent(),
+    this.numeroDocumento = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProductoresCompanion.insert({
@@ -1237,6 +1339,8 @@ class ProductoresCompanion extends UpdateCompanion<Productor> {
     this.telefono = const Value.absent(),
     this.email = const Value.absent(),
     this.asociacionId = const Value.absent(),
+    this.tipoDocumento = const Value.absent(),
+    this.numeroDocumento = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : nombreCompleto = Value(nombreCompleto);
   static Insertable<Productor> custom({
@@ -1252,6 +1356,8 @@ class ProductoresCompanion extends UpdateCompanion<Productor> {
     Expression<String>? telefono,
     Expression<String>? email,
     Expression<String>? asociacionId,
+    Expression<String>? tipoDocumento,
+    Expression<String>? numeroDocumento,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1267,6 +1373,8 @@ class ProductoresCompanion extends UpdateCompanion<Productor> {
       if (telefono != null) 'telefono': telefono,
       if (email != null) 'email': email,
       if (asociacionId != null) 'asociacion_id': asociacionId,
+      if (tipoDocumento != null) 'tipo_documento': tipoDocumento,
+      if (numeroDocumento != null) 'numero_documento': numeroDocumento,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1284,6 +1392,8 @@ class ProductoresCompanion extends UpdateCompanion<Productor> {
     Value<String?>? telefono,
     Value<String?>? email,
     Value<String?>? asociacionId,
+    Value<TipoDocumento?>? tipoDocumento,
+    Value<String?>? numeroDocumento,
     Value<int>? rowid,
   }) {
     return ProductoresCompanion(
@@ -1299,6 +1409,8 @@ class ProductoresCompanion extends UpdateCompanion<Productor> {
       telefono: telefono ?? this.telefono,
       email: email ?? this.email,
       asociacionId: asociacionId ?? this.asociacionId,
+      tipoDocumento: tipoDocumento ?? this.tipoDocumento,
+      numeroDocumento: numeroDocumento ?? this.numeroDocumento,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1344,6 +1456,14 @@ class ProductoresCompanion extends UpdateCompanion<Productor> {
     if (asociacionId.present) {
       map['asociacion_id'] = Variable<String>(asociacionId.value);
     }
+    if (tipoDocumento.present) {
+      map['tipo_documento'] = Variable<String>(
+        $ProductoresTable.$convertertipoDocumenton.toSql(tipoDocumento.value),
+      );
+    }
+    if (numeroDocumento.present) {
+      map['numero_documento'] = Variable<String>(numeroDocumento.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1365,6 +1485,8 @@ class ProductoresCompanion extends UpdateCompanion<Productor> {
           ..write('telefono: $telefono, ')
           ..write('email: $email, ')
           ..write('asociacionId: $asociacionId, ')
+          ..write('tipoDocumento: $tipoDocumento, ')
+          ..write('numeroDocumento: $numeroDocumento, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6169,6 +6291,8 @@ typedef $$ProductoresTableCreateCompanionBuilder =
       Value<String?> telefono,
       Value<String?> email,
       Value<String?> asociacionId,
+      Value<TipoDocumento?> tipoDocumento,
+      Value<String?> numeroDocumento,
       Value<int> rowid,
     });
 typedef $$ProductoresTableUpdateCompanionBuilder =
@@ -6185,6 +6309,8 @@ typedef $$ProductoresTableUpdateCompanionBuilder =
       Value<String?> telefono,
       Value<String?> email,
       Value<String?> asociacionId,
+      Value<TipoDocumento?> tipoDocumento,
+      Value<String?> numeroDocumento,
       Value<int> rowid,
     });
 
@@ -6292,6 +6418,17 @@ class $$ProductoresTableFilterComposer
 
   ColumnFilters<String> get email => $composableBuilder(
     column: $table.email,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<TipoDocumento?, TipoDocumento, String>
+  get tipoDocumento => $composableBuilder(
+    column: $table.tipoDocumento,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get numeroDocumento => $composableBuilder(
+    column: $table.numeroDocumento,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6408,6 +6545,16 @@ class $$ProductoresTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get tipoDocumento => $composableBuilder(
+    column: $table.tipoDocumento,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get numeroDocumento => $composableBuilder(
+    column: $table.numeroDocumento,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$AsociacionesTableOrderingComposer get asociacionId {
     final $$AsociacionesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -6480,6 +6627,17 @@ class $$ProductoresTableAnnotationComposer
 
   GeneratedColumn<String> get email =>
       $composableBuilder(column: $table.email, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<TipoDocumento?, String> get tipoDocumento =>
+      $composableBuilder(
+        column: $table.tipoDocumento,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get numeroDocumento => $composableBuilder(
+    column: $table.numeroDocumento,
+    builder: (column) => column,
+  );
 
   $$AsociacionesTableAnnotationComposer get asociacionId {
     final $$AsociacionesTableAnnotationComposer composer = $composerBuilder(
@@ -6570,6 +6728,8 @@ class $$ProductoresTableTableManager
                 Value<String?> telefono = const Value.absent(),
                 Value<String?> email = const Value.absent(),
                 Value<String?> asociacionId = const Value.absent(),
+                Value<TipoDocumento?> tipoDocumento = const Value.absent(),
+                Value<String?> numeroDocumento = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProductoresCompanion(
                 id: id,
@@ -6584,6 +6744,8 @@ class $$ProductoresTableTableManager
                 telefono: telefono,
                 email: email,
                 asociacionId: asociacionId,
+                tipoDocumento: tipoDocumento,
+                numeroDocumento: numeroDocumento,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6600,6 +6762,8 @@ class $$ProductoresTableTableManager
                 Value<String?> telefono = const Value.absent(),
                 Value<String?> email = const Value.absent(),
                 Value<String?> asociacionId = const Value.absent(),
+                Value<TipoDocumento?> tipoDocumento = const Value.absent(),
+                Value<String?> numeroDocumento = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProductoresCompanion.insert(
                 id: id,
@@ -6614,6 +6778,8 @@ class $$ProductoresTableTableManager
                 telefono: telefono,
                 email: email,
                 asociacionId: asociacionId,
+                tipoDocumento: tipoDocumento,
+                numeroDocumento: numeroDocumento,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

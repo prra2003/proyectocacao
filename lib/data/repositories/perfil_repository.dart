@@ -1,5 +1,6 @@
 import '../daos/daos.dart';
 import '../local/database.dart';
+import '../local/enums.dart';
 
 /// Fachada del perfil del productor: la UI habla con esto y no con los DAOs,
 /// para que cuando entre la sincronización con Supabase solo cambie esta capa.
@@ -25,10 +26,23 @@ class PerfilRepository {
   Stream<Finca?> watchFinca(String productorId) =>
       _fincas.watchFincaPrincipal(productorId);
 
+  /// Todas las fincas del productor (RF-02/RF-04): la Fase 1 ya no se limita
+  /// a una sola.
+  Stream<List<Finca>> watchFincas(String productorId) =>
+      _fincas.watchFincasDe(productorId);
+
   Stream<List<Lote>> watchLotes(String fincaId) => _lotes.watchLotesDe(fincaId);
 
   Stream<List<Asociacion>> watchAsociaciones() =>
       _productores.watchAsociaciones();
+
+  Future<Asociacion?> asociacionPorId(String id) =>
+      _productores.asociacionPorId(id);
+
+  /// Crea una asociación fuera del catálogo ("Otra, especificar") y devuelve
+  /// su id, listo para usarse como `asociacionId` del productor.
+  Future<String> crearAsociacion(String nombre) =>
+      _productores.crearAsociacion(nombre);
 
   Future<String> guardarProductor({
     String? id,
@@ -36,6 +50,8 @@ class PerfilRepository {
     String? telefono,
     String? email,
     String? asociacionId,
+    TipoDocumento? tipoDocumento,
+    String? numeroDocumento,
   }) {
     return _productores.guardar(
       id: id,
@@ -44,6 +60,8 @@ class PerfilRepository {
       telefono: telefono,
       email: email,
       asociacionId: asociacionId,
+      tipoDocumento: tipoDocumento,
+      numeroDocumento: numeroDocumento,
     );
   }
 

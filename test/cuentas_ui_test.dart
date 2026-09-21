@@ -162,4 +162,47 @@ void main() {
 
     await desmontar(tester);
   });
+
+  testWidgets('una contraseña débil no deja crear la cuenta', (tester) async {
+    await repo.guardarProductor(nombreCompleto: 'Diego Parra');
+    await abrirApp(tester);
+
+    await tester.tap(find.text('Perfil'));
+    await asentar(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Crear cuenta'));
+    await asentar(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('campo_correo')),
+      'diego@finca.co',
+    );
+    // Menos de 8 caracteres.
+    await tester.enterText(find.byKey(const Key('campo_clave')), 'cacao1');
+    await tester.enterText(
+      find.byKey(const Key('campo_confirmacion')),
+      'cacao1',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Crear cuenta'));
+    await asentar(tester);
+
+    expect(find.text('Mínimo 8 caracteres'), findsOneWidget);
+    expect(api.correo, isNull);
+
+    // Ocho caracteres, pero solo letras: sigue sin dejar pasar.
+    await tester.enterText(
+      find.byKey(const Key('campo_clave')),
+      'cacaocacao',
+    );
+    await tester.enterText(
+      find.byKey(const Key('campo_confirmacion')),
+      'cacaocacao',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Crear cuenta'));
+    await asentar(tester);
+
+    expect(find.text('Use letras y números'), findsOneWidget);
+    expect(api.correo, isNull);
+
+    await desmontar(tester);
+  });
 }

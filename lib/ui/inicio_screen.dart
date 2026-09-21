@@ -18,7 +18,7 @@ import 'widgets/mazorca.dart';
 ///
 /// Aquí no van los datos de identidad (nombre, teléfono, GPS): se leen una vez
 /// y viven en el perfil. El inicio responde a otra pregunta: *cómo va mi finca*.
-class InicioScreen extends StatelessWidget {
+class InicioScreen extends StatefulWidget {
   const InicioScreen({
     super.key,
     required this.repo,
@@ -33,9 +33,19 @@ class InicioScreen extends StatelessWidget {
   final SyncService sync;
 
   @override
+  State<InicioScreen> createState() => _InicioScreenState();
+}
+
+class _InicioScreenState extends State<InicioScreen> {
+  /// Cuál finca se ve en el panel. Arranca en null (se resuelve a la primera
+  /// en cuanto llegan las fincas) y solo cambia cuando el productor elige otra
+  /// en el selector de la cabecera.
+  String? _fincaSeleccionadaId;
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<Productor?>(
-      stream: repo.watchProductor(),
+      stream: widget.repo.watchProductor(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -44,13 +54,13 @@ class InicioScreen extends StatelessWidget {
         // El cascarón ya decide qué mostrar cuando no hay productor; esto es
         // solo la red de seguridad si esta pantalla se usa suelta.
         if (productor == null) {
-          return BienvenidaScreen(repo: repo, sync: sync);
+          return BienvenidaScreen(repo: widget.repo, sync: widget.sync);
         }
-        return StreamBuilder<Finca?>(
-          stream: repo.watchFinca(productor.id),
+        return StreamBuilder<List<Finca>>(
+          stream: widget.repo.watchFincas(productor.id),
           builder: (context, snapshot) {
-            final finca = snapshot.data;
-            if (finca == null) {
+            final fincas = snapshot.data ?? const <Finca>[];
+            if (fincas.isEmpty) {
               return SingleChildScrollView(
                 child: EstadoVacio(
                   icono: Icons.holiday_village_outlined,
@@ -60,7 +70,7 @@ class InicioScreen extends StatelessWidget {
                   onAccion: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => EditarFincaScreen(
-                        repo: repo,
+                        repo: widget.repo,
                         productorId: productor.id,
                       ),
                     ),
@@ -68,12 +78,20 @@ class InicioScreen extends StatelessWidget {
                 ),
               );
             }
+            // Si la finca elegida ya no existe (se borró), se cae a la
+            // primera en vez de dejar la pantalla en blanco.
+            final fincaActiva = fincas.firstWhere(
+              (f) => f.id == _fincaSeleccionadaId,
+              orElse: () => fincas.first,
+            );
             return _Contenido(
-              repo: repo,
-              lotesRepo: lotesRepo,
-              db: db,
-              sync: sync,
-              finca: finca,
+              repo: widget.repo,
+              lotesRepo: widget.lotesRepo,
+              db: widget.db,
+              sync: widget.sync,
+              finca: fincaActiva,
+              fincas: fincas,
+              onCambiarFinca: (id) => setState(() => _fincaSeleccionadaId = id),
             );
           },
         );
@@ -89,6 +107,8 @@ class _Contenido extends StatelessWidget {
     required this.db,
     required this.sync,
     required this.finca,
+    required this.fincas,
+    required this.onCambiarFinca,
   });
 
   final PerfilRepository repo;
@@ -96,6 +116,10 @@ class _Contenido extends StatelessWidget {
   final AppDatabase db;
   final SyncService sync;
   final Finca finca;
+
+  /// Todas las fincas del productor, para el selector de la cabecera.
+  final List<Finca> fincas;
+  final ValueChanged<String> onCambiarFinca;
 
   Future<void> _agregarLote(BuildContext context) async {
     final datos = await pedirDatosLote(context);
@@ -122,6 +146,8 @@ class _Contenido extends StatelessWidget {
             _Cabecera(
               repo: repo,
               finca: finca,
+              fincas: fincas,
+              onCambiarFinca: onCambiarFinca,
               lotes: lotes,
               db: db,
               sync: sync,
@@ -180,6 +206,8 @@ class _Cabecera extends StatelessWidget {
   const _Cabecera({
     required this.repo,
     required this.finca,
+    required this.fincas,
+    required this.onCambiarFinca,
     required this.lotes,
     required this.db,
     required this.sync,
@@ -187,6 +215,8 @@ class _Cabecera extends StatelessWidget {
 
   final PerfilRepository repo;
   final Finca finca;
+  final List<Finca> fincas;
+  final ValueChanged<String> onCambiarFinca;
   final List<Lote> lotes;
   final AppDatabase db;
   final SyncService sync;
@@ -247,6 +277,34 @@ class _Cabecera extends StatelessWidget {
               ),
             ],
           ),
+          // Con una sola finca no hace falta elegir: el selector solo estorba.
+          if (fincas.length > 1) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: fincas.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, i) {
+                  final opcion = fincas[i];
+                  final activa = opcion.id == finca.id;
+                  return ChoiceChip(
+                    label: Text(opcion.nombre),
+                    selected: activa,
+                    onSelected: (_) => onCambiarFinca(opcion.id),
+                    backgroundColor: Colors.white.withValues(alpha: 0.16),
+                    selectedColor: Colors.white,
+                    labelStyle: TextStyle(
+                      color: activa ? PaletaCacao.cafeOscuro : Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    side: BorderSide.none,
+                  );
+                },
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           EstadoSync(db: db, sync: sync),
           const SizedBox(height: 16),
