@@ -10,7 +10,7 @@ primer paso del ecosistema digital de la Red Nacional de Cacao.
 |---|---|
 | **Estado** | Fase 1 cerrada (captura local + sincronización + cuentas) |
 | **Plataforma** | Android · Web (iOS preparado, sin compilar todavía) |
-| **Tecnología** | Flutter · Drift/SQLite · Supabase (PostgreSQL) |
+| **Tecnología** | Flutter · Drift/SQLite · Google Apps Script + Sheets |
 | **Tests** | 121, todos en verde |
 
 ---
@@ -53,7 +53,7 @@ Productor
 - **Borrado suave con cascada**: borrar un lote arrastra sus registros y nada se
   borra físicamente.
 - **Funcionamiento sin internet** de toda la app.
-- **Sincronización con Supabase**: subida de cambios pendientes, descarga
+- **Sincronización con la nube**: subida de cambios pendientes, descarga
   incremental, reglas de conflicto y cascadas remotas.
 - **Cuenta**: sesión anónima automática y vinculación con correo y contraseña,
   con aviso mientras el correo está **pendiente de confirmar**.
@@ -84,9 +84,9 @@ de cuenta en un teléfono con datos, compilación de iOS. Ver
              │
          ApiRemota            (interfaz)
         ┌────┴─────┐
-   ApiRemotaFalsa  ApiSupabase
+   ApiRemotaFalsa  ApiAppsScript
      (tests)            │
-                  Supabase / PostgreSQL
+              Apps Script / Google Sheets
 ```
 
 La aplicación es **offline-first**. Eso significa, en concreto:
@@ -98,7 +98,7 @@ La aplicación es **offline-first**. Eso significa, en concreto:
 
 `ApiRemota` es una interfaz a propósito: los tests corren contra
 `ApiRemotaFalsa` (un servidor en memoria, sin red) y la app real contra
-`ApiSupabase`. Cambiar de una a otra no toca la UI, ni los repositorios, ni los
+`ApiAppsScript`. Cambiar de una a otra no toca la UI, ni los repositorios, ni los
 DAOs, ni la lógica de sincronización.
 
 ---
@@ -194,7 +194,7 @@ conviene no confundirlos:
 |---|---|---|
 | `id` de cada fila | La fila en sí (UUID) | **Nunca** |
 | `sesion.usuarioId` | **La instalación** (este teléfono) | Nunca |
-| `sesion.authUid` | **La cuenta** en Supabase | No al vincular |
+| `sesion.authUid` | **La cuenta** de Google (su `sub`) | Solo si se entra con otra cuenta |
 
 Y el dueño de los datos se expresa distinto en cada lado:
 
@@ -212,68 +212,88 @@ Instalación sin internet
       ↓
 usuarioId local (UUID)          ← se puede trabajar ya, sin cuenta
       ↓
-hay internet → sesión anónima → authUid
+(sin cuenta: todo se queda en el teléfono, nada se sube)
       ↓
-sincronización
+entrar con Google → authUid = `sub` de Google
       ↓
-vincular cuenta (correo + contraseña)
-      ↓
-MISMO auth.uid()                ← los datos ya subidos siguen siendo suyos
+primera sincronización          ← lo anotado antes sube y queda a su nombre
 ```
 
-**Regla dura del código:** si existe una sesión anónima, la cuenta se **vincula**
-(`updateUser`), nunca se **registra** (`signUp`). Registrar crearía un `auth.uid()`
-nuevo y dejaría los datos anteriores huérfanos, invisibles para el RLS.
+**Regla dura del código:** lo anotado antes de entrar **no se pierde**. Al abrir
+sesión, esas filas siguen `pending` y suben con su dueño ya puesto. Y el
+servidor nunca deja escribir sobre una fila que ya tiene otro dueño.
 
 ### Dos teléfonos, una cuenta
 
 ```
 Teléfono A                        Teléfono B
 instalación A                     instalación B
-      └──────── cuenta X ─────────────┘
+      └──── misma cuenta de Google ────┘
                    │
-              Supabase
+            Apps Script / Sheets
 ```
 
-B inicia sesión, baja las filas y **las adopta con su propia identidad de
+B entra con la misma cuenta, baja las filas y **las adopta con su propia identidad de
 instalación**. Los `id` y las claves foráneas viajan intactos. Mientras la
 primera descarga no termina, la app **bloquea el registro** para que no aparezca
 un productor duplicado bajo la misma cuenta.
 
 ---
 
-## 7. Supabase
+## 7. El servidor: Google Apps Script
 
-- **PostgreSQL** guarda las mismas siete tablas de datos (sin `sync_status` ni
-  `sync_error`, que son estado local).
-- **`updated_at` lo escribe el servidor** con un trigger, ignorando lo que mande
-  el cliente. Un teléfono con la hora mal no puede envenenar la sincronización.
-- Todas las fechas son `timestamptz`, nunca `date`.
-- **Supabase Auth** con sesión anónima y con correo/contraseña.
-- **Row Level Security** activo en las siete tablas.
+Hasta septiembre de 2026 el backend fue **Supabase (PostgreSQL)**. Se cambió a
+un script sobre una hoja de cálculo de Google. El motivo no fue técnico: la
+cuenta es del equipo, no depende de un tercero, no se apaga por inactividad, y
+los técnicos pueden mirar los datos en una hoja. A cambio se pierde una base de
+datos de verdad, y eso hay que tenerlo presente.
 
-El esquema completo, listo para pegar en el SQL Editor, está en
-[`supabase/schema.sql`](supabase/schema.sql). El script es **idempotente**: se
-puede volver a ejecutar sin borrar datos ni fallar por lo que ya exista.
+- Una **hoja de cálculo** guarda las mismas siete tablas de datos (sin
+  `sync_status` ni `sync_error`, que son estado local).
+- **`updated_at` lo escribe el servidor**, ignorando lo que mande el cliente. Un
+  teléfono con la hora mal no puede envenenar la sincronización.
+- **`usuario_id` también lo escribe el servidor**, sacado de la sesión: el
+  filtro "cada quien ve lo suyo" no depende de lo que mande el teléfono.
+- Todas las fechas viajan como texto **ISO-8601 en UTC**.
+- La identidad la da **Google**: el script verifica el token contra Google y
+  comprueba que sea de esta app antes de abrir sesión.
+
+El script y la guía de instalación están en [`backend/`](backend/). Tres cosas
+que cuestan horas si no se saben:
+
+1. Las peticiones van como `text/plain`. Con `application/json` el navegador
+   hace una petición previa que Apps Script no contesta, y la versión web deja
+   de sincronizar sin decir por qué.
+2. Un `POST` responde con una redirección, y el destino solo acepta `GET`. El
+   cliente sigue esa redirección a mano.
+3. Cada cambio en el script necesita **publicar una versión nueva**, o la
+   dirección sigue sirviendo el código viejo.
+
+### Sin cuenta no hay servidor
+
+Con Supabase había una sesión anónima que respaldaba aunque nadie hubiera
+entrado. Con Google eso ya no es posible: **quien no entra trabaja solo contra
+el teléfono**. La app funciona igual —el campo no espera a la nube— pero no hay
+respaldo, y la pantalla de perfil lo dice sin rodeos.
 
 ### Configuración
 
-Las credenciales viven en `lib/data/sync/config_supabase.dart` y se pueden pasar
-por línea de comandos sin tocar el código:
+La dirección del servidor y los identificadores de OAuth viven en
+`lib/data/sync/config_nube.dart` y se pueden pasar por línea de comandos:
 
 ```bash
 flutter run \
-  --dart-define=SUPABASE_URL=TU_URL \
-  --dart-define=SUPABASE_KEY=TU_LLAVE_PUBLICABLE
+  --dart-define=NUBE_URL=https://script.google.com/macros/s/.../exec \
+  --dart-define=GOOGLE_CLIENTE_WEB=...apps.googleusercontent.com
 ```
 
-Si no hay llave configurada, la app arranca contra el **doble en memoria** y
-funciona igual; lo único que cambia es a dónde van los datos.
+Si no hay dirección configurada, la app arranca contra el **doble en memoria**
+y funciona igual; lo único que cambia es a dónde van los datos.
 
-> La llave **publicable** (antes `anon`) es pública por diseño: viaja dentro de
-> la app y lo que protege los datos es el RLS del servidor. La llave
-> **`service_role` / secret nunca debe estar en el código ni en el repositorio**,
-> porque se salta el RLS.
+> Los identificadores de OAuth son públicos por diseño: viajan dentro de la app.
+> Lo que protege la cuenta es la huella **SHA-1** registrada en Google (Android)
+> y la lista de orígenes autorizados (web). El **secreto del cliente**
+> (`GOCSPX-...`) no se usa en este diseño y **no debe estar en el repositorio**.
 
 ---
 
@@ -283,7 +303,8 @@ funciona igual; lo único que cambia es a dónde van los datos.
 
 - Flutter 3.47 o superior (incluye Dart 3.13)
 - Android SDK con API 36 y NDK (para compilar a Android)
-- Un proyecto de Supabase, si se quiere sincronizar de verdad
+- Una hoja de Google con el script de [`backend/`](backend/), si se quiere
+  sincronizar de verdad
 
 **Puesta en marcha**
 
@@ -373,7 +394,7 @@ paginación, idempotencia, reintentos, conflictos, cascadas remotas, vinculació
 de cuenta conservando el `auth.uid()`, inicio de sesión, dos instalaciones
 compartiendo una cuenta y aislamiento entre cuentas distintas.
 
-### Qué se verificó contra Supabase real
+### Qué se verificó contra el servidor real
 
 En emulador Android, contra el proyecto real: creación de las tablas, sesión
 anónima, **subida** de productor, finca y lote con sello de PostgreSQL,
@@ -396,6 +417,8 @@ dos teléfonos**.
 | v3 | `lastSyncId`: el cursor pasa a ser compuesto |
 | v4 | `correo` y `descargaInicial` en `sesion` (cuentas) |
 | v5 | `correoConfirmado` en `sesion` |
+| v6 | `tipoDocumento` y `numeroDocumento` en `productores` |
+| v7 | `tokenNube` en `sesion` (sesión del servidor) |
 
 Todas son **aditivas**: agregan columnas o tablas, no borran datos ni cambian
 identificadores. Las migraciones v1→v2 y v2→v3 se probaron instalando sobre una
@@ -430,14 +453,14 @@ instalación real con datos.
 | Diagnósticos con foto | ✅ Implementado |
 | Funcionamiento offline-first | ✅ Implementado |
 | Borrado suave y cascadas | ✅ Implementado |
-| Sincronización con Supabase | ✅ Implementado |
+| Sincronización con la nube | ✅ Implementado |
 | Autenticación anónima | ✅ Implementado |
 | Vinculación de cuenta (correo confirmado) | ✅ Implementado |
 | Inicio de sesión | ✅ Implementado |
 | Cerrar sesión | ✅ Implementado |
 | Cambiar de cuenta en un teléfono con datos | ✅ Implementado |
 | Recuperación en varios dispositivos | 🟡 Funciona con un correo real confirmado; falta dejar registro formal de la prueba con dos teléfonos |
-| Fotos en Supabase Storage | ⏳ Pendiente (hoy viaja la ruta, no la imagen) |
+| Fotos en Google Drive | ⏳ Pendiente (hoy viaja la ruta, no la imagen) |
 | Recuperación de contraseña | ⏳ Pendiente |
 | Versión web (mismo código) | 🟡 Compila y arranca en navegador de escritorio; falta probarla a fondo y publicarla |
 | Compilación iOS | ⏳ Pendiente (permisos ya configurados) |
@@ -447,24 +470,24 @@ instalación real con datos.
 
 ## 13. Seguridad y privacidad
 
-- **RLS** activo en las siete tablas. `productores` filtra por
-  `usuario_id = auth.uid()`; las demás llegan por *join* hasta el productor.
-- Un usuario **no puede leer ni modificar** los datos de otro. La misma cuenta sí
-  puede entrar desde varios dispositivos.
-- La app usa **únicamente la llave publicable**. La `service_role` **no está** en
-  el código ni en el repositorio, y no debe estarlo nunca.
-- Las contraseñas las gestiona Supabase Auth; la app no las guarda.
+- **Cada petición se filtra por la sesión.** El servidor escribe el
+  `usuario_id` de quien entró en todas las filas y nunca cree lo que manda el
+  teléfono. Una fila que ya tiene otro dueño no se puede sobrescribir.
+- Un usuario **no puede leer ni modificar** los datos de otro. La misma cuenta
+  sí puede entrar desde varios dispositivos.
+- **Las contraseñas las gestiona Google**; la app nunca las ve ni las guarda.
+  Eso también quita de encima la recuperación de contraseña.
+- El **secreto del cliente** de OAuth no se usa ni está en el repositorio.
 - Las fotos de diagnóstico **no salen del teléfono**.
 
-**Confirmación de correo.** Está **activada** a propósito: la cuenta solo sirve
-para recuperar los datos, y con un correo inventado esa recuperación es
-imposible el día que hace falta. Mientras el correo no se confirma, la app lo
-dice con todas sus letras y no promete un respaldo que no existe.
+**La cuenta llega verificada.** Antes hacía falta confirmar el correo y la app
+tenía un tercer estado ("pendiente de confirmar"). Con Google eso desaparece: o
+hay cuenta o no la hay.
 
-> **Pendiente antes de producción:** conectar un SMTP propio (el correo incluido
-> de Supabase está limitado a unos pocos envíos por hora y es solo para
-> pruebas), recuperación y cambio de contraseña —que necesitan enlaces
-> profundos hacia la app—, y revisión de cuentas abandonadas.
+> **Pendiente antes de producción:** llaves de firma propias para Android (hoy
+> se firma con las de depuración, y si cambian sin registrar la nueva huella el
+> ingreso deja de funcionar), publicar la app en Google para que entre
+> cualquiera y no solo los correos de prueba, y fotos en Drive.
 
 ---
 
@@ -498,9 +521,10 @@ dice con todas sus letras y no promete un respaldo que no existe.
 |---|---|
 | `sync_service.dart` | **El corazón**: push/pull, cursor, conflictos, cuentas |
 | `api_remota.dart` | La interfaz con el backend |
-| `api_supabase.dart` | Implementación real (PostgREST + Auth) |
+| `api_apps_script.dart` | Implementación real (Apps Script) |
+| `autenticador_google.dart` | Pide la cuenta a Google y entrega el token |
 | `api_falsa.dart` | Servidor en memoria con cuentas, para tests y desarrollo |
-| `config_supabase.dart` | URL y llave publicable |
+| `config_nube.dart` | Dirección del servidor e identificadores de OAuth |
 | `mapeador_productor.dart` · `mapeador_finca.dart` · `mapeador_lote.dart` · `mapeadores_registros.dart` | Traducen fila local ↔ fila remota |
 | `sync_result.dart` | Resultado de una pasada y motivos de conflicto |
 | `sync_state.dart` | Estado observable para la interfaz |
@@ -531,7 +555,8 @@ dice con todas sus letras y no promete un respaldo que no existe.
 | Archivo | Qué hay dentro |
 |---|---|
 | `lib/main.dart` | Arranque: base local, identidad, backend y `runApp` |
-| `supabase/schema.sql` | Esquema, triggers, índices y políticas RLS |
+| `backend/Codigo.gs` | El servidor: sesiones, subida, descarga y sellos |
+| `backend/GUIA_PASO_A_PASO.md` | Cómo dejarlo instalado en una cuenta nueva |
 | `tools/servidor_web.py` | Servidor local con las cabeceras que exige la base del navegador |
 | `web/_headers` · `vercel.json` | Las mismas cabeceras para Netlify y Vercel |
 | `test/utiles.dart` | Ayudas de tests (incluye por qué no se usa `pumpAndSettle`) |

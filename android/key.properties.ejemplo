@@ -1,0 +1,7 @@
+# Copie este archivo como `android/key.properties` y ponga sus datos.
+# NO lo suba a GitHub: con esta llave cualquiera puede firmar una app que el
+# celular acepta como si fuera la suya.
+storeFile=/ruta/absoluta/a/cacao-release.jks
+storePassword=LA_CLAVE_DEL_ALMACEN
+keyAlias=cacao
+keyPassword=LA_CLAVE_DE_LA_LLAVE

@@ -6,12 +6,11 @@ import 'data/local/database.dart';
 import 'data/repositories/lote_repository.dart';
 import 'data/repositories/perfil_repository.dart';
 
-import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'data/sync/api_apps_script.dart';
 import 'data/sync/api_falsa.dart';
 import 'data/sync/api_remota.dart';
-import 'data/sync/api_supabase.dart';
-import 'data/sync/config_supabase.dart';
+import 'data/sync/autenticador_google.dart';
+import 'data/sync/config_nube.dart';
 import 'data/sync/sync_service.dart';
 import 'ui/cascaron_screen.dart';
 import 'ui/tema.dart';
@@ -23,17 +22,24 @@ Future<void> main() async {
   // La identidad se resuelve sin red: la app tiene que poder crear el perfil
   // aunque nunca haya visto internet.
   final usuarioId = await db.syncDao.identidadLocal();
+  final sesion = await db.syncDao.sesionActual();
 
-  // Con llave configurada se habla con Supabase; sin ella, con el doble en
+  // Con servidor configurado se habla con Apps Script; sin él, con el doble en
   // memoria. La app funciona igual en los dos casos: lo que cambia es a dónde
   // van los datos, no cómo se guardan aquí.
+  //
+  // La sesión guardada se restaura de una: así quien ya entró alguna vez no
+  // vuelve a ver la pantalla de Google en cada arranque.
   final ApiRemota api;
-  if (ConfigSupabase.hayBackend) {
-    await Supabase.initialize(
-      url: ConfigSupabase.url,
-      publishableKey: ConfigSupabase.llavePublica,
+  if (hayNube) {
+    final google = AutenticadorGoogle();
+    api = ApiAppsScript(
+      url: Uri.parse(urlNube),
+      pedirIdTokenAGoogle: google.idToken,
+      salirDeGoogle: google.salir,
+      token: sesion?.tokenNube,
+      usuarioId: sesion?.authUid,
     );
-    api = ApiSupabase(Supabase.instance.client);
   } else {
     api = ApiRemotaFalsa();
   }

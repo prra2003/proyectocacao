@@ -47,25 +47,13 @@ class ApiSinSubida implements ApiRemota {
   final ApiRemotaFalsa real;
 
   @override
-  Future<String> asegurarSesion() => real.asegurarSesion();
+  Future<String?> usuarioActual() => real.usuarioActual();
 
   @override
-  Future<String> vincularCorreo({
-    required String correo,
-    required String clave,
-  }) => real.vincularCorreo(correo: correo, clave: clave);
-
-  @override
-  Future<String> iniciarSesion({
-    required String correo,
-    required String clave,
-  }) => real.iniciarSesion(correo: correo, clave: clave);
+  Future<SesionRemota> entrarConGoogle() => real.entrarConGoogle();
 
   @override
   Future<void> cerrarSesion() => real.cerrarSesion();
-
-  @override
-  Future<bool> correoConfirmado() => real.correoConfirmado();
 
   @override
   Future<List<FilaRemota>> descargar({

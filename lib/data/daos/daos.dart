@@ -596,7 +596,7 @@ class SyncDao extends DatabaseAccessor<AppDatabase> with _$SyncDaoMixin {
     return id;
   }
 
-  /// Guarda el `auth.uid()` de la sesión anónima de Supabase. La identidad
+  /// Guarda el identificador de la cuenta de Google. La identidad
   /// local no cambia: este id solo viaja al servidor.
   Future<void> guardarAuthUid(String authUid) async {
     await identidadLocal();
@@ -632,11 +632,48 @@ class SyncDao extends DatabaseAccessor<AppDatabase> with _$SyncDaoMixin {
 
   /// Olvida la cuenta, **conservando la identidad de la instalación**: este
   /// teléfono sigue siendo el mismo, solo deja de estar ligado a una cuenta.
+  /// Guarda quién entró y con qué sesión del servidor.
+  Future<void> guardarSesionRemota({
+    required String usuarioRemoto,
+    required String correo,
+    String? token,
+  }) async {
+    await (update(sesion)..where((s) => s.id.equals(1))).write(
+      SesionCompanion(
+        authUid: Value(usuarioRemoto),
+        correo: Value(correo),
+        tokenNube: Value(token),
+        // Con Google la cuenta llega confirmada: no hay correo que abrir.
+        correoConfirmado: const Value(true),
+      ),
+    );
+  }
+
+  /// ¿Este teléfono ya tiene datos propios?
+  ///
+  /// Sirve para decidir si hay que avisar antes de entrar con una cuenta: si
+  /// el teléfono está vacío no hay nada que reemplazar y la pregunta sobra.
+  Future<bool> hayDatosLocales() async {
+    // Consulta directa: `SyncDao` solo tiene declaradas sus dos tablas, y
+    // declarar `productores` aquí solo para contar sería peor.
+    final fila = await customSelect(
+      'select count(*) as n from productores where deleted_at is null',
+      readsFrom: {},
+    ).getSingle();
+    return fila.read<int>('n') > 0;
+  }
+
+  Future<String?> tokenNube() async {
+    final fila = await sesionActual();
+    return fila?.tokenNube;
+  }
+
   Future<void> olvidarCuenta() async {
     await (update(sesion)..where((s) => s.id.equals(1))).write(
       const SesionCompanion(
         authUid: Value(null),
         correo: Value(null),
+        tokenNube: Value(null),
         correoConfirmado: Value(false),
         descargaInicial: Value(true),
       ),

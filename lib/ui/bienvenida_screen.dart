@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../data/repositories/perfil_repository.dart';
 import '../data/sync/sync_service.dart';
-import 'cuenta_screens.dart';
 import 'editar_finca_screen.dart';
 import 'editar_productor_screen.dart';
 import 'tema.dart';
+import 'widgets/comunes.dart';
 import 'widgets/mazorca.dart';
 
 /// Lo primero que se ve al instalar la app.
@@ -103,13 +103,16 @@ class BienvenidaScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               // La puerta del teléfono nuevo: quien ya tiene cuenta no debe
-              // registrarse otra vez, sino bajar lo que ya existe.
+              // registrarse otra vez, sino bajar lo que ya existe. No hace
+              // falta navegar a ninguna parte: Google abre su propia ventana.
               TextButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => IniciarSesionScreen(sync: sync),
-                  ),
-                ),
+                // Si algo falla hay que decirlo: un botón que no responde deja
+                // a la persona sin saber si tocó mal o si no hay señal.
+                onPressed: () async {
+                  final resultado = await sync.entrarConGoogle();
+                  if (!context.mounted || resultado.ok) return;
+                  avisar(context, resultado.error ?? 'No se pudo entrar');
+                },
                 child: const Text(
                   'Ya tengo cuenta',
                   style: TextStyle(

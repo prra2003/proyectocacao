@@ -1,15 +1,15 @@
 import 'api_remota.dart';
 
 /// Cuenta del servidor de prueba.
+///
+/// Ya no guarda contraseña ni estado de confirmación: con Google, quien entra
+/// llega identificado y con el correo verificado.
 class CuentaFalsa {
-  CuentaFalsa(this.uid);
+  CuentaFalsa(this.uid, {this.correo = ''});
 
+  /// El `sub` de Google: identifica a la persona para siempre.
   final String uid;
-  String? correo;
-  String? clave;
-
-  /// Imita la confirmación por correo del servidor real.
-  bool confirmado = false;
+  String correo;
 }
 
 /// El servidor en memoria: cuentas y filas, compartido por varios clientes.
@@ -34,36 +34,20 @@ class ServidorFalso {
   Map<String, FilaRemota> tabla(String entidad) =>
       _tablas.putIfAbsent(entidad, () => {});
 
-  CuentaFalsa crearAnonima() {
-    final cuenta = CuentaFalsa('auth-${sello().microsecondsSinceEpoch}');
+  /// La cuenta de un correo de Google, creándola la primera vez.
+  ///
+  /// Dos teléfonos que entren con el mismo correo caen en la misma cuenta: es
+  /// justo lo que hace posible recuperar los datos en un equipo nuevo.
+  CuentaFalsa cuentaDeGoogle(String correo) {
+    for (final cuenta in _cuentas.values) {
+      if (cuenta.correo == correo) return cuenta;
+    }
+    final cuenta = CuentaFalsa(
+      'google-${sello().microsecondsSinceEpoch}',
+      correo: correo,
+    );
     _cuentas[cuenta.uid] = cuenta;
     return cuenta;
-  }
-
-  /// Solo entra quien tenga el correo **confirmado**, como el servidor real
-  /// cuando la confirmación está activada.
-  CuentaFalsa? porCorreo(String correo, String clave) {
-    for (final cuenta in _cuentas.values) {
-      if (cuenta.correo == correo &&
-          cuenta.clave == clave &&
-          cuenta.confirmado) {
-        return cuenta;
-      }
-    }
-    return null;
-  }
-
-  /// Lo que haría la persona al abrir el enlace del correo.
-  void confirmarCorreo(String correo) {
-    for (final cuenta in _cuentas.values) {
-      if (cuenta.correo == correo) cuenta.confirmado = true;
-    }
-  }
-
-  bool correoOcupado(String correo, String salvoUid) {
-    return _cuentas.values.any(
-      (c) => c.correo == correo && c.uid != salvoUid,
-    );
   }
 
   CuentaFalsa cuenta(String uid) => _cuentas[uid]!;
@@ -93,23 +77,29 @@ class ServidorFalso {
   String? duenoDe(String entidad, String id) => _duenos['$entidad/$id'];
 }
 
-/// Cliente del servidor de prueba: imita a Supabase sin red.
+/// Cliente del servidor de prueba: imita a Apps Script sin red.
 ///
-/// Sella `updated_at` con el reloj del servidor, igual que hará el trigger de
-/// PostgreSQL: el reloj del dispositivo nunca entra en la comparación.
+/// Sella `updated_at` con el reloj del servidor, igual que hace el script en
+/// la hoja: el reloj del dispositivo nunca entra en la comparación.
 class ApiRemotaFalsa implements ApiRemota {
-  ApiRemotaFalsa({DateTime? desde}) : servidor = ServidorFalso(desde: desde);
+  ApiRemotaFalsa({DateTime? desde, this.correoDeGoogle = 'productor@gmail.com'})
+    : servidor = ServidorFalso(desde: desde);
 
   /// Otro "teléfono" contra el mismo servidor.
-  ApiRemotaFalsa.deServidor(this.servidor);
+  ApiRemotaFalsa.deServidor(this.servidor, {
+    this.correoDeGoogle = 'productor@gmail.com',
+  });
+
+  /// Con qué cuenta contestará Google cuando la app pida entrar.
+  String correoDeGoogle;
+
+  /// Para probar que la persona puede cerrar la ventana de Google sin que la
+  /// app quede en un estado raro.
+  bool googleCancela = false;
 
   final ServidorFalso servidor;
 
   CuentaFalsa? _sesion;
-
-  /// ¿El servidor exige confirmar el correo? Refleja el ajuste
-  /// "Confirm email" de Supabase, que en este proyecto está **activado**.
-  bool exigeConfirmacion = true;
 
   /// Fallos que provocará en las próximas llamadas, para probar la
   /// recuperación ante errores.
@@ -122,7 +112,7 @@ class ApiRemotaFalsa implements ApiRemota {
   /// Llamadas atendidas, para comprobar que no se descarga de más.
   var descargas = 0;
 
-  /// `auth.uid()` de la sesión abierta en este cliente.
+  /// Identidad de la sesión abierta en este cliente.
   String? get uid => _sesion?.uid;
 
   String? get correo => _sesion?.correo;
@@ -165,52 +155,25 @@ class ApiRemotaFalsa implements ApiRemota {
   String? duenoDe(String entidad, String id) => servidor.duenoDe(entidad, id);
 
   @override
-  Future<String> asegurarSesion() async {
-    _quizasFallar();
-    return (_sesion ??= servidor.crearAnonima()).uid;
-  }
+  Future<String?> usuarioActual() async => _sesion?.uid;
 
   @override
-  Future<String> vincularCorreo({
-    required String correo,
-    required String clave,
-  }) async {
+  Future<SesionRemota> entrarConGoogle() async {
     _quizasFallar();
-    final sesion = _sesion ?? servidor.crearAnonima();
-    _sesion = sesion;
-    if (servidor.correoOcupado(correo, sesion.uid)) {
-      throw const ErrorRemoto('ese correo ya tiene una cuenta');
+    if (googleCancela) {
+      throw const ErrorRemoto('Se canceló el ingreso con Google');
     }
-    sesion.correo = correo;
-    sesion.clave = clave;
-    sesion.confirmado = !exigeConfirmacion;
-    // El uid no cambia: es toda la gracia de vincular en vez de registrar.
-    return sesion.uid;
-  }
-
-  @override
-  Future<String> iniciarSesion({
-    required String correo,
-    required String clave,
-  }) async {
-    _quizasFallar();
-    final cuenta = servidor.porCorreo(correo, clave);
-    if (cuenta == null) {
-      throw const ErrorRemoto('correo o contraseña incorrectos');
-    }
+    final cuenta = servidor.cuentaDeGoogle(correoDeGoogle);
     _sesion = cuenta;
-    return cuenta.uid;
+    return SesionRemota(
+      usuarioId: cuenta.uid,
+      correo: cuenta.correo,
+      token: 'sesion-${cuenta.uid}',
+    );
   }
 
   @override
   Future<void> cerrarSesion() async => _sesion = null;
-
-  @override
-  Future<bool> correoConfirmado() async =>
-      _sesion?.correo != null && (_sesion?.confirmado ?? false);
-
-  /// Atajo de tests: abre el enlace del correo por la persona.
-  void confirmarCorreo(String correo) => servidor.confirmarCorreo(correo);
 
   @override
   Future<List<FilaRemota>> descargar({

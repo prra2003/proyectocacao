@@ -87,6 +87,8 @@ Más dos tablas de servicio que no son datos del productor:
 | v3 | `lastSyncId` | El cursor pasó a ser compuesto (ver 4.3) |
 | v4 | `correo`, `descargaInicial` | Cuentas y bloqueo de la primera descarga |
 | v5 | `correoConfirmado` | La confirmación de correo del servidor |
+| v6 | `tipoDocumento`, `numeroDocumento` | La identificación que pide el SENA |
+| v7 | `tokenNube` | La sesión del servidor, para no pedir Google en cada arranque |
 
 **Todas son aditivas**: agregan columnas o tablas, nunca borran datos ni cambian
 identificadores. Las migraciones v1→v2 y v2→v3 se probaron instalando la app
@@ -145,11 +147,11 @@ delicada del proyecto.
 
 `ApiRemota` es una interfaz, y eso no es decoración: permite que los tests
 corran contra `ApiRemotaFalsa` —un servidor en memoria, con cuentas y aislamiento
-entre usuarios— sin tocar la red, y que la app real use `ApiSupabase`. Cambiar
+entre usuarios— sin tocar la red, y que la app real use `ApiAppsScript`. Cambiar
 de una a otra no toca la interfaz, ni los repositorios, ni los DAOs, ni el
 `SyncService`.
 
-En `main.dart`, si hay llave configurada se usa Supabase; si no, el doble. La app
+En `main.dart`, si hay servidor configurado se usa Apps Script; si no, el doble. La app
 funciona igual en los dos casos.
 
 ### 4.2 El ciclo
@@ -251,7 +253,7 @@ parecen:
 |---|---|---|
 | `id` de cada fila | La fila en sí | **Nunca** |
 | `sesion.usuarioId` | **La instalación** (este teléfono) | Nunca |
-| `sesion.authUid` | **La cuenta** en Supabase | No al vincular |
+| `sesion.authUid` | **La cuenta** de Google (su `sub`) | Solo al entrar con otra |
 | `productores.usuarioId` (local) | Dueño local = la instalación | — |
 | `productores.usuario_id` (remoto) | Dueño remoto = la cuenta | — |
 
@@ -271,7 +273,7 @@ Teléfono A                        Teléfono B
 instalación A                     instalación B
       └──────── cuenta X ─────────────┘
                    │
-              Supabase
+        Apps Script / Sheets
 ```
 
 ### 5.2 Vincular, nunca registrar
@@ -284,61 +286,42 @@ políticas de seguridad siguen encajando sin tocar una fila.
 `signUp()` crearía un usuario **nuevo**, con otro uid, y dejaría los datos
 anteriores huérfanos: invisibles para el RLS, imposibles de recuperar.
 
-### 5.3 La confirmación de correo
+### 5.3 La identidad la da Google
 
-En el proyecto de Supabase, **"Confirm email" está activado**. Fue una decisión
-consciente: la cuenta solo sirve para recuperar los datos, y con un correo
-inventado esa recuperación es imposible el día que hace falta.
+Hasta septiembre de 2026 la cuenta era de correo y contraseña, con confirmación
+por correo activada, y la app tenía un tercer estado: "pendiente de confirmar".
+Al pasar a Google ese estado desapareció, porque la cuenta llega verificada.
 
-La consecuencia técnica es que `updateUser(email)` **no aplica el correo** hasta
-que la persona abre el enlace del mensaje. Mientras tanto:
+Lo que hay ahora, en orden:
 
-- La cuenta existe y la contraseña ya está puesta.
-- El correo está pendiente → **no se puede entrar desde otro teléfono**.
-- La app lo dice con todas sus letras y **no promete un respaldo que no existe**.
+1. La app pide la cuenta a Google y recibe un **token de identidad** (un JWT
+   firmado que dura una hora).
+2. El servidor le pregunta a Google si el token es válido y **comprueba que sea
+   de esta app** (`aud` contra la lista de identificadores). Sin esa
+   comprobación, el token de cualquier aplicación de Google serviría para
+   entrar: es la línea que sostiene la seguridad.
+3. El servidor devuelve una **sesión propia de 90 días**, que se guarda en
+   `sesion.tokenNube`. Sin ese cambio, la sincronización empezaría a fallar
+   sola al cabo de una hora y sin motivo visible.
 
-Ese estado se guarda en `sesion.correoConfirmado` y se refresca con
-`refrescarEstadoCuenta()`, que es lo que hay detrás del botón "Ya confirmé mi
-correo".
+El `sub` de Google pasa a ser el dueño de cada fila: ocupa exactamente el lugar
+que tenía el `auth.uid()` de Supabase, así que el resto del diseño no cambió.
 
-> Este fue el origen de un fallo real que costó tiempo: la app decía "sus datos
-> están respaldados" con el correo pendiente, y el segundo teléfono nunca podía
-> entrar. El diagnóstico no estaba en el código sino en la configuración del
-> servidor (`mailer_autoconfirm = false`).
+**Lo que sí cambió de fondo:** ya no hay sesión anónima. Antes se respaldaba
+aunque nadie hubiera entrado; ahora **sin cuenta no hay servidor**. Lo anotado
+antes de entrar no se pierde: queda `pending` y sube con la primera
+sincronización, ya a nombre de la cuenta.
 
-### 5.4 El bloqueo de la descarga inicial
-
-Cuando alguien entra con una cuenta existente en un teléfono nuevo, hay una
-ventana peligrosa: entre el login y el final de la descarga, no hay productor
-local y la app ofrecería "Comenzar registro". Si el usuario toca ahí, **crea un
-productor duplicado bajo la misma cuenta**.
-
-Por eso `entrarConCuenta` pone `sesion.descargaInicial = false` **antes** de
-sincronizar, y la interfaz muestra "Recuperando sus datos…" —con reintento si
-falla— hasta que la descarga termina bien. Solo entonces se levanta el bloqueo.
-
-### 5.5 Cerrar sesión y cambiar de cuenta
-
-**Cerrar sesión** borra los datos locales y olvida la cuenta, pero **conserva
-`sesion.usuarioId`**: el teléfono sigue siendo el mismo, solo deja de estar
-ligado a una cuenta. Antes avisa si hay cambios sin enviar, con el número exacto.
-
-**Cambiar de cuenta** (botón "Ya tengo cuenta" en Perfil, en una instalación con
-datos) usa `entrarConCuenta(reemplazarDatosLocales: true)`. El detalle importante
-del orden: **primero se autentica, y solo si el servidor acepta se borra lo
-local**. Con credenciales malas no se toca nada.
-
----
-
-## 6. Supabase
+## 6. El servidor
 
 ### 6.1 El esquema
 
-`supabase/schema.sql` crea las siete tablas de datos, los tipos enumerados, los
-triggers, los índices y las políticas. Es **idempotente**: se puede volver a
-ejecutar sin borrar datos ni fallar por lo que ya exista —los tipos se crean
-dentro de un bloque que ignora "ya existe", las tablas usan `if not exists`, y
-triggers y políticas se borran antes de crearse—.
+`backend/Codigo.gs` crea las siete hojas de datos más la de sesiones, con sus
+encabezados, al ejecutar `instalar()` una vez. Es **idempotente**: se puede
+volver a ejecutar sin borrar nada, porque solo crea lo que falte.
+
+Las columnas se leen **por orden**, no por nombre, así que renombrar o mover una
+columna en la hoja rompe la sincronización. Está avisado en `backend/README.md`.
 
 Tres decisiones que no son obvias:
 
@@ -425,7 +408,7 @@ Por eso hay un `tools/servidor_web.py` que manda esas cabeceras, y por eso está
 configuradas para Netlify (`web/_headers`) y Vercel (`vercel.json`).
 
 Verificado: arranca en Brave/Chrome de escritorio, abre la base y completa la
-inicialización de Supabase. **No** se ha probado a fondo la interfaz completa en
+inicialización del servidor. **No** se ha probado a fondo la interfaz completa en
 navegador ni en Safari de iPhone.
 
 ### Qué es y qué no es
@@ -462,7 +445,7 @@ Están documentadas en `test/utiles.dart` porque cuestan horas si no se saben:
 2. **Nunca `pumpAndSettle`** con un indicador de carga en pantalla: es una
    animación infinita y nunca se estabiliza.
 
-### 8.3 Qué se verificó contra Supabase real
+### 8.3 Qué se verificó contra el servidor real
 
 En emulador Android, contra el proyecto real: creación del esquema, sesión
 anónima, subida de productor, finca y lote con sello de PostgreSQL, borrado
@@ -498,10 +481,12 @@ Esta sección existe porque cada uno de estos costó tiempo y podría volver.
 
 - **Las fotos no salen del teléfono.** Al servidor viaja la ruta, no la imagen.
   Si el productor cambia de equipo, los diagnósticos llegan sin foto. Falta
-  Supabase Storage.
+  Google Drive.
 - **No hay recuperación de contraseña.** Necesita enlaces profundos hacia la app
   y configuración de la URL de redirección.
-- **El correo de Supabase gratis está limitado** a unos pocos envíos por hora y
+- **Los límites de Apps Script**: 90 minutos de ejecución al día en cuentas
+  gratuitas de Gmail, y las escrituras se hacen de a una con candado. Con
+  decenas de productores va bien; con cientos, se sentiría lento. Y
   es solo para pruebas. Para usuarios reales hace falta un SMTP propio.
 - **iOS nunca se ha compilado.** La configuración y los permisos están puestos,
   pero falta un Mac con Xcode para saber si algo hay que ajustar.
@@ -516,9 +501,11 @@ Ordenado por lo que más valor da:
 
 1. **Dejar registro de la prueba con dos teléfonos reales** — es lo único que
    falta para cerrar la Fase 1 sin asteriscos.
-2. **SMTP propio** en Supabase, para que los correos lleguen de verdad.
-3. **Fotos en Supabase Storage.**
-4. **Recuperación de contraseña** con enlaces profundos.
+2. **Llaves de firma propias** para Android, registrando la nueva huella SHA-1
+   en Google: hoy se firma con las de depuración.
+3. **Fotos en Google Drive.**
+4. **Publicar la app en Google**, para que pueda entrar cualquier productor y no
+   solo los correos de la lista de prueba.
 5. **Panel web para técnicos** — el navegador es el sitio natural para ver muchos
    productores. Ojo: exige otro modelo de permisos, porque hoy el RLS aísla a
    cada productor.

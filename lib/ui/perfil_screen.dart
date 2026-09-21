@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../data/local/database.dart';
 import '../data/repositories/perfil_repository.dart';
 import '../data/sync/sync_service.dart';
-import 'cuenta_screens.dart';
 import 'editar_productor_screen.dart';
 import 'formato.dart';
 import 'mis_fincas_screen.dart';
@@ -72,10 +71,11 @@ class PerfilScreen extends StatelessWidget {
   }
 }
 
-/// Estado de la cuenta. Tiene tres caras, y la del medio importa: con la
-/// confirmación de correo activada en el servidor, vincular **no** basta, y la
-/// app no puede decir que los datos están respaldados hasta que la persona
-/// abra el enlace del mensaje.
+/// Estado de la cuenta: con Google son dos caras, no tres.
+///
+/// Antes había un estado intermedio —"le mandamos un correo, ábralo"— porque
+/// el servidor exigía confirmar la dirección. Con Google la cuenta llega
+/// verificada, así que o hay respaldo o no lo hay.
 class _TarjetaCuenta extends StatefulWidget {
   const _TarjetaCuenta({required this.db, required this.sync});
 
@@ -89,58 +89,53 @@ class _TarjetaCuenta extends StatefulWidget {
 class _TarjetaCuentaState extends State<_TarjetaCuenta> {
   var _trabajando = false;
 
-  Future<void> _yaConfirme() async {
+  /// Entra con Google. Si el teléfono ya tiene datos, avisa primero: lo local
+  /// se reemplaza por lo de la cuenta.
+  ///
+  /// El borrado ocurre dentro de `entrarConGoogle`, y solo si Google y el
+  /// servidor aceptaron: si la persona cierra la ventana, no se toca nada.
+  Future<void> _entrar() async {
+    final pendientes = await widget.db.syncDao.watchPendientes().first;
+    final hayProductor = await widget.db.syncDao.hayDatosLocales();
+    if (!mounted) return;
+
+    if (hayProductor) {
+      final seguir = await showDialog<bool>(
+        context: context,
+        builder: (contexto) => AlertDialog(
+          title: const Text('¿Entrar con su cuenta?'),
+          content: Text(
+            'Si ya tiene datos guardados en esa cuenta, los de este teléfono '
+            'se reemplazan por los suyos.'
+            '${pendientes > 0 ? '\n\nTiene $pendientes '
+                      '${pendientes == 1 ? 'cambio' : 'cambios'} sin enviar: '
+                      'se perderían.' : ''}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(contexto).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
+              onPressed: () => Navigator.of(contexto).pop(true),
+              child: const Text('Continuar'),
+            ),
+          ],
+        ),
+      );
+      if (seguir != true || !mounted) return;
+    }
+
     setState(() => _trabajando = true);
-    final confirmado = await widget.sync.refrescarEstadoCuenta();
+    final resultado = await widget.sync.entrarConGoogle();
     if (!mounted) return;
     setState(() => _trabajando = false);
     avisar(
       context,
-      confirmado
-          ? 'Listo: su cuenta quedó confirmada'
-          : 'Todavía no aparece confirmado. Abra el enlace del correo.',
-    );
-  }
-
-  /// Entrar con una cuenta existente desde un teléfono que ya tiene datos.
-  ///
-  /// Se avisa antes porque lo local se reemplaza; el borrado real ocurre dentro
-  /// de `entrarConCuenta`, y solo si el servidor acepta las credenciales.
-  Future<void> _entrarConOtraCuenta() async {
-    final pendientes = await widget.db.syncDao.watchPendientes().first;
-    if (!mounted) return;
-
-    final seguir = await showDialog<bool>(
-      context: context,
-      builder: (contexto) => AlertDialog(
-        title: const Text('¿Ya tiene cuenta?'),
-        content: Text(
-          'Al entrar, los datos de este teléfono se borran y se bajan los de '
-          'su cuenta.'
-          '${pendientes > 0 ? '\n\nTiene $pendientes '
-                    '${pendientes == 1 ? 'cambio' : 'cambios'} sin enviar: '
-                    'se perderían.' : ''}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(contexto).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
-            onPressed: () => Navigator.of(contexto).pop(true),
-            child: const Text('Continuar'),
-          ),
-        ],
-      ),
-    );
-    if (seguir != true || !mounted) return;
-
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) =>
-            IniciarSesionScreen(sync: widget.sync, reemplazarDatos: true),
-      ),
+      resultado.ok
+          ? 'Listo: sus datos quedaron respaldados'
+          : resultado.error ?? 'No se pudo entrar',
     );
   }
 
@@ -157,9 +152,9 @@ class _TarjetaCuentaState extends State<_TarjetaCuenta> {
               ? 'Tiene $pendientes ${pendientes == 1 ? 'cambio' : 'cambios'} '
                     'sin enviar. Si sale ahora, se pierden.\n\n'
                     'Los datos de este teléfono se borran; los que ya envió los '
-                    'recupera volviendo a entrar con su correo.'
+                    'recupera volviendo a entrar con la misma cuenta.'
               : 'Los datos de este teléfono se borran. Los recupera volviendo '
-                    'a entrar con su correo y contraseña.',
+                    'a entrar con la misma cuenta de Google.',
         ),
         actions: [
           TextButton(
@@ -190,29 +185,21 @@ class _TarjetaCuentaState extends State<_TarjetaCuenta> {
       stream: widget.db.syncDao.watchSesion(),
       builder: (context, snapshot) {
         final correo = snapshot.data?.correo;
-        final confirmado = snapshot.data?.correoConfirmado ?? false;
-        final pendienteDeConfirmar = correo != null && !confirmado;
+        final hayCuenta = correo != null;
 
-        final (color, fondo, icono, titulo) = switch ((correo, confirmado)) {
-          (null, _) => (
-            PaletaCacao.maduro,
-            PaletaCacao.maduroClaro,
-            Icons.cloud_off_outlined,
-            'Sin cuenta',
-          ),
-          (final c?, false) => (
-            PaletaCacao.maduro,
-            PaletaCacao.maduroClaro,
-            Icons.mark_email_unread_outlined,
-            c,
-          ),
-          (final c?, true) => (
-            PaletaCacao.verde,
-            PaletaCacao.verdeClaro,
-            Icons.verified_user_outlined,
-            c,
-          ),
-        };
+        final (color, fondo, icono, titulo) = hayCuenta
+            ? (
+                PaletaCacao.verde,
+                PaletaCacao.verdeClaro,
+                Icons.verified_user_outlined,
+                correo,
+              )
+            : (
+                PaletaCacao.maduro,
+                PaletaCacao.maduroClaro,
+                Icons.cloud_off_outlined,
+                'Sin cuenta',
+              );
 
         return Card(
           child: Padding(
@@ -235,49 +222,26 @@ class _TarjetaCuentaState extends State<_TarjetaCuenta> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  switch ((correo, confirmado)) {
-                    (null, _) =>
-                      'Sus datos están solo en este teléfono. Con una cuenta '
-                          'puede recuperarlos si lo pierde o cambia de equipo.',
-                    (_, false) =>
-                      'Le enviamos un correo para confirmar su cuenta. Ábralo '
-                          'y toque el enlace: hasta entonces no podrá entrar '
-                          'desde otro teléfono.',
-                    (_, true) =>
-                      'Sus datos están respaldados. Puede entrar con este '
-                          'correo desde otro teléfono.',
-                  },
+                  hayCuenta
+                      ? 'Sus datos están respaldados. Puede entrar con esta '
+                            'misma cuenta desde otro teléfono.'
+                      : 'Sus datos están solo en este teléfono. Entrando con '
+                            'su cuenta de Google puede recuperarlos si lo '
+                            'pierde o cambia de equipo.',
                   style: tema.textTheme.bodyMedium?.copyWith(
                     color: tema.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 18),
-                if (correo == null) ...[
+                if (!hayCuenta)
                   FilledButton.icon(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => CrearCuentaScreen(sync: widget.sync),
-                      ),
-                    ),
-                    icon: const Icon(Icons.person_add_alt),
-                    label: const Text('Crear cuenta'),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _entrarConOtraCuenta,
+                    onPressed: _trabajando ? null : _entrar,
                     icon: const Icon(Icons.login),
-                    label: const Text('Ya tengo cuenta'),
-                  ),
-                ] else ...[
-                  if (pendienteDeConfirmar)
-                    FilledButton.icon(
-                      onPressed: _trabajando ? null : _yaConfirme,
-                      icon: const Icon(Icons.refresh),
-                      label: Text(
-                        _trabajando ? 'Revisando…' : 'Ya confirmé mi correo',
-                      ),
+                    label: Text(
+                      _trabajando ? 'Entrando…' : 'Entrar con Google',
                     ),
-                  if (pendienteDeConfirmar) const SizedBox(height: 12),
+                  )
+                else
                   OutlinedButton.icon(
                     onPressed: _cerrarSesion,
                     style: OutlinedButton.styleFrom(
@@ -286,7 +250,6 @@ class _TarjetaCuentaState extends State<_TarjetaCuenta> {
                     icon: const Icon(Icons.logout),
                     label: const Text('Cerrar sesión'),
                   ),
-                ],
               ],
             ),
           ),

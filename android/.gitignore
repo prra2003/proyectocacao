@@ -12,3 +12,8 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Llaves de firma: nunca van al repositorio.
+key.properties
+*.jks
+*.keystore

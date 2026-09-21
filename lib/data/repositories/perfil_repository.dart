@@ -3,7 +3,7 @@ import '../local/database.dart';
 import '../local/enums.dart';
 
 /// Fachada del perfil del productor: la UI habla con esto y no con los DAOs,
-/// para que cuando entre la sincronización con Supabase solo cambie esta capa.
+/// para que cuando entre la sincronización con la nube solo cambie esta capa.
 class PerfilRepository {
   PerfilRepository(AppDatabase db, {required this.usuarioId})
     : _productores = db.productoresDao,

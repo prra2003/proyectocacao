@@ -28,6 +28,9 @@ void main() {
     registros = LoteRepository(db);
     api = ApiRemotaFalsa();
     sync = SyncService(baseDatos: db, apiRemota: api, usuarioLocal: usuarioId);
+    // Sin cuenta no hay servidor: estos tests ejercitan la sincronización, así
+    // que entran una vez y ya.
+    await sync.entrarConGoogle();
 
     productorId = await perfil.guardarProductor(nombreCompleto: 'Diego Parra');
     fincaId = await perfil.guardarFinca(
