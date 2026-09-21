@@ -1,5 +1,4 @@
 # Netlify: la base de datos del navegador necesita el origen aislado.
 # Sin estas dos cabeceras, la versión web no puede guardar datos.
 /*
-  Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Opener-Policy: same-origin-allow-popups

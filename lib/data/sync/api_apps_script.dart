@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:http/http.dart' as http;
 
 import 'api_remota.dart';
@@ -236,9 +238,11 @@ class ApiAppsScript implements ApiRemota {
     final peticion = http.Request('POST', url)
       ..headers['Content-Type'] = 'text/plain;charset=utf-8'
       ..body = jsonEncode(cuerpo);
-    // En la web el navegador manda en las redirecciones y este campo se
-    // ignora; en Android e iOS es lo que evita el 405.
-    peticion.followRedirects = false;
+    // En Android hay que seguir la redirección a mano: si se reenvía el POST a
+    // donde Apps Script manda, contesta 405. En la web no se puede decidir
+    // esto —el navegador sigue las redirecciones por su cuenta— y pedirlo
+    // rompe la petición entera con un "Failed to fetch".
+    if (!kIsWeb) peticion.followRedirects = false;
 
     final primera = await http.Response.fromStream(await _cliente.send(peticion));
     final aDonde = primera.headers['location'];

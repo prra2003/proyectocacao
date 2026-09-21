@@ -17,6 +17,13 @@ import 'ui/tema.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Sin esto, un error de dibujo deja la pantalla **en blanco** y nadie sabe
+  // qué pasó: en el navegador no hay consola a la vista ni forma de contarlo.
+  // Mostrar el motivo es la diferencia entre un reporte útil y un "no sirve".
+  ErrorWidget.builder = (detalles) => _PantallaDeError(
+    mensaje: detalles.exceptionAsString(),
+  );
   final db = AppDatabase();
 
   // La identidad se resuelve sin red: la app tiene que poder crear el perfil
@@ -33,6 +40,9 @@ Future<void> main() async {
   final ApiRemota api;
   if (hayNube) {
     final google = AutenticadorGoogle();
+    // En la web hay que tener listo el paquete antes de dibujar el botón de
+    // Google; en Android da igual, pero cuesta nada y deja un solo camino.
+    await google.preparar();
     api = ApiAppsScript(
       url: Uri.parse(urlNube),
       pedirIdTokenAGoogle: google.idToken,
@@ -52,6 +62,45 @@ Future<void> main() async {
       sync: SyncService(baseDatos: db, apiRemota: api, usuarioLocal: usuarioId),
     ),
   );
+}
+
+/// Lo que se ve cuando algo se rompe dibujando.
+class _PantallaDeError extends StatelessWidget {
+  const _PantallaDeError({required this.mensaje});
+
+  final String mensaje;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Container(
+        color: const Color(0xFFFBF2EA),
+        padding: const EdgeInsets.all(24),
+        alignment: Alignment.center,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Algo falló en la aplicación',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF33200F),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SelectableText(
+                mensaje,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF6E5A4C)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class CacaoApp extends StatelessWidget {

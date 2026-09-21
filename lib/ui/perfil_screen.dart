@@ -7,6 +7,7 @@ import 'editar_productor_screen.dart';
 import 'formato.dart';
 import 'mis_fincas_screen.dart';
 import 'tema.dart';
+import 'widgets/boton_google.dart';
 import 'widgets/comunes.dart';
 
 /// Los datos que se leen una vez: quién es el productor y dónde está la finca.
@@ -234,11 +235,14 @@ class _TarjetaCuentaState extends State<_TarjetaCuenta> {
                 ),
                 const SizedBox(height: 18),
                 if (!hayCuenta)
-                  FilledButton.icon(
-                    onPressed: _trabajando ? null : _entrar,
-                    icon: const Icon(Icons.login),
-                    label: Text(
-                      _trabajando ? 'Entrando…' : 'Entrar con Google',
+                  BotonGoogle(
+                    alEntrar: _entrar,
+                    constructorPropio: (alTocar) => FilledButton.icon(
+                      onPressed: _trabajando ? null : alTocar,
+                      icon: const Icon(Icons.login),
+                      label: Text(
+                        _trabajando ? 'Entrando…' : 'Entrar con Google',
+                      ),
                     ),
                   )
                 else

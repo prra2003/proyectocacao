@@ -5,6 +5,7 @@ import '../data/sync/sync_service.dart';
 import 'editar_finca_screen.dart';
 import 'editar_productor_screen.dart';
 import 'tema.dart';
+import 'widgets/boton_google.dart';
 import 'widgets/comunes.dart';
 import 'widgets/mazorca.dart';
 
@@ -105,22 +106,25 @@ class BienvenidaScreen extends StatelessWidget {
               // La puerta del teléfono nuevo: quien ya tiene cuenta no debe
               // registrarse otra vez, sino bajar lo que ya existe. No hace
               // falta navegar a ninguna parte: Google abre su propia ventana.
-              TextButton(
+              BotonGoogle(
                 // Si algo falla hay que decirlo: un botón que no responde deja
                 // a la persona sin saber si tocó mal o si no hay señal.
-                onPressed: () async {
+                alEntrar: () async {
                   final resultado = await sync.entrarConGoogle();
                   if (!context.mounted || resultado.ok) return;
                   avisar(context, resultado.error ?? 'No se pudo entrar');
                 },
-                child: const Text(
-                  'Ya tengo cuenta',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.white,
+                constructorPropio: (alTocar) => TextButton(
+                  onPressed: alTocar,
+                  child: const Text(
+                    'Ya tengo cuenta',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.white,
+                    ),
                   ),
                 ),
               ),
