@@ -568,4 +568,6 @@ hay cuenta o no la hay.
 
 ## 15. Créditos
 
-Seminario de grado · SENA / Tecnoparque · 2026
+Seminario de grado · Ingenieros a cargo Jorge Aldana - Alexander Vera Tasama
+Ingenieros en formacion: Andres Alzate - Andres Quiceno - Diego Parra - Esteban Gonzales - Miguel Marin - Samuel Martinez
+SENA / Tecnoparque · 2026
