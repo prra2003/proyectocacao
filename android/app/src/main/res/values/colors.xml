@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- El café de la paleta (PaletaCacao.cafe en lib/ui/tema.dart). -->
+    <color name="fondo_icono">#7A4A2B</color>
+</resources>

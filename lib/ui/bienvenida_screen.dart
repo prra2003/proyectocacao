@@ -7,7 +7,6 @@ import 'editar_productor_screen.dart';
 import 'tema.dart';
 import 'widgets/boton_google.dart';
 import 'widgets/comunes.dart';
-import 'widgets/mazorca.dart';
 
 /// Lo primero que se ve al instalar la app.
 ///
@@ -60,10 +59,14 @@ class BienvenidaScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Mazorca(
-                tamano: 160,
-                color: Colors.white,
-                colorHoja: PaletaCacao.verdeClaro,
+              // El emblema de la Red. Va recortado en círculo y con el fondo
+              // transparente por fuera, para que sobre el degradado se lea
+              // como un sello y no como una calcomanía cuadrada.
+              Image.asset(
+                'assets/emblema.png',
+                width: 190,
+                height: 190,
+                filterQuality: FilterQuality.medium,
               ),
               const SizedBox(height: 32),
               const Text(
