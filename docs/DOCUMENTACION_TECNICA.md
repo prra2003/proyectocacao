@@ -501,14 +501,57 @@ Ordenado por lo que más valor da:
 
 1. **Dejar registro de la prueba con dos teléfonos reales** — es lo único que
    falta para cerrar la Fase 1 sin asteriscos.
-2. **Llaves de firma propias** para Android, registrando la nueva huella SHA-1
-   en Google: hoy se firma con las de depuración.
-3. **Fotos en Google Drive.**
-4. **Publicar la app en Google**, para que pueda entrar cualquier productor y no
-   solo los correos de la lista de prueba.
-5. **Panel web para técnicos** — el navegador es el sitio natural para ver muchos
+2. **Fotos en Google Drive** — ver la propuesta en 11.1.
+3. **Publicar la app en Google**, para que pueda entrar cualquier productor y no
+   solo los correos de la lista de prueba. Con los permisos que pide hoy
+   (nombre, correo y foto de perfil) no hay revisión de por medio: es un botón
+   en la consola. De paso desaparece un problema silencioso: **en modo de
+   prueba las sesiones de Google caducan a los 7 días**.
+4. **Panel web para técnicos** — el navegador es el sitio natural para ver muchos
    productores. Ojo: exige otro modelo de permisos, porque hoy el RLS aísla a
    cada productor.
 
 Y lo que **no** haría sin hablar antes con el SENA: agregar módulos nuevos. Que
 la priorización de la Fase 2 salga de ellos.
+
+### 11.1 Fotos: por dónde NO hacerlo, y por dónde sí
+
+Hoy el diagnóstico guarda la **ruta** de la foto, no la imagen: el archivo se
+queda en el teléfono. Si el celular se daña, esa evidencia se pierde. Llevarlas
+a Drive es el siguiente paso natural, y hay dos formas muy distintas.
+
+**Lo que parece obvio y sale caro:** pedirle al productor acceso a *su* Drive.
+
+- El permiso amplio de Drive es de los que Google llama **restringidos**: exige
+  verificación, política de privacidad publicada, un video del uso y, en muchos
+  casos, una **auditoría de seguridad que se paga aparte**. Para un proyecto de
+  semestre, inviable.
+- El permiso acotado (`drive.file`, solo los archivos que la propia app crea) es
+  bastante más liviano y es el que Google recomienda justo para evitar esa
+  revisión pesada. Aun así habría que confirmar en la consola qué exige, porque
+  la clasificación de Google cambia con el tiempo.
+- Y lo de fondo: las fotos quedarían **en el Drive de cada campesino**. Si él
+  borra el archivo o se le llena el espacio, la Red pierde la evidencia.
+
+**Lo recomendado: que las guarde el script, no la app.**
+
+`backend/Codigo.gs` **corre con los permisos de su dueño**, no con los del
+productor: por eso ya escribe en la hoja sin que nadie autorice nada. Lo mismo
+puede hacer con una carpeta de Drive de esa cuenta.
+
+La app le manda la foto al script y el script la guarda. El productor **no
+autoriza nada**, no hay verificación de Google que pasar —la app nunca toca el
+Drive de nadie— y las fotos quedan donde deben: en la cuenta de la Red, al lado
+de la hoja y a la vista de los técnicos.
+
+Lo que habría que cuidar al implementarlo:
+
+- **Encoger la imagen en el teléfono** antes de mandarla (unos 1024 px y ~200 KB).
+  Apps Script no aguanta envíos grandes y el productor no tiene datos que gastar.
+- **El espacio**: 15 GB en una cuenta gratuita. Con 100 productores y 20 fotos
+  de 200 KB cada uno son unos 400 MB; con Workspace del SENA, mucho más margen.
+- **Es lo más pesado que pasaría por el script**, así que ahí sí se va a sentir
+  su lentitud. Conviene subirlas solo con wifi, o de a una.
+- Guardar en la fila del diagnóstico el **identificador del archivo en Drive**,
+  no una ruta local, y dejar la ruta del teléfono como respaldo mientras no se
+  haya subido.
