@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart' show Value;
+
 import '../daos/daos.dart';
 import '../local/database.dart';
 import '../local/enums.dart';
@@ -22,6 +24,29 @@ class LoteRepository {
 
   /// Borra el lote y, en cascada, sus labores, cosechas y diagnósticos.
   Future<void> borrarLote(String loteId) => _lotes.borrar(loteId);
+
+  /// Crea un lote nuevo, o edita uno existente si se pasa [id].
+  Future<String> guardarLote({
+    String? id,
+    required String fincaId,
+    required String nombre,
+    String? codigo,
+    required double areaSembradaHa,
+    required String variedadCacao,
+    required DateTime fechaSiembra,
+    Value<String?> fotoPath = const Value.absent(),
+  }) {
+    return _lotes.guardar(
+      id: id,
+      fincaId: fincaId,
+      nombre: nombre,
+      codigo: codigo,
+      areaSembradaHa: areaSembradaHa,
+      variedadCacao: variedadCacao,
+      fechaSiembra: fechaSiembra,
+      fotoPath: fotoPath,
+    );
+  }
 
   Stream<List<ActividadAgricola>> watchActividades(String loteId) =>
       _registros.watchActividadesDe(loteId);

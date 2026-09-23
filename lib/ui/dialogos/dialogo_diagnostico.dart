@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../data/local/enums.dart';
 import '../formato.dart';
 import '../tema.dart';
+import '../widgets/campo_dictado.dart';
 import '../widgets/comunes.dart';
 import '../widgets/selector_fecha.dart';
 
@@ -126,15 +127,11 @@ class _DialogoDiagnosticoState extends State<_DialogoDiagnostico> {
               ],
             ),
             const SizedBox(height: 14),
-            TextField(
-              key: const Key('campo_notas_diagnostico'),
+            CampoDictado(
+              campoKey: const Key('campo_notas_diagnostico'),
               controller: _notas,
-              decoration: const InputDecoration(
-                labelText: 'Notas',
-                hintText: 'Qué se ve en el lote: manchas, monilla, escoba...',
-              ),
-              maxLines: 3,
-              textCapitalization: TextCapitalization.sentences,
+              etiqueta: '¿Cómo ve el lote?',
+              hint: 'Manchas, monilia, escoba... Toque el micrófono y hable',
             ),
           ],
         ),

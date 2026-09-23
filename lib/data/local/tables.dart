@@ -86,6 +86,7 @@ class Lotes extends Table with SyncColumns {
   TextColumn get fincaId => text().references(Fincas, #id)();
   TextColumn get nombre => text()();
   RealColumn get areaSembradaHa => real()();
+
   /// Código corto del lote ("Lote 001"), aparte del nombre libre: el nombre
   /// puede cambiar o ser descriptivo, el código es la referencia que se usa en
   /// reportes e historiales.
@@ -96,6 +97,10 @@ class Lotes extends Table with SyncColumns {
   /// Se guarda la fecha de siembra, no la edad: la edad se calcula en la app y
   /// así el dato no se desactualiza solo.
   DateTimeColumn get fechaSiembra => dateTime()();
+
+  /// Foto del lote, para reconocerlo sin leer el nombre. Vive solo en este
+  /// teléfono: no viaja al servidor (la ruta no le sirve a otro equipo).
+  TextColumn get fotoPath => text().nullable()();
 }
 
 @DataClassName('ActividadAgricola')
@@ -135,7 +140,6 @@ class ActividadesAgricolas extends Table with SyncColumns {
   IntColumn get edadPlantulaMeses => integer().nullable()();
   TextColumn get insumos => text().nullable()();
   TextColumn get resultadoEsperado => text().nullable()();
-
 }
 
 @DataClassName('Cosecha')
@@ -150,7 +154,6 @@ class Cosechas extends Table with SyncColumns {
 
   /// Evidencia fotográfica de la entrega, en el propio teléfono.
   TextColumn get fotoPath => text().nullable()();
-
 }
 
 @DataClassName('Diagnostico')
@@ -192,6 +195,10 @@ class Sesion extends Table {
   /// El token de Google dura una hora; esta sesión dura meses. Guardarla es lo
   /// que evita tener que pedir la cuenta en cada arranque de la app.
   TextColumn get tokenNube => text().nullable()();
+
+  /// Nombre de la persona en su cuenta de Google. Sirve para no pedírselo otra
+  /// vez al registrarse.
+  TextColumn get nombreCuenta => text().nullable()();
 
   /// ¿Ya terminó la primera descarga tras entrar con una cuenta existente?
   ///

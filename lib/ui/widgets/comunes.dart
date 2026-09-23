@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../data/local/enums.dart';
-import '../../data/local/tables.dart';
 import '../formato.dart';
 import '../tema.dart';
 import 'mazorca.dart';
+
+const _uuid = Uuid();
+
 /// Pantalla o sección sin datos todavía: ícono, explicación y una salida clara.
 class EstadoVacio extends StatelessWidget {
   const EstadoVacio({
@@ -180,7 +183,7 @@ class FilaDato extends StatelessWidget {
 }
 
 IconData iconoActividad(TipoActividad tipo) => switch (tipo) {
-  TipoActividad.siembra => Icons.spa_outlined,
+  TipoActividad.siembra => Icons.eco_outlined,
   TipoActividad.poda => Icons.content_cut,
   TipoActividad.fertilizacion => Icons.grass,
   TipoActividad.controlFitosanitario => Icons.pest_control,
@@ -249,12 +252,17 @@ class CampoTarjeta extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.suffixText,
     this.readOnly = false,
+    this.campoKey,
   });
 
   final String etiqueta;
   final IconData icono;
   final Color color;
   final TextEditingController controller;
+
+  /// Va en el campo de texto de adentro, no en la tarjeta: es lo que buscan
+  /// los tests para escribir.
+  final Key? campoKey;
   final String? hint;
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
@@ -291,22 +299,30 @@ class CampoTarjeta extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(9),
-                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
                     child: Icon(icono, color: Colors.white, size: 22),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    etiqueta,
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w700,
-                      color: PaletaCacao.cafeOscuro,
+                  // Expanded: las preguntas largas ("¿Cuántos árboles
+                  // podó?") bajan de línea en vez de cortarse.
+                  Expanded(
+                    child: Text(
+                      etiqueta,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                        color: PaletaCacao.crema,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 14),
               TextFormField(
+                key: campoKey,
                 controller: controller,
                 validator: validator,
                 keyboardType: keyboardType,
@@ -348,11 +364,11 @@ class CampoTarjeta extends StatelessWidget {
 }
 
 String? validarRango(
-    String? texto, {
-      required double min,
-      required double max,
-      required String etiqueta,
-    }) {
+  String? texto, {
+  required double min,
+  required double max,
+  required String etiqueta,
+}) {
   final valor = aNumero(texto ?? '');
   if (valor == null) return '$etiqueta inválido';
   if (valor <= min) return '$etiqueta debe ser mayor a ${numeroCorto(min)}';
@@ -360,92 +376,6 @@ String? validarRango(
     return '$etiqueta no puede pasar de ${numeroCorto(max)}';
   }
   return null;
-}
-
-/// Campo tocable para agregar una foto: muestra la miniatura si ya hay una,
-/// o una invitación a tomarla si no. Es opcional a propósito: no toda labor
-/// en campo tiene con qué tomar la foto en el momento.
-class CampoFoto extends StatelessWidget {
-  const CampoFoto({
-    super.key,
-    required this.fotoPath,
-    required this.cargando,
-    required this.onTap,
-    required this.onQuitar,
-    this.etiqueta = 'Registro fotográfico (opcional)',
-  });
-
-  final String? fotoPath;
-  final bool cargando;
-  final VoidCallback onTap;
-  final VoidCallback onQuitar;
-  final String etiqueta;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: cargando ? null : onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: PaletaCacao.tarjeta,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: PaletaCacao.verde.withValues(alpha: 0.16),
-          ),
-        ),
-        child: Row(
-          children: [
-            if (fotoPath != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.file(
-                  File(fotoPath!),
-                  width: 52,
-                  height: 52,
-                  fit: BoxFit.cover,
-                ),
-              )
-            else
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: PaletaCacao.verde.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: cargando
-                    ? const Padding(
-                  padding: EdgeInsets.all(14),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-                    : const Icon(
-                  Icons.add_a_photo_outlined,
-                  color: PaletaCacao.verde,
-                ),
-              ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                fotoPath != null ? 'Foto agregada' : etiqueta,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: PaletaCacao.cafeOscuro,
-                ),
-              ),
-            ),
-            if (fotoPath != null)
-              IconButton(
-                tooltip: 'Quitar foto',
-                icon: const Icon(Icons.close),
-                onPressed: onQuitar,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// Desplegable con el mismo look de [CampoTarjeta], pero con opciones fijas
@@ -462,6 +392,8 @@ class SelectorDesplegable extends StatelessWidget {
     required this.opciones,
     required this.valor,
     required this.onCambio,
+    this.validator,
+    this.campoKey,
   });
 
   final String etiqueta;
@@ -470,6 +402,10 @@ class SelectorDesplegable extends StatelessWidget {
   final List<String> opciones;
   final String? valor;
   final ValueChanged<String?> onCambio;
+  final String? Function(String?)? validator;
+
+  /// Va en el desplegable de adentro, igual que en [CampoTarjeta].
+  final Key? campoKey;
 
   @override
   Widget build(BuildContext context) {
@@ -502,20 +438,26 @@ class SelectorDesplegable extends StatelessWidget {
                     child: Icon(icono, color: Colors.white, size: 22),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    etiqueta,
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w700,
-                      color: PaletaCacao.cafeOscuro,
+                  // Expanded: las preguntas largas ("¿Cuántos árboles
+                  // podó?") bajan de línea en vez de cortarse.
+                  Expanded(
+                    child: Text(
+                      etiqueta,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                        color: PaletaCacao.crema,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
+                key: campoKey,
                 initialValue: valor,
                 isExpanded: true,
+                validator: validator,
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: color.withValues(alpha: 0.14),
@@ -558,7 +500,10 @@ class SelectorDesplegable extends StatelessWidget {
 /// todo en la galería, esa ruta puede vivir en una caché temporal que el
 /// sistema borra sin avisar — la foto desaparecería del historial sin que
 /// el productor lo note. Devuelve `null` si cancela en cualquier paso.
-Future<String?> elegirFoto(BuildContext context, {required String carpeta}) async {
+Future<String?> elegirFoto(
+  BuildContext context, {
+  required String carpeta,
+}) async {
   final origen = await showModalBottomSheet<ImageSource>(
     context: context,
     builder: (contexto) => SafeArea(
@@ -593,8 +538,92 @@ Future<String?> elegirFoto(BuildContext context, {required String carpeta}) asyn
   await destinoCarpeta.create(recursive: true);
   final destino = p.join(
     destinoCarpeta.path,
-    '${nuevoId()}${p.extension(archivo.path)}',
+    '${_uuid.v4()}${p.extension(archivo.path)}',
   );
   await File(archivo.path).copy(destino);
   return destino;
+}
+
+/// Campo tocable para agregar una foto: muestra la miniatura si ya hay una,
+/// o una invitación a tomarla si no. Es opcional a propósito: no toda labor
+/// en campo tiene con qué tomar la foto en el momento.
+class CampoFoto extends StatelessWidget {
+  const CampoFoto({
+    super.key,
+    required this.fotoPath,
+    required this.cargando,
+    required this.onTap,
+    required this.onQuitar,
+    this.etiqueta = 'Registro fotográfico (opcional)',
+  });
+
+  final String? fotoPath;
+  final bool cargando;
+  final VoidCallback onTap;
+  final VoidCallback onQuitar;
+  final String etiqueta;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: cargando ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: PaletaCacao.tarjeta,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: PaletaCacao.verde.withValues(alpha: 0.16)),
+        ),
+        child: Row(
+          children: [
+            if (fotoPath != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.file(
+                  File(fotoPath!),
+                  width: 52,
+                  height: 52,
+                  fit: BoxFit.cover,
+                ),
+              )
+            else
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: PaletaCacao.verde.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: cargando
+                    ? const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(
+                        Icons.add_a_photo_outlined,
+                        color: PaletaCacao.verde,
+                      ),
+              ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                fotoPath != null ? 'Foto agregada' : etiqueta,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: PaletaCacao.crema,
+                ),
+              ),
+            ),
+            if (fotoPath != null)
+              IconButton(
+                tooltip: 'Quitar foto',
+                icon: const Icon(Icons.close),
+                onPressed: onQuitar,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

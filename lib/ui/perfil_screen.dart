@@ -5,7 +5,6 @@ import '../data/repositories/perfil_repository.dart';
 import '../data/sync/sync_service.dart';
 import 'editar_productor_screen.dart';
 import 'formato.dart';
-import 'mis_fincas_screen.dart';
 import 'tema.dart';
 import 'widgets/boton_google.dart';
 import 'widgets/comunes.dart';
@@ -56,11 +55,7 @@ class PerfilScreen extends StatelessWidget {
                   builder: (context, snapshot) {
                     final fincas = snapshot.data ?? const <Finca>[];
                     if (fincas.isEmpty) return const SizedBox.shrink();
-                    return _TarjetaFincas(
-                      repo: repo,
-                      productorId: productor.id,
-                      fincas: fincas,
-                    );
+                    return _TarjetaFincas(fincas: fincas);
                   },
                 ),
               ],
@@ -332,7 +327,7 @@ class _TarjetaProductor extends StatelessWidget {
             const SizedBox(height: 18),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
+                RutaCacao<void>(
                   builder: (_) =>
                       EditarProductorScreen(repo: repo, productor: productor),
                 ),
@@ -347,58 +342,43 @@ class _TarjetaProductor extends StatelessWidget {
   }
 }
 
-/// Resumen de la(s) finca(s) del productor, con acceso al listado completo.
+/// Las fincas del productor, solo para verlas.
 ///
-/// Un productor puede tener varias fincas (RF-02): esta tarjeta muestra la
-/// primera como referencia rápida y siempre enlaza a "Mis fincas" para verlas,
-/// editarlas o agregar una nueva (RF-04).
+/// Agregar, editar o borrar una finca se hace en un solo lugar: tocando el
+/// nombre de la finca arriba en el Inicio. Antes se podía también desde aquí
+/// y desde Reportes, y con tres caminos para lo mismo el productor no sabía
+/// cuál era el bueno.
 class _TarjetaFincas extends StatelessWidget {
-  const _TarjetaFincas({
-    required this.repo,
-    required this.productorId,
-    required this.fincas,
-  });
+  const _TarjetaFincas({required this.fincas});
 
-  final PerfilRepository repo;
-  final String productorId;
   final List<Finca> fincas;
 
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    final principal = fincas.first;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(principal.nombre, style: tema.textTheme.titleLarge),
-            FilaDato(
-              icono: Icons.place_outlined,
-              texto: '${principal.municipio}, ${principal.departamento}',
+            Text(
+              fincas.length == 1 ? 'Su finca' : 'Sus fincas',
+              style: tema.textTheme.titleLarge,
             ),
-            if (principal.latitud != null && principal.longitud != null)
+            for (final finca in fincas)
               FilaDato(
-                icono: Icons.my_location_outlined,
-                secundario: true,
+                icono: Icons.place_outlined,
                 texto:
-                    '${principal.latitud!.toStringAsFixed(4)}, '
-                    '${principal.longitud!.toStringAsFixed(4)}',
+                    '${finca.nombre} · ${finca.municipio}, '
+                    '${finca.departamento}',
               ),
-            const SizedBox(height: 18),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) =>
-                      MisFincasScreen(repo: repo, productorId: productorId),
-                ),
-              ),
-              icon: const Icon(Icons.holiday_village_outlined),
-              label: Text(
-                fincas.length == 1
-                    ? 'Ver mi finca'
-                    : 'Ver mis fincas (${fincas.length})',
+            const SizedBox(height: 12),
+            Text(
+              'Para cambiar o agregar una finca, toque su nombre arriba en '
+              'el Inicio.',
+              style: tema.textTheme.bodySmall?.copyWith(
+                color: tema.colorScheme.onSurfaceVariant,
               ),
             ),
           ],

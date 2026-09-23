@@ -16,13 +16,13 @@ import 'nombre_archivo.dart';
 /// tabla en pantalla la puede exportar con esto, pasándole exactamente lo
 /// que el productor está viendo (ya filtrado, si hay filtros puestos).
 Future<void> exportarTablaAExcel(
-    BuildContext context, {
-      required String tituloHoja,
-      required List<String> encabezados,
-      required List<List<String>> filas,
-      required String nombreArchivo,
-      required String tituloComparticion,
-    }) async {
+  BuildContext context, {
+  required String tituloHoja,
+  required List<String> encabezados,
+  required List<List<String>> filas,
+  required String nombreArchivo,
+  required String tituloComparticion,
+}) async {
   if (filas.isEmpty) {
     avisar(context, 'No hay nada que exportar con estos filtros');
     return;

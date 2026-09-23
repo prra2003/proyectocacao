@@ -11,7 +11,9 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import 'utiles.dart';
+
 /// Estado de una fila hoja, visto igual para las tres entidades.
 typedef EstadoFila = ({DateTime? borrado, SyncStatus estado, DateTime? sello});
 
@@ -177,76 +179,86 @@ void main() {
     ),
   ];
 
-  test('los datos completos de la labor viajan al servidor y vuelven',
-      () async {
-    // El documento del SENA pide responsable, costo, producto y lo propio de
-    // la siembra. De nada sirve guardarlos si se quedan en el teléfono.
-    final id = await registros.registrarActividad(
-      loteId: loteId,
-      tipo: TipoActividad.siembra,
-      fecha: DateTime(2026, 3, 1),
-      responsable: 'Juan Pérez',
-      costo: 350000,
-      arbolesSembrados: 200,
-      edadPlantulaMeses: 4,
-      insumos: 'Bolsas biodegradables',
-      producto: 'NPK 15-15-15',
-      cantidadAplicada: '25 kg',
-    );
+  test(
+    'los datos completos de la labor viajan al servidor y vuelven',
+    () async {
+      // El documento del SENA pide responsable, costo, producto y lo propio de
+      // la siembra. De nada sirve guardarlos si se quedan en el teléfono.
+      final id = await registros.registrarActividad(
+        loteId: loteId,
+        tipo: TipoActividad.siembra,
+        fecha: DateTime(2026, 3, 1),
+        responsable: 'Juan Pérez',
+        costo: 350000,
+        arbolesSembrados: 200,
+        edadPlantulaMeses: 4,
+        insumos: 'Bolsas biodegradables',
+        producto: 'NPK 15-15-15',
+        cantidadAplicada: '25 kg',
+      );
 
-    await sync.sincronizar();
+      await sync.sincronizar();
 
-    final subida = api
-        .filasDe('actividades_agricolas')
-        .firstWhere((f) => f['id'] == id);
-    expect(subida['tipo_actividad'], 'siembra');
-    expect(subida['responsable'], 'Juan Pérez');
-    expect(subida['costo'], 350000);
-    expect(subida['arboles_sembrados'], 200);
-    expect(subida['producto'], 'NPK 15-15-15');
+      final subida = api
+          .filasDe('actividades_agricolas')
+          .firstWhere((f) => f['id'] == id);
+      expect(subida['tipo_actividad'], 'siembra');
+      expect(subida['responsable'], 'Juan Pérez');
+      expect(subida['costo'], 350000);
+      expect(subida['arboles_sembrados'], 200);
+      expect(subida['producto'], 'NPK 15-15-15');
 
-    // Y de vuelta: un teléfono nuevo que baje esa fila la reconstruye igual.
-    final traida = MapeadorActividad.deRemoto(subida);
-    expect(traida.responsable.value, 'Juan Pérez');
-    expect(traida.costo.value, 350000);
-    expect(traida.arbolesSembrados.value, 200);
-    expect(traida.insumos.value, 'Bolsas biodegradables');
-  });
+      // Y de vuelta: un teléfono nuevo que baje esa fila la reconstruye igual.
+      final traida = MapeadorActividad.deRemoto(subida);
+      expect(traida.responsable.value, 'Juan Pérez');
+      expect(traida.costo.value, 350000);
+      expect(traida.arbolesSembrados.value, 200);
+      expect(traida.insumos.value, 'Bolsas biodegradables');
+    },
+  );
 
-  test('una columna que el servidor no tiene no borra lo del teléfono',
-      () async {
-    // Pasó de verdad: la hoja de cálculo todavía no tenía las columnas
-    // nuevas, la fila volvió sin ellas y la copia remota pisó con vacíos lo
-    // que el productor había escrito. Ausente no es lo mismo que vacío.
-    final id = await registros.registrarActividad(
-      loteId: loteId,
-      tipo: TipoActividad.poda,
-      fecha: DateTime(2026, 4, 1),
-      subtipoLabor: 'Formación',
-      arbolesAfectados: 35,
-    );
-    await sync.sincronizar();
+  test(
+    'una columna que el servidor no tiene no borra lo del teléfono',
+    () async {
+      // Pasó de verdad: la hoja de cálculo todavía no tenía las columnas
+      // nuevas, la fila volvió sin ellas y la copia remota pisó con vacíos lo
+      // que el productor había escrito. Ausente no es lo mismo que vacío.
+      final id = await registros.registrarActividad(
+        loteId: loteId,
+        tipo: TipoActividad.poda,
+        fecha: DateTime(2026, 4, 1),
+        subtipoLabor: 'Formación',
+        arbolesAfectados: 35,
+      );
+      await sync.sincronizar();
 
-    // El servidor devuelve la fila **sin** esas columnas.
-    final comoLaDevuelveUnServidorViejo = Map<String, Object?>.from(
-      api.filasDe('actividades_agricolas').firstWhere((f) => f['id'] == id),
-    )..removeWhere(
-      (clave, _) => clave == 'subtipo_labor' || clave == 'arboles_afectados',
-    );
+      // El servidor devuelve la fila **sin** esas columnas.
+      final comoLaDevuelveUnServidorViejo =
+          Map<String, Object?>.from(
+            api
+                .filasDe('actividades_agricolas')
+                .firstWhere((f) => f['id'] == id),
+          )..removeWhere(
+            (clave, _) =>
+                clave == 'subtipo_labor' || clave == 'arboles_afectados',
+          );
 
-    final aplicada = MapeadorActividad.deRemoto(comoLaDevuelveUnServidorViejo);
-    expect(aplicada.subtipoLabor, const Value<String?>.absent());
-    expect(aplicada.arbolesAfectados, const Value<int?>.absent());
+      final aplicada = MapeadorActividad.deRemoto(
+        comoLaDevuelveUnServidorViejo,
+      );
+      expect(aplicada.subtipoLabor, const Value<String?>.absent());
+      expect(aplicada.arbolesAfectados, const Value<int?>.absent());
 
-    // Y si la columna viene vacía, entonces sí es un nulo de verdad.
-    final conColumnaVacia = Map<String, Object?>.from(
-      comoLaDevuelveUnServidorViejo,
-    )..['subtipo_labor'] = null;
-    expect(
-      MapeadorActividad.deRemoto(conColumnaVacia).subtipoLabor,
-      const Value<String?>(null),
-    );
-  });
+      // Y si la columna viene vacía, entonces sí es un nulo de verdad.
+      final conColumnaVacia = Map<String, Object?>.from(
+        comoLaDevuelveUnServidorViejo,
+      )..['subtipo_labor'] = null;
+      expect(
+        MapeadorActividad.deRemoto(conColumnaVacia).subtipoLabor,
+        const Value<String?>(null),
+      );
+    },
+  );
 
   for (final caso in casos()) {
     group(caso.entidad, () {
@@ -269,24 +281,23 @@ void main() {
         expect(selloLote.compareTo(selloHoja) < 0, isTrue);
       });
 
-      test('editar vuelve a dejarlo pendiente y lo actualiza sin duplicar',
-          () async {
-        final id = await caso.crear(loteId);
-        await sync.sincronizar();
-        final selloPrimero = (await caso.leer(id))!.sello;
+      test(
+        'editar vuelve a dejarlo pendiente y lo actualiza sin duplicar',
+        () async {
+          final id = await caso.crear(loteId);
+          await sync.sincronizar();
+          final selloPrimero = (await caso.leer(id))!.sello;
 
-        await caso.editar(id, loteId);
-        expect((await caso.leer(id))!.estado, SyncStatus.pending);
+          await caso.editar(id, loteId);
+          expect((await caso.leer(id))!.estado, SyncStatus.pending);
 
-        final resultado = await sync.sincronizar();
+          final resultado = await sync.sincronizar();
 
-        expect(resultado.subidos, 1);
-        expect(api.filasDe(caso.entidad), hasLength(1));
-        expect(
-          (await caso.leer(id))!.sello!.isAfter(selloPrimero!),
-          isTrue,
-        );
-      });
+          expect(resultado.subidos, 1);
+          expect(api.filasDe(caso.entidad), hasLength(1));
+          expect((await caso.leer(id))!.sello!.isAfter(selloPrimero!), isTrue);
+        },
+      );
 
       test('el borrado local viaja como deleted_at', () async {
         final id = await caso.crear(loteId);
@@ -295,10 +306,7 @@ void main() {
         await caso.borrar(id);
         await sync.sincronizar();
 
-        expect(
-          api.filasDe(caso.entidad).single['deleted_at'],
-          isA<String>(),
-        );
+        expect(api.filasDe(caso.entidad).single['deleted_at'], isA<String>());
         expect((await caso.leer(id))!.estado, SyncStatus.synced);
       });
 
@@ -313,17 +321,19 @@ void main() {
         expect((await caso.leer(id))!.estado, SyncStatus.synced);
       });
 
-      test('tras un fallo de red sigue pendiente y el reintento lo sube',
-          () async {
-        final id = await caso.crear(loteId);
-        api.fallosProgramados = 1;
+      test(
+        'tras un fallo de red sigue pendiente y el reintento lo sube',
+        () async {
+          final id = await caso.crear(loteId);
+          api.fallosProgramados = 1;
 
-        expect((await sync.sincronizar()).ok, isFalse);
-        expect((await caso.leer(id))!.estado, SyncStatus.pending);
+          expect((await sync.sincronizar()).ok, isFalse);
+          expect((await caso.leer(id))!.estado, SyncStatus.pending);
 
-        expect((await sync.sincronizar()).ok, isTrue);
-        expect((await caso.leer(id))!.estado, SyncStatus.synced);
-      });
+          expect((await sync.sincronizar()).ok, isTrue);
+          expect((await caso.leer(id))!.estado, SyncStatus.synced);
+        },
+      );
 
       test('un registro remoto entra si su lote ya está aquí', () async {
         await sync.sincronizar();
@@ -337,8 +347,7 @@ void main() {
         expect(fila.borrado, isNull);
       });
 
-      test('un registro que llega antes que su lote se aplaza y no mueve el cursor',
-          () async {
+      test('un registro que llega antes que su lote se aplaza y no mueve el cursor', () async {
         api.sembrar(caso.entidad, caso.fila('huerfano', 'lote-que-no-esta'));
 
         final resultado = await sync.sincronizar();
@@ -353,8 +362,7 @@ void main() {
         expect((await db.syncDao.cursor(caso.entidad)).sello, isNull);
       });
 
-      test('cuando el lote llega, el registro aplazado se aplica solo',
-          () async {
+      test('cuando el lote llega, el registro aplazado se aplica solo', () async {
         api.sembrar(caso.entidad, caso.fila('huerfano', loteId));
         // El lote todavía no está en el servidor ni sincronizado aquí... sí lo
         // está localmente, así que se aplica en la misma pasada.
@@ -393,72 +401,76 @@ void main() {
         );
       });
 
-      test('un cambio local pendiente no lo pisa la descarga y queda anotado',
-          () async {
-        final id = await caso.crear(loteId);
-        await sync.sincronizar();
-        api.sembrar(caso.entidad, caso.fila(id, loteId));
-        await caso.editar(id, loteId);
+      test(
+        'un cambio local pendiente no lo pisa la descarga y queda anotado',
+        () async {
+          final id = await caso.crear(loteId);
+          await sync.sincronizar();
+          api.sembrar(caso.entidad, caso.fila(id, loteId));
+          await caso.editar(id, loteId);
 
-        final soloDescarga = SyncService(
-          baseDatos: db,
-          apiRemota: ApiSinSubida(api),
-          usuarioLocal: usuarioId,
-        );
-        final resultado = await soloDescarga.sincronizar();
+          final soloDescarga = SyncService(
+            baseDatos: db,
+            apiRemota: ApiSinSubida(api),
+            usuarioLocal: usuarioId,
+          );
+          final resultado = await soloDescarga.sincronizar();
 
-        expect((await caso.leer(id))!.estado, SyncStatus.pending);
-        expect(
-          resultado.conflictos
-              .singleWhere((c) => c.entidad == caso.entidad)
-              .motivo,
-          motivoLocalPendiente,
-        );
-      });
+          expect((await caso.leer(id))!.estado, SyncStatus.pending);
+          expect(
+            resultado.conflictos
+                .singleWhere((c) => c.entidad == caso.entidad)
+                .motivo,
+            motivoLocalPendiente,
+          );
+        },
+      );
     });
   }
 
   group('árbol completo', () {
-    test('borrar el lote localmente sube el borrado de los tres registros',
-        () async {
-      final actividadId = await registros.registrarActividad(
-        loteId: loteId,
-        tipo: TipoActividad.riego,
-        fecha: DateTime(2026, 2, 1),
-      );
-      final cosechaId = await registros.registrarCosecha(
-        loteId: loteId,
-        fecha: DateTime(2026, 3, 1),
-        cantidadKg: 10,
-      );
-      final diagnosticoId = await db.registrosDao.registrarDiagnostico(
-        loteId: loteId,
-        fecha: DateTime(2026, 4, 1),
-        estado: EstadoFenologico.cuajado,
-      );
-      await sync.sincronizar();
-
-      await perfil.borrarLote(loteId);
-      final resultado = await sync.sincronizar();
-
-      // El lote y sus tres registros.
-      expect(resultado.subidos, 4);
-      for (final entidad in [
-        'lotes',
-        'actividades_agricolas',
-        'cosechas',
-        'diagnosticos',
-      ]) {
-        expect(
-          api.filasDe(entidad).single['deleted_at'],
-          isA<String>(),
-          reason: 'el borrado de $entidad tiene que llegar al servidor',
+    test(
+      'borrar el lote localmente sube el borrado de los tres registros',
+      () async {
+        final actividadId = await registros.registrarActividad(
+          loteId: loteId,
+          tipo: TipoActividad.riego,
+          fecha: DateTime(2026, 2, 1),
         );
-      }
-      for (final id in [actividadId, cosechaId, diagnosticoId]) {
-        expect(id, isNotEmpty);
-      }
-    });
+        final cosechaId = await registros.registrarCosecha(
+          loteId: loteId,
+          fecha: DateTime(2026, 3, 1),
+          cantidadKg: 10,
+        );
+        final diagnosticoId = await db.registrosDao.registrarDiagnostico(
+          loteId: loteId,
+          fecha: DateTime(2026, 4, 1),
+          estado: EstadoFenologico.cuajado,
+        );
+        await sync.sincronizar();
+
+        await perfil.borrarLote(loteId);
+        final resultado = await sync.sincronizar();
+
+        // El lote y sus tres registros.
+        expect(resultado.subidos, 4);
+        for (final entidad in [
+          'lotes',
+          'actividades_agricolas',
+          'cosechas',
+          'diagnosticos',
+        ]) {
+          expect(
+            api.filasDe(entidad).single['deleted_at'],
+            isA<String>(),
+            reason: 'el borrado de $entidad tiene que llegar al servidor',
+          );
+        }
+        for (final id in [actividadId, cosechaId, diagnosticoId]) {
+          expect(id, isNotEmpty);
+        }
+      },
+    );
 
     test('el orden de subida respeta todo el árbol', () async {
       await registros.registrarCosecha(

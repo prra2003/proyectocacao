@@ -38,11 +38,7 @@ void main() {
       perfil: PerfilRepository(db, usuarioId: usuarioId),
       lotes: LoteRepository(db),
       api: api,
-      sync: SyncService(
-        baseDatos: db,
-        apiRemota: api,
-        usuarioLocal: usuarioId,
-      ),
+      sync: SyncService(baseDatos: db, apiRemota: api, usuarioLocal: usuarioId),
     );
   }
 
@@ -88,8 +84,7 @@ void main() {
   }
 
   group('entrar con Google', () {
-    test('sin cuenta no se sube nada; al entrar, todo queda a su nombre',
-        () async {
+    test('sin cuenta no se sube nada; al entrar, todo queda a su nombre', () async {
       final a = await instalar();
       await sembrarFinca(a);
 
@@ -318,9 +313,9 @@ void main() {
 
       await b.sync.sincronizar();
 
-      final finca = (await b.perfil.watchFinca(
-        (await b.perfil.watchProductor().first)!.id,
-      ).first)!;
+      final finca = (await b.perfil
+          .watchFinca((await b.perfil.watchProductor().first)!.id)
+          .first)!;
       expect(await b.perfil.watchLotes(finca.id).first, isEmpty);
       expect(await b.lotes.watchActividades(ids.lote).first, isEmpty);
       expect(await b.lotes.watchCosechas(ids.lote).first, isEmpty);
@@ -361,42 +356,44 @@ void main() {
       expect(enB.single.nombre, 'Nombre de A');
     });
 
-    test('un cambio local pendiente no lo pisa la descarga y se anota',
-        () async {
-      await b.perfil.guardarLote(
-        id: ids.lote,
-        fincaId: ids.finca,
-        nombre: 'Nombre de B',
-        areaSembradaHa: 3,
-        variedadCacao: 'CCN-51',
-        fechaSiembra: DateTime(2020, 3, 15),
-      );
-      await b.sync.sincronizar();
+    test(
+      'un cambio local pendiente no lo pisa la descarga y se anota',
+      () async {
+        await b.perfil.guardarLote(
+          id: ids.lote,
+          fincaId: ids.finca,
+          nombre: 'Nombre de B',
+          areaSembradaHa: 3,
+          variedadCacao: 'CCN-51',
+          fechaSiembra: DateTime(2020, 3, 15),
+        );
+        await b.sync.sincronizar();
 
-      await a.perfil.guardarLote(
-        id: ids.lote,
-        fincaId: ids.finca,
-        nombre: 'Nombre local de A',
-        areaSembradaHa: 4,
-        variedadCacao: 'CCN-51',
-        fechaSiembra: DateTime(2020, 3, 15),
-      );
-      final soloDescarga = SyncService(
-        baseDatos: a.db,
-        apiRemota: ApiSinSubida(a.api),
-        usuarioLocal: a.usuarioId,
-      );
-      final resultado = await soloDescarga.sincronizar();
+        await a.perfil.guardarLote(
+          id: ids.lote,
+          fincaId: ids.finca,
+          nombre: 'Nombre local de A',
+          areaSembradaHa: 4,
+          variedadCacao: 'CCN-51',
+          fechaSiembra: DateTime(2020, 3, 15),
+        );
+        final soloDescarga = SyncService(
+          baseDatos: a.db,
+          apiRemota: ApiSinSubida(a.api),
+          usuarioLocal: a.usuarioId,
+        );
+        final resultado = await soloDescarga.sincronizar();
 
-      expect(
-        (await a.perfil.watchLotes(ids.finca).first).single.nombre,
-        'Nombre local de A',
-      );
-      expect(
-        resultado.conflictos.singleWhere((c) => c.entidad == 'lotes').motivo,
-        motivoLocalPendiente,
-      );
-    });
+        expect(
+          (await a.perfil.watchLotes(ids.finca).first).single.nombre,
+          'Nombre local de A',
+        );
+        expect(
+          resultado.conflictos.singleWhere((c) => c.entidad == 'lotes').motivo,
+          motivoLocalPendiente,
+        );
+      },
+    );
   });
 
   group('aislamiento entre cuentas', () {
@@ -437,7 +434,9 @@ void main() {
         throwsA(isA<Object>()),
       );
       // La fila del dueño no cambió.
-      final lote = a.api.filasDe('lotes').firstWhere((f) => f['id'] == ids.lote);
+      final lote = a.api
+          .filasDe('lotes')
+          .firstWhere((f) => f['id'] == ids.lote);
       expect(lote['nombre'], 'Lote 1');
     });
   });
@@ -464,24 +463,29 @@ void main() {
       expect((await a.db.syncDao.cursor('productores')).sello, isNull);
     });
 
-    test('lo del servidor sigue ahí y se recupera al volver a entrar',
-        () async {
-      final a = await instalar();
-      final ids = await sembrarFinca(a);
-      await a.sync.sincronizar();
-      await a.sync.entrarConGoogle();
+    test(
+      'lo del servidor sigue ahí y se recupera al volver a entrar',
+      () async {
+        final a = await instalar();
+        final ids = await sembrarFinca(a);
+        await a.sync.sincronizar();
+        await a.sync.entrarConGoogle();
 
-      await a.sync.cerrarSesion();
-      expect(await a.perfil.watchProductor().first, isNull);
+        await a.sync.cerrarSesion();
+        expect(await a.perfil.watchProductor().first, isNull);
 
-      final vuelta = await a.sync.entrarConGoogle();
+        final vuelta = await a.sync.entrarConGoogle();
 
-      expect(vuelta.ok, isTrue);
-      final productor = await a.perfil.watchProductor().first;
-      expect(productor!.id, ids.productor);
-      final finca = await a.perfil.watchFinca(productor.id).first;
-      expect((await a.perfil.watchLotes(finca!.id).first).single.id, ids.lote);
-    });
+        expect(vuelta.ok, isTrue);
+        final productor = await a.perfil.watchProductor().first;
+        expect(productor!.id, ids.productor);
+        final finca = await a.perfil.watchFinca(productor.id).first;
+        expect(
+          (await a.perfil.watchLotes(finca!.id).first).single.id,
+          ids.lote,
+        );
+      },
+    );
   });
 
   group('cambiar de cuenta en un teléfono con datos', () {
@@ -490,7 +494,9 @@ void main() {
       await sembrarFinca(a);
       a.api.googleCancela = true;
 
-      final resultado = await a.sync.entrarConGoogle(reemplazarDatosLocales: true);
+      final resultado = await a.sync.entrarConGoogle(
+        reemplazarDatosLocales: true,
+      );
 
       expect(resultado.ok, isFalse);
       // Lo local sigue intacto: el borrado ocurre después de autenticarse.
@@ -510,7 +516,9 @@ void main() {
       final suyos = await sembrarFinca(otro);
       expect(suyos.lote, isNot(ids.lote));
 
-      final resultado = await otro.sync.entrarConGoogle(reemplazarDatosLocales: true);
+      final resultado = await otro.sync.entrarConGoogle(
+        reemplazarDatosLocales: true,
+      );
 
       expect(resultado.ok, isTrue);
       final productor = await otro.perfil.watchProductor().first;

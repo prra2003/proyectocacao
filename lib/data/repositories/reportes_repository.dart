@@ -60,9 +60,9 @@ class RendimientoLote {
 /// lotes —o varias fincas— a la vez, no uno solo.
 class ReportesRepository {
   ReportesRepository(AppDatabase db)
-      : _registros = db.registrosDao,
-        _lotes = db.lotesDao,
-        _fincas = db.fincasDao;
+    : _registros = db.registrosDao,
+      _lotes = db.lotesDao,
+      _fincas = db.fincasDao;
 
   final RegistrosDao _registros;
   final LotesDao _lotes;
@@ -86,7 +86,7 @@ class ReportesRepository {
   /// completo y el área de cada lote.
   Stream<IndicadoresFinca> watchIndicadores(String fincaId) {
     return watchHistorial(fincaId).asyncMap(
-          (eventos) async =>
+      (eventos) async =>
           _resumir(eventos, await _lotes.watchLotesDe(fincaId).first),
     );
   }
@@ -104,10 +104,10 @@ class ReportesRepository {
   }
 
   IndicadoresFinca _resumir(
-      List<EventoHistorial> eventos,
-      List<Lote> lotes, {
-        Map<String, String>? nombrePorFincaId,
-      }) {
+    List<EventoHistorial> eventos,
+    List<Lote> lotes, {
+    Map<String, String>? nombrePorFincaId,
+  }) {
     var produccionTotal = 0.0;
     var actividades = 0;
     var cosechas = 0;

@@ -61,9 +61,8 @@ class ProductoresDao extends DatabaseAccessor<AppDatabase>
     return idFinal;
   }
 
-  Future<Asociacion?> asociacionPorId(String id) => (select(
-    asociaciones,
-  )..where((a) => a.id.equals(id))).getSingleOrNull();
+  Future<Asociacion?> asociacionPorId(String id) =>
+      (select(asociaciones)..where((a) => a.id.equals(id))).getSingleOrNull();
 
   /// Crea una asociación que no estaba en el catálogo ("Otra, especificar" en
   /// el formulario del productor). Nace `pending` para que viaje al servidor
@@ -237,15 +236,15 @@ class FincasDao extends DatabaseAccessor<AppDatabase> with _$FincasDaoMixin {
       into(fincas).insertOnConflictUpdate(fila);
 
   Stream<List<Lote>> watchLotesDeProductor(String productorId) {
-    final consulta = select(lotes).join([
-      innerJoin(fincas, fincas.id.equalsExp(lotes.fincaId)),
-    ])
-      ..where(fincas.productorId.equals(productorId))
-      ..where(lotes.deletedAt.isNull())
-      ..where(fincas.deletedAt.isNull());
-    return consulta
-        .watch()
-        .map((filas) => [for (final fila in filas) fila.readTable(lotes)]);
+    final consulta =
+        select(lotes)
+            .join([innerJoin(fincas, fincas.id.equalsExp(lotes.fincaId))])
+          ..where(fincas.productorId.equals(productorId))
+          ..where(lotes.deletedAt.isNull())
+          ..where(fincas.deletedAt.isNull());
+    return consulta.watch().map(
+      (filas) => [for (final fila in filas) fila.readTable(lotes)],
+    );
   }
 }
 
@@ -265,9 +264,11 @@ class LotesDao extends DatabaseAccessor<AppDatabase> with _$LotesDaoMixin {
     String? id,
     required String fincaId,
     required String nombre,
+    String? codigo,
     required double areaSembradaHa,
     required String variedadCacao,
     required DateTime fechaSiembra,
+    Value<String?> fotoPath = const Value.absent(),
   }) async {
     final idFinal = id ?? nuevoId();
     await into(lotes).insertOnConflictUpdate(
@@ -275,6 +276,10 @@ class LotesDao extends DatabaseAccessor<AppDatabase> with _$LotesDaoMixin {
         id: Value(idFinal),
         fincaId: fincaId,
         nombre: nombre,
+        // Sin código se deja el que ya tenía: editar un lote viejo desde un
+        // sitio que no conoce el código no debe borrarlo.
+        codigo: codigo == null ? const Value.absent() : Value(codigo),
+        fotoPath: fotoPath,
         areaSembradaHa: areaSembradaHa,
         variedadCacao: variedadCacao,
         fechaSiembra: fechaSiembra,
@@ -579,7 +584,15 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Lo mismo pero para toda la finca, uniendo por lote.
-  Stream<double> watchKgDeFinca(String fincaId, int anio) {
+  Stream<double> watchKgDeFinca(String fincaId, int anio) =>
+      watchKgDeFincaEntre(fincaId, DateTime(anio), DateTime(anio + 1));
+
+  /// Kilos de la finca cosechados en `[desde, hasta)`.
+  Stream<double> watchKgDeFincaEntre(
+    String fincaId,
+    DateTime desde,
+    DateTime hasta,
+  ) {
     final suma = cosechas.cantidadKg.sum();
     final consulta =
         selectOnly(cosechas)
@@ -589,12 +602,37 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
             lotes.fincaId.equals(fincaId) &
                 lotes.deletedAt.isNull() &
                 cosechas.deletedAt.isNull() &
-                cosechas.fecha.isBetweenValues(
-                  DateTime(anio),
-                  DateTime(anio + 1),
-                ),
+                cosechas.fecha.isBiggerOrEqualValue(desde) &
+                cosechas.fecha.isSmallerThanValue(hasta),
           );
     return consulta.watchSingle().map((fila) => fila.read(suma) ?? 0);
+  }
+
+  /// Todas las labores vivas de los lotes vivos de una finca, la más reciente
+  /// primero. Es lo que miran los recordatorios.
+  Stream<List<ActividadAgricola>> watchActividadesDeFinca(String fincaId) {
+    final consulta =
+        select(actividadesAgricolas).join([
+            innerJoin(
+              lotes,
+              lotes.id.equalsExp(actividadesAgricolas.loteId),
+              useColumns: false,
+            ),
+          ])
+          ..where(
+            lotes.fincaId.equals(fincaId) &
+                lotes.deletedAt.isNull() &
+                actividadesAgricolas.deletedAt.isNull(),
+          )
+          ..orderBy([
+            OrderingTerm(
+              expression: actividadesAgricolas.fecha,
+              mode: OrderingMode.desc,
+            ),
+          ]);
+    return consulta.watch().map(
+      (filas) => [for (final f in filas) f.readTable(actividadesAgricolas)],
+    );
   }
 
   Future<String> registrarDiagnostico({
@@ -658,7 +696,7 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
       readsFrom: {actividadesAgricolas, cosechas, diagnosticos, lotes},
     );
     return consulta.watch().map(
-          (filas) => [for (final fila in filas) EventoHistorial.desdeFila(fila)],
+      (filas) => [for (final fila in filas) EventoHistorial.desdeFila(fila)],
     );
   }
 
@@ -704,8 +742,9 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
       readsFrom: {actividadesAgricolas, cosechas, diagnosticos, lotes, fincas},
     );
     return consulta.watch().map(
-          (filas) =>
-      [for (final fila in filas) EventoHistorial.desdeFilaConFinca(fila)],
+      (filas) => [
+        for (final fila in filas) EventoHistorial.desdeFilaConFinca(fila),
+      ],
     );
   }
 }
@@ -770,12 +809,14 @@ class SyncDao extends DatabaseAccessor<AppDatabase> with _$SyncDaoMixin {
     required String usuarioRemoto,
     required String correo,
     String? token,
+    String? nombre,
   }) async {
     await (update(sesion)..where((s) => s.id.equals(1))).write(
       SesionCompanion(
         authUid: Value(usuarioRemoto),
         correo: Value(correo),
         tokenNube: Value(token),
+        nombreCuenta: Value(nombre),
         // Con Google la cuenta llega confirmada: no hay correo que abrir.
         correoConfirmado: const Value(true),
       ),

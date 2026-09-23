@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tema.dart';
+import '../widgets/campo_dictado.dart';
 import '../widgets/comunes.dart';
 import '../widgets/selector_fecha.dart';
 
@@ -9,11 +10,11 @@ import '../widgets/selector_fecha.dart';
 const _tiposProducto = ['Cacao en baba', 'Cacao fermentado', 'Cacao seco'];
 
 typedef DatosCosecha = ({
-DateTime fecha,
-double cantidadKg,
-String? observaciones,
-String? tipoProducto,
-String? fotoPath,
+  DateTime fecha,
+  double cantidadKg,
+  String? observaciones,
+  String? tipoProducto,
+  String? fotoPath,
 });
 
 Future<DatosCosecha?> pedirDatosCosecha(BuildContext context) {
@@ -59,11 +60,11 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
   void _aceptar() {
     if (!_formKey.currentState!.validate()) return;
     Navigator.of(context).pop((
-    fecha: _fecha,
-    cantidadKg: aNumero(_cantidad.text)!,
-    observaciones: textoONulo(_observaciones.text),
-    tipoProducto: _tipoProducto,
-    fotoPath: _fotoPath,
+      fecha: _fecha,
+      cantidadKg: aNumero(_cantidad.text)!,
+      observaciones: textoONulo(_observaciones.text),
+      tipoProducto: _tipoProducto,
+      fotoPath: _fotoPath,
     ));
   }
 
@@ -108,7 +109,7 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
               // tipo de producto va de desplegable, no de texto libre.
               SelectorDesplegable(
                 key: const Key('campo_tipo_producto'),
-                etiqueta: 'Tipo de producto',
+                etiqueta: '¿Cómo lo sacó?',
                 icono: Icons.eco_outlined,
                 color: PaletaCacao.dorado,
                 opciones: _tiposProducto,
@@ -121,18 +122,15 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
                 cargando: _cargandoFoto,
                 onTap: _elegirFoto,
                 onQuitar: () => setState(() => _fotoPath = null),
-                etiqueta: 'Evidencia fotográfica (opcional)',
+                etiqueta: 'Tomar una foto (si quiere)',
               ),
               const SizedBox(height: 14),
-              TextFormField(
-                key: const Key('campo_observaciones_cosecha'),
+              CampoDictado(
+                campoKey: const Key('campo_observaciones_cosecha'),
                 controller: _observaciones,
-                decoration: const InputDecoration(
-                  labelText: 'Observaciones',
-                  hintText: 'Secado al sol, calidad, humedad...',
-                ),
+                etiqueta: '¿Algo más?',
+                hint: 'Secado al sol, calidad... Toque el micrófono y hable',
                 maxLines: 2,
-                textCapitalization: TextCapitalization.sentences,
               ),
             ],
           ),

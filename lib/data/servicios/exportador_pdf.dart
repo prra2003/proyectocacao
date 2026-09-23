@@ -14,13 +14,13 @@ import 'nombre_archivo.dart';
 /// ya armada por la pantalla que llama, con exactamente lo que el productor
 /// está viendo.
 Future<void> exportarTablaAPdf(
-    BuildContext context, {
-      required String titulo,
-      required String subtitulo,
-      required List<String> encabezados,
-      required List<List<String>> filas,
-      required String nombreArchivo,
-    }) async {
+  BuildContext context, {
+  required String titulo,
+  required String subtitulo,
+  required List<String> encabezados,
+  required List<List<String>> filas,
+  required String nombreArchivo,
+}) async {
   if (filas.isEmpty) {
     avisar(context, 'No hay nada que exportar con estos filtros');
     return;

@@ -102,7 +102,7 @@ Para no chocar, cada quien trabaja sobre su carpeta:
 | Interfaz | `lib/ui/` | Pantallas, tema, diálogos |
 | Datos | `lib/data/local/`, `lib/data/daos/` | Tablas, migraciones, consultas |
 | Sincronización | `lib/data/sync/` | Lo más delicado del proyecto |
-| Backend | `supabase/` | Esquema, triggers, políticas RLS |
+| Backend | `backend/` | Servidor en Apps Script (`Codigo.gs`) y guía de instalación |
 | Pruebas | `test/` | |
 
 Si tu tarea toca `lib/data/sync/`, avisa antes en el grupo: es la parte donde un
@@ -114,8 +114,11 @@ cambio mal hecho se nota tarde y duele.
 
 - **No** subir la APK ni la carpeta `build/` al repositorio. Las versiones se
   publican en *Releases* de GitHub.
-- **No** poner la llave `service_role` de Google Apps Script en el código. La publicable
-  sí, es pública por diseño; la otra se salta toda la seguridad.
+- **No** poner el **secreto del cliente** de OAuth (`GOCSPX-...`) en el código
+  ni en el repositorio. Los identificadores de cliente sí, son públicos por
+  diseño.
+- **No** compartir la hoja de cálculo del servidor con permiso de edición fuera
+  del equipo: la hoja **es** la base de datos.
 - **No** borrar filas de verdad. Todo borrado es suave (`deleted_at`), o los
   demás teléfonos nunca se enteran.
 - **No** hacer que la interfaz espere al servidor. Se guarda en local y se
@@ -138,12 +141,18 @@ cambio mal hecho se nota tarde y duele.
 Por ahora todos apuntamos al **mismo proyecto** de Google Apps Script, así que los datos de
 prueba se ven entre nosotros. No pasa nada en esta etapa.
 
-Cuando alguien vaya a cambiar el `schema.sql`, mejor que cree su propio proyecto
-gratis y lo use con su llave:
+Cuando alguien vaya a cambiar `backend/Codigo.gs` o las columnas de las hojas,
+mejor que monte su propia copia (hoja + script, siguiendo
+[`backend/README.md`](../backend/README.md)) y apunte la app a ella:
 
 ```bash
-flutter run --dart-define=SUPABASE_URL=TU_URL --dart-define=SUPABASE_KEY=TU_LLAVE
+flutter run \
+  --dart-define=NUBE_URL=https://script.google.com/macros/s/SU_COPIA/exec \
+  --dart-define=GOOGLE_CLIENTE_WEB=...apps.googleusercontent.com
 ```
+
+Sin `NUBE_URL`, la app arranca contra el doble en memoria: sirve para trabajar
+en la interfaz sin tocar ningún servidor.
 
 Así nadie le tumba las tablas a otro.
 

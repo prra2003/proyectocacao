@@ -9,7 +9,6 @@ import '../data/repositories/reportes_repository.dart';
 import '../data/servicios/exportador_excel.dart';
 import '../data/servicios/exportador_historial_productor.dart';
 import '../data/servicios/exportador_pdf.dart';
-import 'editar_finca_screen.dart';
 import 'formato.dart';
 import 'lote_detalle_screen.dart';
 import 'tema.dart';
@@ -44,15 +43,6 @@ class ReportesScreen extends StatefulWidget {
 class _ReportesScreenState extends State<ReportesScreen> {
   String? _seleccionId;
 
-  Future<void> _agregarFinca(BuildContext context, String productorId) {
-    return Navigator.of(context).push(
-      RutaCacao<void>(
-        builder: (_) =>
-            EditarFincaScreen(repo: widget.repo, productorId: productorId),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Productor?>(
@@ -74,7 +64,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
                     icono: Icons.bar_chart_rounded,
                     titulo: 'Todavía no hay nada que reportar',
                     mensaje:
-                    'Registre su finca y sus lotes para ver aquí la '
+                        'Registre su finca y sus lotes para ver aquí la '
                         'producción y el historial.',
                   ),
                 ),
@@ -82,16 +72,17 @@ class _ReportesScreenState extends State<ReportesScreen> {
             }
             // Con varias fincas, si el productor no ha elegido nada todavía
             // se parte viendo todas juntas.
-            final seleccionId = _seleccionId ??
+            final seleccionId =
+                _seleccionId ??
                 (fincas.length > 1 ? _todasLasFincas : fincas.first.id);
             final verTodas =
                 fincas.length > 1 && seleccionId == _todasLasFincas;
             final finca = verTodas
                 ? null
                 : fincas.firstWhere(
-                  (f) => f.id == seleccionId,
-              orElse: () => fincas.first,
-            );
+                    (f) => f.id == seleccionId,
+                    orElse: () => fincas.first,
+                  );
             return _ReportesContenido(
               repo: widget.repo,
               lotesRepo: widget.lotesRepo,
@@ -101,7 +92,6 @@ class _ReportesScreenState extends State<ReportesScreen> {
               fincas: fincas,
               seleccionId: seleccionId,
               onSeleccionarFinca: (id) => setState(() => _seleccionId = id),
-              onAgregarFinca: () => _agregarFinca(context, productor.id),
             );
           },
         );
@@ -120,7 +110,6 @@ class _ReportesContenido extends StatefulWidget {
     required this.fincas,
     required this.seleccionId,
     required this.onSeleccionarFinca,
-    required this.onAgregarFinca,
   });
 
   final PerfilRepository repo;
@@ -133,7 +122,6 @@ class _ReportesContenido extends StatefulWidget {
   final List<Finca> fincas;
   final String seleccionId;
   final ValueChanged<String> onSeleccionarFinca;
-  final VoidCallback onAgregarFinca;
 
   @override
   State<_ReportesContenido> createState() => _ReportesContenidoState();
@@ -186,17 +174,7 @@ class _ReportesContenidoState extends State<_ReportesContenido>
           fincas: widget.fincas,
           seleccionId: widget.seleccionId,
           onSeleccionar: widget.onSeleccionarFinca,
-          onAgregar: widget.onAgregarFinca,
         ),
-        acciones: [
-          IconButton(
-            tooltip: finca == null
-                ? 'Exportar todo el historial del productor (PDF)'
-                : 'Exportar el historial de ${finca.nombre} (PDF)',
-            icon: const Icon(Icons.summarize_outlined),
-            onPressed: () => _exportarHistorial(context),
-          ),
-        ],
         abajo: TabBar(
           controller: _tabs,
           tabs: const [
@@ -216,6 +194,7 @@ class _ReportesContenidoState extends State<_ReportesContenido>
               streamLotes: streamLotes,
               mostrarFinca: finca == null,
               tituloExportacion: finca?.nombre ?? 'Todas mis fincas',
+              onExportarCompleto: () => _exportarHistorial(context),
             ),
             PestanaLotes(
               repo: widget.repo,
@@ -238,13 +217,11 @@ class _SelectorFincaReportes extends StatelessWidget {
     required this.fincas,
     required this.seleccionId,
     required this.onSeleccionar,
-    required this.onAgregar,
   });
 
   final List<Finca> fincas;
   final String seleccionId;
   final ValueChanged<String> onSeleccionar;
-  final VoidCallback onAgregar;
 
   bool get _esTodas => seleccionId == _todasLasFincas;
 
@@ -292,15 +269,8 @@ class _SelectorFincaReportes extends StatelessWidget {
                   onSeleccionar(finca.id);
                 },
               ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.add_circle_outline),
-              title: const Text('Agregar otra finca'),
-              onTap: () {
-                Navigator.of(contexto).pop();
-                onAgregar();
-              },
-            ),
+            // Agregar o editar fincas se hace en un solo lugar: tocando el
+            // nombre de la finca en el Inicio. Aquí solo se elige qué mirar.
             const SizedBox(height: 12),
           ],
         ),
@@ -313,9 +283,9 @@ class _SelectorFincaReportes extends StatelessWidget {
     final finca = _esTodas
         ? null
         : fincas.firstWhere(
-          (f) => f.id == seleccionId,
-      orElse: () => fincas.first,
-    );
+            (f) => f.id == seleccionId,
+            orElse: () => fincas.first,
+          );
     final nombre = _esTodas ? 'Todas mis fincas' : finca!.nombre;
     final subtitulo = _esTodas ? '${fincas.length} fincas' : finca!.municipio;
     return InkWell(
@@ -342,7 +312,10 @@ class _SelectorFincaReportes extends StatelessWidget {
                   ),
                   Text(
                     subtitulo,
-                    style: const TextStyle(fontSize: 15, color: Color(0xCCFFFFFF)),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Color(0xCCFFFFFF),
+                    ),
                   ),
                 ],
               ),
@@ -427,7 +400,8 @@ class _PestanaIndicadores extends StatelessWidget {
                 child: EstadoVacio(
                   compacto: true,
                   titulo: 'Sin lotes todavía',
-                  mensaje: 'El rendimiento aparece cuando haya lotes y cosechas.',
+                  mensaje:
+                      'El rendimiento aparece cuando haya lotes y cosechas.',
                 ),
               )
             else
@@ -454,21 +428,23 @@ class _PestanaIndicadores extends StatelessWidget {
                               children: [
                                 Text(
                                   lote.loteNombre,
-                                  style: Theme.of(context).textTheme.titleMedium,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
                                 ),
                                 Text(
                                   lote.fincaNombre == null
                                       ? '${numeroCorto(lote.kgTotales)} kg · '
-                                      '${numeroCorto(lote.areaHa)} ha'
+                                            '${numeroCorto(lote.areaHa)} ha'
                                       : '${numeroCorto(lote.kgTotales)} kg · '
-                                      '${numeroCorto(lote.areaHa)} ha · '
-                                      '${lote.fincaNombre}',
+                                            '${numeroCorto(lote.areaHa)} ha · '
+                                            '${lote.fincaNombre}',
                                   style: Theme.of(context).textTheme.bodyMedium
                                       ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
                                 ),
                               ],
                             ),
@@ -499,10 +475,7 @@ class _PestanaIndicadores extends StatelessWidget {
 /// todas las fincas del productor y, debajo de cada una, sus lotes. No
 /// depende del selector de arriba (que es solo para Indicadores/Historial):
 /// acá siempre se ven todas juntas, que es lo que pide el requerimiento.
-///
-/// Pública (sin guion bajo) porque además de esta pestaña dentro de
-/// Reportes, `LotesScreen` la reutiliza como su propia pestaña principal
-/// "Mis lotes" en la barra de abajo.
+
 class PestanaLotes extends StatelessWidget {
   const PestanaLotes({
     super.key,
@@ -563,21 +536,6 @@ class _TarjetaFincaConLotes extends StatelessWidget {
   final PerfilRepository repo;
   final LoteRepository lotesRepo;
 
-  /// Descarga en PDF solo esta finca: sus lotes y las labores/cosechas de
-  /// cada uno. Así, desde "Mis lotes", el productor con varias fincas puede
-  /// elegir cuál se lleva sin tener que entrar a Reportes.
-  Future<void> _exportar(BuildContext context) async {
-    final productor = await repo.watchProductor().first;
-    if (productor == null || !context.mounted) return;
-    await exportarHistorialProductorAPdf(
-      context,
-      repo: repo,
-      lotesRepo: lotesRepo,
-      productor: productor,
-      fincas: [finca],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -609,11 +567,6 @@ class _TarjetaFincaConLotes extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-                IconButton(
-                  tooltip: 'Descargar historial de ${finca.nombre} (PDF)',
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                  onPressed: () => _exportar(context),
                 ),
               ],
             ),
@@ -661,11 +614,13 @@ class _FilaLote extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.forest_outlined, color: PaletaCacao.verde),
       title: Text(
-        lote.codigo.isNotEmpty ? '${lote.codigo} · ${lote.nombre}' : lote.nombre,
+        lote.codigo.isNotEmpty
+            ? '${lote.codigo} · ${lote.nombre}'
+            : lote.nombre,
       ),
       subtitle: Text(
         '${numeroCorto(lote.areaSembradaHa)} ha · '
-            '${edad == 1 ? '1 año' : '$edad años'}',
+        '${edad == 1 ? '1 año' : '$edad años'}',
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => Navigator.of(context).push(
@@ -689,6 +644,7 @@ class _PestanaHistorial extends StatefulWidget {
     required this.streamLotes,
     required this.mostrarFinca,
     required this.tituloExportacion,
+    required this.onExportarCompleto,
   });
 
   final Stream<List<EventoHistorial>> streamHistorial;
@@ -700,6 +656,10 @@ class _PestanaHistorial extends StatefulWidget {
   /// Nombre de la finca (o "Todas mis fincas") para el título del archivo
   /// exportado.
   final String tituloExportacion;
+
+  /// El PDF completo por finca y por lote (el que antes salía desde tres
+  /// botones distintos: arriba en Reportes, en Mis lotes y en cada finca).
+  final VoidCallback onExportarCompleto;
 
   @override
   State<_PestanaHistorial> createState() => _PestanaHistorialState();
@@ -738,13 +698,13 @@ class _PestanaHistorialState extends State<_PestanaHistorial> {
     for (final evento in eventos) {
       final (tipo, detalle) = switch (evento.tipo) {
         TipoEvento.actividad => (
-        etiquetaActividad(TipoActividad.values.byName(evento.subtipo!)),
-        evento.detalle ?? '',
+          etiquetaActividad(TipoActividad.values.byName(evento.subtipo!)),
+          evento.detalle ?? '',
         ),
         TipoEvento.cosecha => ('Cosecha', evento.detalle ?? ''),
         TipoEvento.diagnostico => (
-        etiquetaEstado(EstadoFenologico.values.byName(evento.subtipo!)),
-        evento.detalle ?? '',
+          etiquetaEstado(EstadoFenologico.values.byName(evento.subtipo!)),
+          evento.detalle ?? '',
         ),
       };
       filas.add([
@@ -770,10 +730,8 @@ class _PestanaHistorialState extends State<_PestanaHistorial> {
       final pasaLote = _loteId == null || evento.loteId == _loteId;
       final pasaFecha =
           _rango == null ||
-              (!evento.fecha.isBefore(_rango!.start) &&
-                  !evento.fecha.isAfter(
-                    _rango!.end.add(const Duration(days: 1)),
-                  ));
+          (!evento.fecha.isBefore(_rango!.start) &&
+              !evento.fecha.isAfter(_rango!.end.add(const Duration(days: 1))));
       return pasaTipo && pasaLote && pasaFecha;
     }).toList();
   }
@@ -803,6 +761,7 @@ class _PestanaHistorialState extends State<_PestanaHistorial> {
                   rango: _rango,
                   onRango: () => _elegirRango(context),
                   onLimpiarRango: () => setState(() => _rango = null),
+                  onExportarCompleto: widget.onExportarCompleto,
                   onExportarExcel: () {
                     final (encabezados, filas) = _tabla(filtrados);
                     exportarTablaAExcel(
@@ -812,7 +771,7 @@ class _PestanaHistorialState extends State<_PestanaHistorial> {
                       filas: filas,
                       nombreArchivo: 'historial_${widget.tituloExportacion}',
                       tituloComparticion:
-                      'Historial de ${widget.tituloExportacion}',
+                          'Historial de ${widget.tituloExportacion}',
                     );
                   },
                   onExportarPdf: () {
@@ -830,26 +789,26 @@ class _PestanaHistorialState extends State<_PestanaHistorial> {
                 Expanded(
                   child: filtrados.isEmpty
                       ? SingleChildScrollView(
-                    child: EstadoVacio(
-                      icono: Icons.history,
-                      titulo: eventos.isEmpty
-                          ? 'Sin historial todavía'
-                          : 'Nada con estos filtros',
-                      mensaje: eventos.isEmpty
-                          ? 'Las labores, cosechas y diagnósticos que '
-                          'anote van a aparecer aquí.'
-                          : 'Pruebe a quitar algún filtro.',
-                    ),
-                  )
+                          child: EstadoVacio(
+                            icono: Icons.history,
+                            titulo: eventos.isEmpty
+                                ? 'Sin historial todavía'
+                                : 'Nada con estos filtros',
+                            mensaje: eventos.isEmpty
+                                ? 'Las labores, cosechas y diagnósticos que '
+                                      'anote van a aparecer aquí.'
+                                : 'Pruebe a quitar algún filtro.',
+                          ),
+                        )
                       : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                    itemCount: filtrados.length,
-                    separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (context, i) => _FilaEvento(
-                      evento: filtrados[i],
-                      mostrarFinca: widget.mostrarFinca,
-                    ),
-                  ),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                          itemCount: filtrados.length,
+                          separatorBuilder: (_, _) => const Divider(),
+                          itemBuilder: (context, i) => _FilaEvento(
+                            evento: filtrados[i],
+                            mostrarFinca: widget.mostrarFinca,
+                          ),
+                        ),
                 ),
               ],
             );
@@ -870,6 +829,7 @@ class _BarraFiltros extends StatelessWidget {
     required this.rango,
     required this.onRango,
     required this.onLimpiarRango,
+    required this.onExportarCompleto,
     required this.onExportarExcel,
     required this.onExportarPdf,
   });
@@ -882,6 +842,8 @@ class _BarraFiltros extends StatelessWidget {
   final DateTimeRange? rango;
   final VoidCallback onRango;
   final VoidCallback onLimpiarRango;
+
+  final VoidCallback onExportarCompleto;
 
   /// Exportan exactamente lo que se ve con los filtros actuales.
   final VoidCallback onExportarExcel;
@@ -898,8 +860,7 @@ class _BarraFiltros extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                for (final MapEntry(key: tipo, value: etiqueta)
-                in const {
+                for (final MapEntry(key: tipo, value: etiqueta) in const {
                   _FiltroTipo.todos: 'Todos',
                   _FiltroTipo.actividades: 'Labores',
                   _FiltroTipo.cosechas: 'Cosechas',
@@ -933,7 +894,10 @@ class _BarraFiltros extends StatelessWidget {
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Todos')),
                     for (final lote in lotes)
-                      DropdownMenuItem(value: lote.id, child: Text(lote.nombre)),
+                      DropdownMenuItem(
+                        value: lote.id,
+                        child: Text(lote.nombre),
+                      ),
                   ],
                   onChanged: onLote,
                 ),
@@ -945,35 +909,43 @@ class _BarraFiltros extends StatelessWidget {
                 icon: const Icon(Icons.date_range_outlined),
               ),
               const SizedBox(width: 10),
-              // Un solo botón con las dos opciones: Excel para seguir
-              // trabajando los datos, PDF para algo listo para mostrar o
-              // imprimir.
+              // El único botón de exportar de la app: el historial completo
+              // para mandarle al técnico, o la tabla de lo que se ve con los
+              // filtros (Excel para trabajarla, PDF para mostrarla).
               Container(
                 decoration: const BoxDecoration(
                   color: PaletaCacao.verde,
                   shape: BoxShape.circle,
                 ),
                 child: PopupMenuButton<String>(
-                  tooltip: 'Descargar / exportar',
+                  tooltip: 'Enviar o descargar el historial',
                   icon: const Icon(
                     Icons.ios_share_outlined,
                     color: Colors.white,
                   ),
-                  onSelected: (valor) {
-                    if (valor == 'excel') {
-                      onExportarExcel();
-                    } else {
-                      onExportarPdf();
-                    }
+                  onSelected: (valor) => switch (valor) {
+                    'completo' => onExportarCompleto(),
+                    'excel' => onExportarExcel(),
+                    _ => onExportarPdf(),
                   },
                   itemBuilder: (contexto) => const [
+                    PopupMenuItem(
+                      value: 'completo',
+                      child: Row(
+                        children: [
+                          Icon(Icons.summarize_outlined, size: 20),
+                          SizedBox(width: 10),
+                          Text('Historial completo (PDF)'),
+                        ],
+                      ),
+                    ),
                     PopupMenuItem(
                       value: 'excel',
                       child: Row(
                         children: [
                           Icon(Icons.grid_on_outlined, size: 20),
                           SizedBox(width: 10),
-                          Text('Exportar a Excel'),
+                          Text('Esta tabla en Excel'),
                         ],
                       ),
                     ),
@@ -983,7 +955,7 @@ class _BarraFiltros extends StatelessWidget {
                         children: [
                           Icon(Icons.picture_as_pdf_outlined, size: 20),
                           SizedBox(width: 10),
-                          Text('Exportar a PDF'),
+                          Text('Esta tabla en PDF'),
                         ],
                       ),
                     ),
@@ -1022,22 +994,22 @@ class _FilaEvento extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icono, color, fondo, titulo) = switch (evento.tipo) {
       TipoEvento.actividad => (
-      iconoActividad(TipoActividad.values.byName(evento.subtipo!)),
-      PaletaCacao.verde,
-      PaletaCacao.verdeClaro,
-      etiquetaActividad(TipoActividad.values.byName(evento.subtipo!)),
+        iconoActividad(TipoActividad.values.byName(evento.subtipo!)),
+        PaletaCacao.verde,
+        PaletaCacao.verdeClaro,
+        etiquetaActividad(TipoActividad.values.byName(evento.subtipo!)),
       ),
       TipoEvento.cosecha => (
-      Icons.shopping_basket_outlined,
-      PaletaCacao.maduro,
-      PaletaCacao.maduroClaro,
-      '${numeroCorto(evento.cantidadKg ?? 0)} kg cosechados',
+        Icons.shopping_basket_outlined,
+        PaletaCacao.maduro,
+        PaletaCacao.maduroClaro,
+        '${numeroCorto(evento.cantidadKg ?? 0)} kg cosechados',
       ),
       TipoEvento.diagnostico => (
-      Icons.eco_outlined,
-      PaletaCacao.cafe,
-      PaletaCacao.cafeClaro,
-      etiquetaEstado(EstadoFenologico.values.byName(evento.subtipo!)),
+        Icons.eco_outlined,
+        PaletaCacao.cafe,
+        PaletaCacao.cafeClaro,
+        etiquetaEstado(EstadoFenologico.values.byName(evento.subtipo!)),
       ),
     };
     final subtitulo = [

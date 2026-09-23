@@ -6,17 +6,22 @@ import 'package:flutter/material.dart';
 import '../data/local/database.dart';
 import '../data/repositories/lote_repository.dart';
 import '../data/repositories/perfil_repository.dart';
-import '../data/sync/sync_service.dart';
 import '../data/repositories/reportes_repository.dart';
-import 'bienvenida_screen.dart';
-import 'cuenta_screens.dart';
+import '../data/sync/sync_service.dart';
 import 'dialogos/dialogo_actividad.dart';
 import 'dialogos/dialogo_cosecha.dart';
+import 'bienvenida_screen.dart';
+import 'cuenta_screens.dart';
 import 'inicio_screen.dart';
 import 'perfil_screen.dart';
 import 'reportes_screen.dart';
 import 'tema.dart';
 import 'widgets/comunes.dart';
+import 'widgets/confirmacion_guardado.dart';
+
+/// Un lote y el nombre de la finca a la que pertenece, para poder mostrarlo
+/// en la lista de "¿en cuál lote?" cuando el productor tiene varias fincas.
+typedef LoteConFinca = ({Lote lote, String fincaNombre});
 
 /// El armazón de la app: inicio, perfil y el botón de anotar siempre a mano.
 ///
@@ -54,6 +59,7 @@ class _CascaronScreenState extends State<CascaronScreen> {
   static const _intervaloMaximo = Duration(minutes: 60);
 
   var _pestana = 0;
+  late final _reportesRepo = ReportesRepository(widget.db);
   StreamSubscription<List<ConnectivityResult>>? _conexion;
   Timer? _reintentoPeriodico;
   var _fallosSeguidos = 0;
@@ -113,18 +119,18 @@ class _CascaronScreenState extends State<CascaronScreen> {
   }
 
   Future<void> _anotar() async {
-    final lotes = await _lotesDisponibles();
+    final disponibles = await _lotesDisponibles();
     if (!mounted) return;
-    if (lotes.isEmpty) {
+    if (disponibles.isEmpty) {
       avisar(context, 'Primero registre un lote');
       return;
     }
 
-    final lote = lotes.length == 1
-        ? lotes.first
+    final lote = disponibles.length == 1
+        ? disponibles.first.lote
         : await showModalBottomSheet<Lote>(
             context: context,
-            builder: (_) => _ElegirLote(lotes: lotes),
+            builder: (_) => _ElegirLote(disponibles: disponibles),
           );
     if (lote == null || !mounted) return;
 
@@ -145,44 +151,34 @@ class _CascaronScreenState extends State<CascaronScreen> {
         tipoProducto: datos.tipoProducto,
         fotoPath: datos.fotoPath,
       );
-      if (mounted) avisar(context, 'Cosecha registrada');
+      if (mounted) {
+        mostrarConfirmacionGuardado(context, mensaje: 'Cosecha registrada');
+      }
     } else {
-      final datos = await pedirDatosActividad(context);
+      final datos = await pedirDatosActividad(context, loteNombre: lote.nombre);
       if (datos == null) return;
-      await widget.lotesRepo.registrarActividad(
-        loteId: lote.id,
-        tipo: datos.tipo,
-        fecha: datos.fecha,
-        observaciones: datos.observaciones,
-        responsable: datos.responsable,
-        costo: datos.costo,
-        fotoPath: datos.fotoPath,
-        subtipoLabor: datos.subtipoLabor,
-        producto: datos.producto,
-        cantidadAplicada: datos.cantidadAplicada,
-        incidencia: datos.incidencia,
-        arbolesAfectados: datos.arbolesAfectados,
-        edadCultivoAnios: datos.edadCultivoAnios,
-        arbolesSembrados: datos.arbolesSembrados,
-        edadPlantulaMeses: datos.edadPlantulaMeses,
-        insumos: datos.insumos,
-        resultadoEsperado: datos.resultadoEsperado,
-      );
-      if (mounted) avisar(context, 'Labor registrada');
+      await guardarLabor(widget.lotesRepo, lote, datos);
+      if (mounted) {
+        mostrarConfirmacionGuardado(context, mensaje: 'Labor registrada');
+      }
     }
   }
 
-  /// Lotes de **todas** las fincas del productor (RF-02): con una sola finca
-  /// asumida, el botón "Anotar" dejaría invisibles los lotes de la segunda.
-  Future<List<Lote>> _lotesDisponibles() async {
+  /// Todos los lotes de todas las fincas del productor, cada uno con el
+  /// nombre de su finca — el botón de anotar no depende de cuál finca esté
+  /// seleccionada en la pantalla de Inicio o Reportes en ese momento.
+  Future<List<LoteConFinca>> _lotesDisponibles() async {
     final productor = await widget.repo.watchProductor().first;
     if (productor == null) return const [];
     final fincas = await widget.repo.watchFincas(productor.id).first;
-    final lotes = <Lote>[];
+    final disponibles = <LoteConFinca>[];
     for (final finca in fincas) {
-      lotes.addAll(await widget.repo.watchLotes(finca.id).first);
+      final lotes = await widget.repo.watchLotes(finca.id).first;
+      for (final lote in lotes) {
+        disponibles.add((lote: lote, fincaNombre: finca.nombre));
+      }
     }
-    return lotes;
+    return disponibles;
   }
 
   @override
@@ -216,9 +212,9 @@ class _CascaronScreenState extends State<CascaronScreen> {
 
   Widget _armazon(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _pestana,
-        children: [
+      body: _CuerpoAnimado(
+        indice: _pestana,
+        hijos: [
           InicioScreen(
             repo: widget.repo,
             lotesRepo: widget.lotesRepo,
@@ -228,60 +224,119 @@ class _CascaronScreenState extends State<CascaronScreen> {
           ReportesScreen(
             repo: widget.repo,
             lotesRepo: widget.lotesRepo,
-            reportesRepo: ReportesRepository(widget.db),
+            reportesRepo: _reportesRepo,
           ),
           PerfilScreen(repo: widget.repo, db: widget.db, sync: widget.sync),
         ],
       ),
-      // Antes era `FloatingActionButton.large` (96 px). Con la pestaña de
-      // Reportes en la barra, ese tamaño le tapaba el nombre al botón vecino.
-      // 64 px se toca igual de fácil sin comerse al de al lado.
-      floatingActionButton: SizedBox(
-        width: 64,
-        height: 64,
-        child: FloatingActionButton(
-          onPressed: _anotar,
-          backgroundColor: PaletaCacao.maduro,
-          foregroundColor: Colors.white,
-          shape: const CircleBorder(),
-          tooltip: 'Anotar',
-          child: const Icon(Icons.add, size: 30),
+      // Con palabra y no solo el "+": se entiende sin adivinar qué hace. Va
+      // flotando sobre la barra y no encajado en ella, así la barra reparte
+      // su ancho entre tres botones grandes en vez de dejar un hueco.
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _anotar,
+        backgroundColor: PaletaCacao.maduro,
+        foregroundColor: Colors.white,
+        tooltip: 'Anotar',
+        icon: const Icon(Icons.add, size: 28),
+        label: const Text(
+          'Anotar',
+          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      // Tres pestañas: "Mis lotes" salió de aquí porque los lotes ya están en
+      // el Inicio y en Reportes.
       bottomNavigationBar: BottomAppBar(
-        color: Colors.white,
+        color: PaletaCacao.tarjeta,
         height: 78,
         // Sin esto, el relleno propio de la barra deja 54 px útiles y el
         // contenido (ícono + etiqueta) se desborda.
         padding: EdgeInsets.zero,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 10,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _BotonBarra(
-              icono: Icons.home_rounded,
-              texto: 'Inicio',
-              activo: _pestana == 0,
-              onTap: () => setState(() => _pestana = 0),
+            Expanded(
+              child: _BotonBarra(
+                icono: Icons.home_rounded,
+                texto: 'Inicio',
+                activo: _pestana == 0,
+                onTap: () => setState(() => _pestana = 0),
+              ),
             ),
-            _BotonBarra(
-              icono: Icons.insert_chart_outlined_rounded,
-              texto: 'Reportes',
-              activo: _pestana == 1,
-              onTap: () => setState(() => _pestana = 1),
+            Expanded(
+              child: _BotonBarra(
+                icono: Icons.bar_chart_rounded,
+                texto: 'Reportes',
+                activo: _pestana == 1,
+                onTap: () => setState(() => _pestana = 1),
+              ),
             ),
-            const SizedBox(width: 72),
-            _BotonBarra(
-              icono: Icons.person_rounded,
-              texto: 'Perfil',
-              activo: _pestana == 2,
-              onTap: () => setState(() => _pestana = 2),
+            Expanded(
+              child: _BotonBarra(
+                icono: Icons.person_rounded,
+                texto: 'Perfil',
+                activo: _pestana == 2,
+                onTap: () => setState(() => _pestana = 2),
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// El `IndexedStack` que muestra Inicio/Reportes/Perfil no pasa por ninguna
+/// `Route`, así que la transición de `RutaCacao` no le llegaba: cambiar de
+/// pestaña en la barra de abajo se sentía "de golpe" mientras todo lo demás
+/// ya giraba. Este widget mantiene el `IndexedStack` (cada pestaña conserva
+/// su estado y su scroll) pero le monta encima el mismo giro + desvanecido
+/// que usa `RutaCacao`, disparado cada vez que cambia el índice.
+class _CuerpoAnimado extends StatefulWidget {
+  const _CuerpoAnimado({required this.indice, required this.hijos});
+
+  final int indice;
+  final List<Widget> hijos;
+
+  @override
+  State<_CuerpoAnimado> createState() => _CuerpoAnimadoState();
+}
+
+class _CuerpoAnimadoState extends State<_CuerpoAnimado>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controlador = AnimationController(
+    vsync: this,
+    // Misma duración que `RutaCacao`, para que se sienta igual de rápido
+    // en toda la app y no distinto según por dónde se navegue.
+    duration: const Duration(milliseconds: 180),
+  )..forward();
+
+  @override
+  void didUpdateWidget(covariant _CuerpoAnimado anterior) {
+    super.didUpdateWidget(anterior);
+    if (anterior.indice != widget.indice) {
+      _controlador.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controlador.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entrada = CurvedAnimation(
+      parent: _controlador,
+      curve: Curves.easeOutCubic,
+    );
+    return AnimatedBuilder(
+      animation: entrada,
+      child: IndexedStack(index: widget.indice, children: widget.hijos),
+      builder: (context, hijo) {
+        // El mismo desvanecido corto que la transición entre páginas.
+        return Opacity(opacity: entrada.value, child: hijo);
+      },
     );
   }
 }
@@ -302,22 +357,24 @@ class _BotonBarra extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = activo
-        ? PaletaCacao.cafe
+        ? PaletaCacao.dorado
         : Theme.of(context).colorScheme.onSurfaceVariant;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icono, size: 30, color: color),
+            Icon(icono, size: 31, color: color),
             const SizedBox(height: 2),
             Text(
               texto,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: activo ? FontWeight.w700 : FontWeight.w500,
                 color: color,
               ),
@@ -330,12 +387,15 @@ class _BotonBarra extends StatelessWidget {
 }
 
 class _ElegirLote extends StatelessWidget {
-  const _ElegirLote({required this.lotes});
+  const _ElegirLote({required this.disponibles});
 
-  final List<Lote> lotes;
+  final List<LoteConFinca> disponibles;
 
   @override
   Widget build(BuildContext context) {
+    // Con una sola finca no hace falta repetir su nombre en cada fila.
+    final variasFincas =
+        disponibles.map((d) => d.fincaNombre).toSet().length > 1;
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -343,7 +403,7 @@ class _ElegirLote extends StatelessWidget {
           const SizedBox(height: 20),
           Text('¿En cuál lote?', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          for (final lote in lotes)
+          for (final disponible in disponibles)
             ListTile(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 24,
@@ -351,10 +411,11 @@ class _ElegirLote extends StatelessWidget {
               ),
               leading: const Icon(Icons.park_rounded, size: 32),
               title: Text(
-                lote.nombre,
+                disponible.lote.nombre,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              onTap: () => Navigator.of(context).pop(lote),
+              subtitle: variasFincas ? Text(disponible.fincaNombre) : null,
+              onTap: () => Navigator.of(context).pop(disponible.lote),
             ),
           const SizedBox(height: 12),
         ],

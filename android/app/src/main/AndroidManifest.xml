@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Descarga de los mapas y, mas adelante, la sincronizacion. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Dictar las observaciones en vez de escribirlas. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:label="Red Nacional de Cacao"
@@ -43,6 +45,10 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- El reconocimiento de voz del sistema, para dictar. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

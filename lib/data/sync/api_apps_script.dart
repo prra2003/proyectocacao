@@ -86,7 +86,25 @@ class ApiAppsScript implements ApiRemota {
       usuarioId: _usuarioId!,
       correo: (respuesta['correo'] as String?) ?? '',
       token: _token,
+      nombre: nombreDelToken(idToken),
     );
+  }
+
+  /// El nombre viene dentro del token de Google (un JWT). Se lee aquí, sin
+  /// preguntarle al servidor: solo se usa para llenar el formulario, no para
+  /// dar acceso, así que no hace falta verificar la firma.
+  static String? nombreDelToken(String idToken) {
+    try {
+      final partes = idToken.split('.');
+      if (partes.length != 3) return null;
+      final datos = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(partes[1]))),
+      );
+      final nombre = (datos as Map<String, dynamic>)['name'];
+      return nombre is String && nombre.trim().isNotEmpty ? nombre : null;
+    } on FormatException {
+      return null;
+    }
   }
 
   @override
@@ -244,7 +262,9 @@ class ApiAppsScript implements ApiRemota {
     // rompe la petición entera con un "Failed to fetch".
     if (!kIsWeb) peticion.followRedirects = false;
 
-    final primera = await http.Response.fromStream(await _cliente.send(peticion));
+    final primera = await http.Response.fromStream(
+      await _cliente.send(peticion),
+    );
     final aDonde = primera.headers['location'];
     if (primera.statusCode >= 300 &&
         primera.statusCode < 400 &&

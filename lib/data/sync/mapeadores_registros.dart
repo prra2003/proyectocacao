@@ -17,14 +17,18 @@ DateTime _selloDe(FilaRemota fila) => _fecha(fila['updated_at'])!;
 /// vacía, entonces sí es un valor nulo de verdad.
 Value<String?> _textoSiViene(FilaRemota fila, String clave) =>
     fila.containsKey(clave)
-        ? Value(fila[clave] as String?)
-        : const Value.absent();
+    ? Value(fila[clave] as String?)
+    : const Value.absent();
 
 Value<double?> _realSiViene(FilaRemota fila, String clave) =>
-    fila.containsKey(clave) ? Value(_numero(fila[clave])) : const Value.absent();
+    fila.containsKey(clave)
+    ? Value(_numero(fila[clave]))
+    : const Value.absent();
 
 Value<int?> _enteroSiViene(FilaRemota fila, String clave) =>
-    fila.containsKey(clave) ? Value(_entero(fila[clave])) : const Value.absent();
+    fila.containsKey(clave)
+    ? Value(_entero(fila[clave]))
+    : const Value.absent();
 
 /// La hoja de cálculo guarda texto: un número puede llegar como `12` o como
 /// `'12'`. Las dos formas tienen que entrar igual.

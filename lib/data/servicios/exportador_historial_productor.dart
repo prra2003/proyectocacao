@@ -53,12 +53,12 @@ class _DatosFinca {
 /// subsección por lote, cada una con su propia tabla de labores y de
 /// cosechas.
 Future<void> exportarHistorialProductorAPdf(
-    BuildContext context, {
-      required PerfilRepository repo,
-      required LoteRepository lotesRepo,
-      required Productor productor,
-      required List<Finca> fincas,
-    }) async {
+  BuildContext context, {
+  required PerfilRepository repo,
+  required LoteRepository lotesRepo,
+  required Productor productor,
+  required List<Finca> fincas,
+}) async {
   if (fincas.isEmpty) {
     if (context.mounted) {
       avisar(context, 'Todavía no hay fincas registradas para exportar');
@@ -167,13 +167,16 @@ pw.Widget _bloqueProductor(Productor productor, List<_DatosFinca> fincas) {
         ),
         if (datos.isNotEmpty) ...[
           pw.SizedBox(height: 4),
-          pw.Text(datos.join('   ·   '), style: const pw.TextStyle(fontSize: 10)),
+          pw.Text(
+            datos.join('   ·   '),
+            style: const pw.TextStyle(fontSize: 10),
+          ),
         ],
         pw.SizedBox(height: 8),
         pw.Text(
           '${fincas.length} ${fincas.length == 1 ? 'finca' : 'fincas'}   ·   '
-              '$totalLotes ${totalLotes == 1 ? 'lote' : 'lotes'}   ·   '
-              '${numeroCorto(totalKg)} kg cosechados en total',
+          '$totalLotes ${totalLotes == 1 ? 'lote' : 'lotes'}   ·   '
+          '${numeroCorto(totalKg)} kg cosechados en total',
           style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
         ),
       ],
@@ -193,7 +196,7 @@ pw.Widget _bloqueFinca(_DatosFinca datosFinca) {
         decoration: const pw.BoxDecoration(color: PdfColors.green700),
         child: pw.Text(
           'Finca: ${finca.nombre}  —  ${finca.municipio}, ${finca.departamento}'
-              '  ·  ${numeroCorto(datosFinca.kgCosechados)} kg cosechados',
+          '  ·  ${numeroCorto(datosFinca.kgCosechados)} kg cosechados',
           style: pw.TextStyle(
             fontSize: 12,
             fontWeight: pw.FontWeight.bold,
@@ -234,8 +237,8 @@ pw.Widget _bloqueLote(_DatosLote datosLote) {
           ),
           child: pw.Text(
             'Lote ${lote.nombre}${lote.codigo.isEmpty ? '' : ' (${lote.codigo})'}'
-                '  ·  ${lote.variedadCacao}  ·  ${numeroCorto(lote.areaSembradaHa)} ha'
-                '  ·  sembrado ${fechaLarga(lote.fechaSiembra)} ($edad años)',
+            '  ·  ${lote.variedadCacao}  ·  ${numeroCorto(lote.areaSembradaHa)} ha'
+            '  ·  sembrado ${fechaLarga(lote.fechaSiembra)} ($edad años)',
             style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
           ),
         ),
@@ -249,15 +252,15 @@ pw.Widget _bloqueLote(_DatosLote datosLote) {
           _sinRegistros('Sin labores registradas en este lote.')
         else
           _tabla(
-            encabezados: const ['Fecha', 'Tipo', 'Detalle', 'Responsable', 'Costo'],
+            encabezados: const [
+              'Fecha',
+              'Tipo',
+              'Detalle',
+              'Responsable',
+              'Costo',
+            ],
             filas: [for (final a in datosLote.actividades) _filaActividad(a)],
-            anchos: const {
-              0: 1.6,
-              1: 1.7,
-              2: 4.2,
-              3: 1.7,
-              4: 1.3,
-            },
+            anchos: const {0: 1.6, 1: 1.7, 2: 4.2, 3: 1.7, 4: 1.3},
           ),
         pw.SizedBox(height: 8),
         pw.Text(
@@ -320,8 +323,7 @@ List<String> _filaActividad(ActividadAgricola a) {
   final detalle = [
     if (a.subtipoLabor != null) a.subtipoLabor!,
     if (a.arbolesSembrados != null) '${a.arbolesSembrados} árboles sembrados',
-    if (a.edadPlantulaMeses != null)
-      'plántula de ${a.edadPlantulaMeses} meses',
+    if (a.edadPlantulaMeses != null) 'plántula de ${a.edadPlantulaMeses} meses',
     if (a.insumos != null) 'Insumos: ${a.insumos}',
     if (a.arbolesAfectados != null) '${a.arbolesAfectados} árboles',
     if (a.edadCultivoAnios != null) 'cultivo de ${a.edadCultivoAnios} años',

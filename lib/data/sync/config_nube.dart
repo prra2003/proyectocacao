@@ -16,7 +16,8 @@ library;
 /// `flutter build apk --dart-define=NUBE_URL=https://...`
 const String urlNube = String.fromEnvironment(
   'NUBE_URL',
-  defaultValue: 'https://script.google.com/macros/s/'
+  defaultValue:
+      'https://script.google.com/macros/s/'
       'AKfycbx2otWwTIS96VgupOshybshpUfhK7DiqtanlcWB6PFR8sL2_rS6OsvOUVps6QuU5Q'
       '/exec',
 );
@@ -24,7 +25,8 @@ const String urlNube = String.fromEnvironment(
 /// Identificador de OAuth de la versión web (va también en `web/index.html`).
 const String clienteWeb = String.fromEnvironment(
   'GOOGLE_CLIENTE_WEB',
-  defaultValue: '1093616695034-f3hhofhek3urakqgn7p3ibptj5ro0m0u'
+  defaultValue:
+      '1093616695034-f3hhofhek3urakqgn7p3ibptj5ro0m0u'
       '.apps.googleusercontent.com',
 );
 
@@ -33,7 +35,8 @@ const String clienteWeb = String.fromEnvironment(
 /// Android no lo necesita en el código —se resuelve con el paquete y la huella
 /// SHA-1 registrados en Google—, pero se deja anotado para saber cuál es el
 /// que el servidor tiene que aceptar.
-const String clienteAndroid = '1093616695034-uln607b40ono39611khf8vf2u1ih5bqb'
+const String clienteAndroid =
+    '1093616695034-uln607b40ono39611khf8vf2u1ih5bqb'
     '.apps.googleusercontent.com';
 
 /// ¿Hay servidor configurado?

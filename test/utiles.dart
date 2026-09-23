@@ -38,7 +38,6 @@ Future<void> desmontar(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 5));
 }
 
-
 /// Envuelve la API falsa anulando la subida, para provocar el choque de
 /// "el servidor cambió y yo tengo algo pendiente".
 class ApiSinSubida implements ApiRemota {

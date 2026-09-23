@@ -2426,6 +2426,17 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _fotoPathMeta = const VerificationMeta(
+    'fotoPath',
+  );
+  @override
+  late final GeneratedColumn<String> fotoPath = GeneratedColumn<String>(
+    'foto_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2441,6 +2452,7 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
     codigo,
     variedadCacao,
     fechaSiembra,
+    fotoPath,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2545,6 +2557,12 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
     } else if (isInserting) {
       context.missing(_fechaSiembraMeta);
     }
+    if (data.containsKey('foto_path')) {
+      context.handle(
+        _fotoPathMeta,
+        fotoPath.isAcceptableOrUnknown(data['foto_path']!, _fotoPathMeta),
+      );
+    }
     return context;
   }
 
@@ -2608,6 +2626,10 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}fecha_siembra'],
       )!,
+      fotoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}foto_path'],
+      ),
     );
   }
 
@@ -2646,6 +2668,10 @@ class Lote extends DataClass implements Insertable<Lote> {
   /// Se guarda la fecha de siembra, no la edad: la edad se calcula en la app y
   /// así el dato no se desactualiza solo.
   final DateTime fechaSiembra;
+
+  /// Foto del lote, para reconocerlo sin leer el nombre. Vive solo en este
+  /// teléfono: no viaja al servidor (la ruta no le sirve a otro equipo).
+  final String? fotoPath;
   const Lote({
     required this.id,
     required this.createdAt,
@@ -2660,6 +2686,7 @@ class Lote extends DataClass implements Insertable<Lote> {
     required this.codigo,
     required this.variedadCacao,
     required this.fechaSiembra,
+    this.fotoPath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2687,6 +2714,9 @@ class Lote extends DataClass implements Insertable<Lote> {
     map['codigo'] = Variable<String>(codigo);
     map['variedad_cacao'] = Variable<String>(variedadCacao);
     map['fecha_siembra'] = Variable<DateTime>(fechaSiembra);
+    if (!nullToAbsent || fotoPath != null) {
+      map['foto_path'] = Variable<String>(fotoPath);
+    }
     return map;
   }
 
@@ -2711,6 +2741,9 @@ class Lote extends DataClass implements Insertable<Lote> {
       codigo: Value(codigo),
       variedadCacao: Value(variedadCacao),
       fechaSiembra: Value(fechaSiembra),
+      fotoPath: fotoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fotoPath),
     );
   }
 
@@ -2735,6 +2768,7 @@ class Lote extends DataClass implements Insertable<Lote> {
       codigo: serializer.fromJson<String>(json['codigo']),
       variedadCacao: serializer.fromJson<String>(json['variedadCacao']),
       fechaSiembra: serializer.fromJson<DateTime>(json['fechaSiembra']),
+      fotoPath: serializer.fromJson<String?>(json['fotoPath']),
     );
   }
   @override
@@ -2756,6 +2790,7 @@ class Lote extends DataClass implements Insertable<Lote> {
       'codigo': serializer.toJson<String>(codigo),
       'variedadCacao': serializer.toJson<String>(variedadCacao),
       'fechaSiembra': serializer.toJson<DateTime>(fechaSiembra),
+      'fotoPath': serializer.toJson<String?>(fotoPath),
     };
   }
 
@@ -2773,6 +2808,7 @@ class Lote extends DataClass implements Insertable<Lote> {
     String? codigo,
     String? variedadCacao,
     DateTime? fechaSiembra,
+    Value<String?> fotoPath = const Value.absent(),
   }) => Lote(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -2789,6 +2825,7 @@ class Lote extends DataClass implements Insertable<Lote> {
     codigo: codigo ?? this.codigo,
     variedadCacao: variedadCacao ?? this.variedadCacao,
     fechaSiembra: fechaSiembra ?? this.fechaSiembra,
+    fotoPath: fotoPath.present ? fotoPath.value : this.fotoPath,
   );
   Lote copyWithCompanion(LotesCompanion data) {
     return Lote(
@@ -2815,6 +2852,7 @@ class Lote extends DataClass implements Insertable<Lote> {
       fechaSiembra: data.fechaSiembra.present
           ? data.fechaSiembra.value
           : this.fechaSiembra,
+      fotoPath: data.fotoPath.present ? data.fotoPath.value : this.fotoPath,
     );
   }
 
@@ -2833,7 +2871,8 @@ class Lote extends DataClass implements Insertable<Lote> {
           ..write('areaSembradaHa: $areaSembradaHa, ')
           ..write('codigo: $codigo, ')
           ..write('variedadCacao: $variedadCacao, ')
-          ..write('fechaSiembra: $fechaSiembra')
+          ..write('fechaSiembra: $fechaSiembra, ')
+          ..write('fotoPath: $fotoPath')
           ..write(')'))
         .toString();
   }
@@ -2853,6 +2892,7 @@ class Lote extends DataClass implements Insertable<Lote> {
     codigo,
     variedadCacao,
     fechaSiembra,
+    fotoPath,
   );
   @override
   bool operator ==(Object other) =>
@@ -2870,7 +2910,8 @@ class Lote extends DataClass implements Insertable<Lote> {
           other.areaSembradaHa == this.areaSembradaHa &&
           other.codigo == this.codigo &&
           other.variedadCacao == this.variedadCacao &&
-          other.fechaSiembra == this.fechaSiembra);
+          other.fechaSiembra == this.fechaSiembra &&
+          other.fotoPath == this.fotoPath);
 }
 
 class LotesCompanion extends UpdateCompanion<Lote> {
@@ -2887,6 +2928,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
   final Value<String> codigo;
   final Value<String> variedadCacao;
   final Value<DateTime> fechaSiembra;
+  final Value<String?> fotoPath;
   final Value<int> rowid;
   const LotesCompanion({
     this.id = const Value.absent(),
@@ -2902,6 +2944,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     this.codigo = const Value.absent(),
     this.variedadCacao = const Value.absent(),
     this.fechaSiembra = const Value.absent(),
+    this.fotoPath = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LotesCompanion.insert({
@@ -2918,6 +2961,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     this.codigo = const Value.absent(),
     required String variedadCacao,
     required DateTime fechaSiembra,
+    this.fotoPath = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : fincaId = Value(fincaId),
        nombre = Value(nombre),
@@ -2938,6 +2982,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     Expression<String>? codigo,
     Expression<String>? variedadCacao,
     Expression<DateTime>? fechaSiembra,
+    Expression<String>? fotoPath,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2954,6 +2999,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
       if (codigo != null) 'codigo': codigo,
       if (variedadCacao != null) 'variedad_cacao': variedadCacao,
       if (fechaSiembra != null) 'fecha_siembra': fechaSiembra,
+      if (fotoPath != null) 'foto_path': fotoPath,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2972,6 +3018,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     Value<String>? codigo,
     Value<String>? variedadCacao,
     Value<DateTime>? fechaSiembra,
+    Value<String?>? fotoPath,
     Value<int>? rowid,
   }) {
     return LotesCompanion(
@@ -2988,6 +3035,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
       codigo: codigo ?? this.codigo,
       variedadCacao: variedadCacao ?? this.variedadCacao,
       fechaSiembra: fechaSiembra ?? this.fechaSiembra,
+      fotoPath: fotoPath ?? this.fotoPath,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3036,6 +3084,9 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     if (fechaSiembra.present) {
       map['fecha_siembra'] = Variable<DateTime>(fechaSiembra.value);
     }
+    if (fotoPath.present) {
+      map['foto_path'] = Variable<String>(fotoPath.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3058,6 +3109,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
           ..write('codigo: $codigo, ')
           ..write('variedadCacao: $variedadCacao, ')
           ..write('fechaSiembra: $fechaSiembra, ')
+          ..write('fotoPath: $fotoPath, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6064,6 +6116,17 @@ class $SesionTable extends Sesion with TableInfo<$SesionTable, SesionLocal> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _nombreCuentaMeta = const VerificationMeta(
+    'nombreCuenta',
+  );
+  @override
+  late final GeneratedColumn<String> nombreCuenta = GeneratedColumn<String>(
+    'nombre_cuenta',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _descargaInicialMeta = const VerificationMeta(
     'descargaInicial',
   );
@@ -6087,6 +6150,7 @@ class $SesionTable extends Sesion with TableInfo<$SesionTable, SesionLocal> {
     correo,
     correoConfirmado,
     tokenNube,
+    nombreCuenta,
     descargaInicial,
   ];
   @override
@@ -6139,6 +6203,15 @@ class $SesionTable extends Sesion with TableInfo<$SesionTable, SesionLocal> {
         tokenNube.isAcceptableOrUnknown(data['token_nube']!, _tokenNubeMeta),
       );
     }
+    if (data.containsKey('nombre_cuenta')) {
+      context.handle(
+        _nombreCuentaMeta,
+        nombreCuenta.isAcceptableOrUnknown(
+          data['nombre_cuenta']!,
+          _nombreCuentaMeta,
+        ),
+      );
+    }
     if (data.containsKey('descarga_inicial')) {
       context.handle(
         _descargaInicialMeta,
@@ -6181,6 +6254,10 @@ class $SesionTable extends Sesion with TableInfo<$SesionTable, SesionLocal> {
         DriftSqlType.string,
         data['${effectivePrefix}token_nube'],
       ),
+      nombreCuenta: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nombre_cuenta'],
+      ),
       descargaInicial: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}descarga_inicial'],
@@ -6216,6 +6293,10 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
   /// que evita tener que pedir la cuenta en cada arranque de la app.
   final String? tokenNube;
 
+  /// Nombre de la persona en su cuenta de Google. Sirve para no pedírselo otra
+  /// vez al registrarse.
+  final String? nombreCuenta;
+
   /// ¿Ya terminó la primera descarga tras entrar con una cuenta existente?
   ///
   /// Arranca en `true` porque una instalación normal no espera nada. Solo
@@ -6230,6 +6311,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
     this.correo,
     required this.correoConfirmado,
     this.tokenNube,
+    this.nombreCuenta,
     required this.descargaInicial,
   });
   @override
@@ -6246,6 +6328,9 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
     map['correo_confirmado'] = Variable<bool>(correoConfirmado);
     if (!nullToAbsent || tokenNube != null) {
       map['token_nube'] = Variable<String>(tokenNube);
+    }
+    if (!nullToAbsent || nombreCuenta != null) {
+      map['nombre_cuenta'] = Variable<String>(nombreCuenta);
     }
     map['descarga_inicial'] = Variable<bool>(descargaInicial);
     return map;
@@ -6265,6 +6350,9 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
       tokenNube: tokenNube == null && nullToAbsent
           ? const Value.absent()
           : Value(tokenNube),
+      nombreCuenta: nombreCuenta == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nombreCuenta),
       descargaInicial: Value(descargaInicial),
     );
   }
@@ -6281,6 +6369,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
       correo: serializer.fromJson<String?>(json['correo']),
       correoConfirmado: serializer.fromJson<bool>(json['correoConfirmado']),
       tokenNube: serializer.fromJson<String?>(json['tokenNube']),
+      nombreCuenta: serializer.fromJson<String?>(json['nombreCuenta']),
       descargaInicial: serializer.fromJson<bool>(json['descargaInicial']),
     );
   }
@@ -6294,6 +6383,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
       'correo': serializer.toJson<String?>(correo),
       'correoConfirmado': serializer.toJson<bool>(correoConfirmado),
       'tokenNube': serializer.toJson<String?>(tokenNube),
+      'nombreCuenta': serializer.toJson<String?>(nombreCuenta),
       'descargaInicial': serializer.toJson<bool>(descargaInicial),
     };
   }
@@ -6305,6 +6395,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
     Value<String?> correo = const Value.absent(),
     bool? correoConfirmado,
     Value<String?> tokenNube = const Value.absent(),
+    Value<String?> nombreCuenta = const Value.absent(),
     bool? descargaInicial,
   }) => SesionLocal(
     id: id ?? this.id,
@@ -6313,6 +6404,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
     correo: correo.present ? correo.value : this.correo,
     correoConfirmado: correoConfirmado ?? this.correoConfirmado,
     tokenNube: tokenNube.present ? tokenNube.value : this.tokenNube,
+    nombreCuenta: nombreCuenta.present ? nombreCuenta.value : this.nombreCuenta,
     descargaInicial: descargaInicial ?? this.descargaInicial,
   );
   SesionLocal copyWithCompanion(SesionCompanion data) {
@@ -6325,6 +6417,9 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
           ? data.correoConfirmado.value
           : this.correoConfirmado,
       tokenNube: data.tokenNube.present ? data.tokenNube.value : this.tokenNube,
+      nombreCuenta: data.nombreCuenta.present
+          ? data.nombreCuenta.value
+          : this.nombreCuenta,
       descargaInicial: data.descargaInicial.present
           ? data.descargaInicial.value
           : this.descargaInicial,
@@ -6340,6 +6435,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
           ..write('correo: $correo, ')
           ..write('correoConfirmado: $correoConfirmado, ')
           ..write('tokenNube: $tokenNube, ')
+          ..write('nombreCuenta: $nombreCuenta, ')
           ..write('descargaInicial: $descargaInicial')
           ..write(')'))
         .toString();
@@ -6353,6 +6449,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
     correo,
     correoConfirmado,
     tokenNube,
+    nombreCuenta,
     descargaInicial,
   );
   @override
@@ -6365,6 +6462,7 @@ class SesionLocal extends DataClass implements Insertable<SesionLocal> {
           other.correo == this.correo &&
           other.correoConfirmado == this.correoConfirmado &&
           other.tokenNube == this.tokenNube &&
+          other.nombreCuenta == this.nombreCuenta &&
           other.descargaInicial == this.descargaInicial);
 }
 
@@ -6375,6 +6473,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
   final Value<String?> correo;
   final Value<bool> correoConfirmado;
   final Value<String?> tokenNube;
+  final Value<String?> nombreCuenta;
   final Value<bool> descargaInicial;
   const SesionCompanion({
     this.id = const Value.absent(),
@@ -6383,6 +6482,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
     this.correo = const Value.absent(),
     this.correoConfirmado = const Value.absent(),
     this.tokenNube = const Value.absent(),
+    this.nombreCuenta = const Value.absent(),
     this.descargaInicial = const Value.absent(),
   });
   SesionCompanion.insert({
@@ -6392,6 +6492,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
     this.correo = const Value.absent(),
     this.correoConfirmado = const Value.absent(),
     this.tokenNube = const Value.absent(),
+    this.nombreCuenta = const Value.absent(),
     this.descargaInicial = const Value.absent(),
   }) : usuarioId = Value(usuarioId);
   static Insertable<SesionLocal> custom({
@@ -6401,6 +6502,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
     Expression<String>? correo,
     Expression<bool>? correoConfirmado,
     Expression<String>? tokenNube,
+    Expression<String>? nombreCuenta,
     Expression<bool>? descargaInicial,
   }) {
     return RawValuesInsertable({
@@ -6410,6 +6512,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
       if (correo != null) 'correo': correo,
       if (correoConfirmado != null) 'correo_confirmado': correoConfirmado,
       if (tokenNube != null) 'token_nube': tokenNube,
+      if (nombreCuenta != null) 'nombre_cuenta': nombreCuenta,
       if (descargaInicial != null) 'descarga_inicial': descargaInicial,
     });
   }
@@ -6421,6 +6524,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
     Value<String?>? correo,
     Value<bool>? correoConfirmado,
     Value<String?>? tokenNube,
+    Value<String?>? nombreCuenta,
     Value<bool>? descargaInicial,
   }) {
     return SesionCompanion(
@@ -6430,6 +6534,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
       correo: correo ?? this.correo,
       correoConfirmado: correoConfirmado ?? this.correoConfirmado,
       tokenNube: tokenNube ?? this.tokenNube,
+      nombreCuenta: nombreCuenta ?? this.nombreCuenta,
       descargaInicial: descargaInicial ?? this.descargaInicial,
     );
   }
@@ -6455,6 +6560,9 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
     if (tokenNube.present) {
       map['token_nube'] = Variable<String>(tokenNube.value);
     }
+    if (nombreCuenta.present) {
+      map['nombre_cuenta'] = Variable<String>(nombreCuenta.value);
+    }
     if (descargaInicial.present) {
       map['descarga_inicial'] = Variable<bool>(descargaInicial.value);
     }
@@ -6470,6 +6578,7 @@ class SesionCompanion extends UpdateCompanion<SesionLocal> {
           ..write('correo: $correo, ')
           ..write('correoConfirmado: $correoConfirmado, ')
           ..write('tokenNube: $tokenNube, ')
+          ..write('nombreCuenta: $nombreCuenta, ')
           ..write('descargaInicial: $descargaInicial')
           ..write(')'))
         .toString();
@@ -8355,6 +8464,7 @@ typedef $$LotesTableCreateCompanionBuilder = LotesCompanion Function({
   Value<String> codigo,
   required String variedadCacao,
   required DateTime fechaSiembra,
+  Value<String?> fotoPath,
   Value<int> rowid,
 });
 typedef $$LotesTableUpdateCompanionBuilder = LotesCompanion Function({
@@ -8371,6 +8481,7 @@ typedef $$LotesTableUpdateCompanionBuilder = LotesCompanion Function({
   Value<String> codigo,
   Value<String> variedadCacao,
   Value<DateTime> fechaSiembra,
+  Value<String?> fotoPath,
   Value<int> rowid,
 });
 
@@ -8524,6 +8635,11 @@ class $$LotesTableFilterComposer extends Composer<_$AppDatabase, $LotesTable> {
 
   ColumnFilters<DateTime> get fechaSiembra => $composableBuilder(
     column: $table.fechaSiembra,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fotoPath => $composableBuilder(
+    column: $table.fotoPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8695,6 +8811,11 @@ class $$LotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get fotoPath => $composableBuilder(
+    column: $table.fotoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$FincasTableOrderingComposer get fincaId {
     final $$FincasTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -8774,6 +8895,9 @@ class $$LotesTableAnnotationComposer
     column: $table.fechaSiembra,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get fotoPath =>
+      $composableBuilder(column: $table.fotoPath, builder: (column) => column);
 
   $$FincasTableAnnotationComposer get fincaId {
     final $$FincasTableAnnotationComposer composer = $composerBuilder(
@@ -8921,6 +9045,7 @@ class $$LotesTableTableManager
                 Value<String> codigo = const Value.absent(),
                 Value<String> variedadCacao = const Value.absent(),
                 Value<DateTime> fechaSiembra = const Value.absent(),
+                Value<String?> fotoPath = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LotesCompanion(
                 id: id,
@@ -8936,6 +9061,7 @@ class $$LotesTableTableManager
                 codigo: codigo,
                 variedadCacao: variedadCacao,
                 fechaSiembra: fechaSiembra,
+                fotoPath: fotoPath,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8953,6 +9079,7 @@ class $$LotesTableTableManager
                 Value<String> codigo = const Value.absent(),
                 required String variedadCacao,
                 required DateTime fechaSiembra,
+                Value<String?> fotoPath = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LotesCompanion.insert(
                 id: id,
@@ -8968,6 +9095,7 @@ class $$LotesTableTableManager
                 codigo: codigo,
                 variedadCacao: variedadCacao,
                 fechaSiembra: fechaSiembra,
+                fotoPath: fotoPath,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -10774,6 +10902,7 @@ typedef $$SesionTableCreateCompanionBuilder = SesionCompanion Function({
   Value<String?> correo,
   Value<bool> correoConfirmado,
   Value<String?> tokenNube,
+  Value<String?> nombreCuenta,
   Value<bool> descargaInicial,
 });
 typedef $$SesionTableUpdateCompanionBuilder = SesionCompanion Function({
@@ -10783,6 +10912,7 @@ typedef $$SesionTableUpdateCompanionBuilder = SesionCompanion Function({
   Value<String?> correo,
   Value<bool> correoConfirmado,
   Value<String?> tokenNube,
+  Value<String?> nombreCuenta,
   Value<bool> descargaInicial,
 });
 
@@ -10822,6 +10952,11 @@ class $$SesionTableFilterComposer
 
   ColumnFilters<String> get tokenNube => $composableBuilder(
     column: $table.tokenNube,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nombreCuenta => $composableBuilder(
+    column: $table.nombreCuenta,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10870,6 +11005,11 @@ class $$SesionTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get nombreCuenta => $composableBuilder(
+    column: $table.nombreCuenta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get descargaInicial => $composableBuilder(
     column: $table.descargaInicial,
     builder: (column) => ColumnOrderings(column),
@@ -10904,6 +11044,11 @@ class $$SesionTableAnnotationComposer
 
   GeneratedColumn<String> get tokenNube =>
       $composableBuilder(column: $table.tokenNube, builder: (column) => column);
+
+  GeneratedColumn<String> get nombreCuenta => $composableBuilder(
+    column: $table.nombreCuenta,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get descargaInicial => $composableBuilder(
     column: $table.descargaInicial,
@@ -10948,6 +11093,7 @@ class $$SesionTableTableManager
                 Value<String?> correo = const Value.absent(),
                 Value<bool> correoConfirmado = const Value.absent(),
                 Value<String?> tokenNube = const Value.absent(),
+                Value<String?> nombreCuenta = const Value.absent(),
                 Value<bool> descargaInicial = const Value.absent(),
               }) => SesionCompanion(
                 id: id,
@@ -10956,6 +11102,7 @@ class $$SesionTableTableManager
                 correo: correo,
                 correoConfirmado: correoConfirmado,
                 tokenNube: tokenNube,
+                nombreCuenta: nombreCuenta,
                 descargaInicial: descargaInicial,
               ),
           createCompanionCallback:
@@ -10966,6 +11113,7 @@ class $$SesionTableTableManager
                 Value<String?> correo = const Value.absent(),
                 Value<bool> correoConfirmado = const Value.absent(),
                 Value<String?> tokenNube = const Value.absent(),
+                Value<String?> nombreCuenta = const Value.absent(),
                 Value<bool> descargaInicial = const Value.absent(),
               }) => SesionCompanion.insert(
                 id: id,
@@ -10974,6 +11122,7 @@ class $$SesionTableTableManager
                 correo: correo,
                 correoConfirmado: correoConfirmado,
                 tokenNube: tokenNube,
+                nombreCuenta: nombreCuenta,
                 descargaInicial: descargaInicial,
               ),
           withReferenceMapper: (p0) => p0

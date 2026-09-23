@@ -23,8 +23,7 @@ part 'database.g.dart';
   daos: [ProductoresDao, FincasDao, LotesDao, RegistrosDao, SyncDao],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor])
-    : super(executor ?? _conexion());
+  AppDatabase([QueryExecutor? executor]) : super(executor ?? _conexion());
 
   /// En Android/iOS es un archivo SQLite; en el navegador, el mismo SQLite
   /// compilado a WebAssembly, guardado por el navegador. Los archivos
@@ -41,11 +40,15 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, desde, hasta) async {
+      if (desde < 13) {
+        await m.addColumn(lotes, lotes.fotoPath);
+        await m.addColumn(sesion, sesion.nombreCuenta);
+      }
       // v8 a v12: lo que trajo el módulo de reportes. Van numeradas encima de
       // la v7 de este repositorio; en la copia del equipo tenían otros
       // números porque partieron de la v5.
@@ -59,7 +62,10 @@ class AppDatabase extends _$AppDatabase {
           actividadesAgricolas,
           actividadesAgricolas.cantidadAplicada,
         );
-        await m.addColumn(actividadesAgricolas, actividadesAgricolas.incidencia);
+        await m.addColumn(
+          actividadesAgricolas,
+          actividadesAgricolas.incidencia,
+        );
       }
       if (desde < 10) {
         await m.addColumn(

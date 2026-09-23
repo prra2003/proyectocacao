@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'tema.dart';
-import 'widgets/comunes.dart';
+import 'widgets/ubicacion.dart';
 
 /// Elegir la ubicación de la finca sobre el mapa.
 ///
@@ -32,36 +31,12 @@ class _MapaScreenState extends State<MapaScreen> {
 
   Future<void> _usarMiUbicacion() async {
     setState(() => _buscandoGps = true);
-    try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        if (mounted) avisar(context, 'Active la ubicación del teléfono');
-        return;
-      }
-      var permiso = await Geolocator.checkPermission();
-      if (permiso == LocationPermission.denied) {
-        permiso = await Geolocator.requestPermission();
-      }
-      if (permiso == LocationPermission.denied ||
-          permiso == LocationPermission.deniedForever) {
-        if (mounted) avisar(context, 'Sin permiso para usar la ubicación');
-        return;
-      }
-
-      final posicion = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 20),
-        ),
-      );
-      final aqui = LatLng(posicion.latitude, posicion.longitude);
-      if (!mounted) return;
-      setState(() => _punto = aqui);
-      _mapa.move(aqui, 16);
-    } on Exception catch (_) {
-      if (mounted) avisar(context, 'No se pudo obtener la ubicación');
-    } finally {
-      if (mounted) setState(() => _buscandoGps = false);
-    }
+    final aqui = await ubicacionActual(context);
+    if (!mounted) return;
+    setState(() => _buscandoGps = false);
+    if (aqui == null) return;
+    setState(() => _punto = aqui);
+    _mapa.move(aqui, 16);
   }
 
   @override
