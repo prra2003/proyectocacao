@@ -9,6 +9,22 @@ DateTime? _fecha(Object? valor) =>
 
 DateTime _selloDe(FilaRemota fila) => _fecha(fila['updated_at'])!;
 
+/// La hoja de cálculo guarda texto: un número puede llegar como `12` o como
+/// `'12'`. Las dos formas tienen que entrar igual.
+double? _numero(Object? valor) => switch (valor) {
+  null => null,
+  final num n => n.toDouble(),
+  final String t => double.tryParse(t),
+  _ => null,
+};
+
+int? _entero(Object? valor) => switch (valor) {
+  null => null,
+  final num n => n.toInt(),
+  final String t => int.tryParse(t),
+  _ => null,
+};
+
 /// Traduce entre la fila local de `actividades_agricolas` y la remota.
 class MapeadorActividad {
   const MapeadorActividad._();
@@ -21,6 +37,21 @@ class MapeadorActividad {
     'tipo_actividad': fila.tipoActividad.name,
     'fecha': fila.fecha.toUtc().toIso8601String(),
     'observaciones': fila.observaciones,
+    'responsable': fila.responsable,
+    'costo': fila.costo,
+    // La foto no viaja: solo su ruta en este teléfono. Subir la imagen es
+    // harina de otro costal (ver docs/DOCUMENTACION_TECNICA.md, 11.1).
+    'foto_path': fila.fotoPath,
+    'subtipo_labor': fila.subtipoLabor,
+    'producto': fila.producto,
+    'cantidad_aplicada': fila.cantidadAplicada,
+    'incidencia': fila.incidencia,
+    'arboles_afectados': fila.arbolesAfectados,
+    'edad_cultivo_anios': fila.edadCultivoAnios,
+    'arboles_sembrados': fila.arbolesSembrados,
+    'edad_plantula_meses': fila.edadPlantulaMeses,
+    'insumos': fila.insumos,
+    'resultado_esperado': fila.resultadoEsperado,
     'created_at': fila.createdAt.toUtc().toIso8601String(),
     'deleted_at': fila.deletedAt?.toUtc().toIso8601String(),
   };
@@ -38,6 +69,19 @@ class MapeadorActividad {
       ),
       fecha: Value(_fecha(fila['fecha'])!),
       observaciones: Value(fila['observaciones'] as String?),
+      responsable: Value(fila['responsable'] as String?),
+      costo: Value(_numero(fila['costo'])),
+      fotoPath: Value(fila['foto_path'] as String?),
+      subtipoLabor: Value(fila['subtipo_labor'] as String?),
+      producto: Value(fila['producto'] as String?),
+      cantidadAplicada: Value(fila['cantidad_aplicada'] as String?),
+      incidencia: Value(fila['incidencia'] as String?),
+      arbolesAfectados: Value(_entero(fila['arboles_afectados'])),
+      edadCultivoAnios: Value(_entero(fila['edad_cultivo_anios'])),
+      arbolesSembrados: Value(_entero(fila['arboles_sembrados'])),
+      edadPlantulaMeses: Value(_entero(fila['edad_plantula_meses'])),
+      insumos: Value(fila['insumos'] as String?),
+      resultadoEsperado: Value(fila['resultado_esperado'] as String?),
       createdAt: Value(_fecha(fila['created_at'])!),
       updatedAt: Value(sello),
       deletedAt: Value(_fecha(fila['deleted_at']) ?? borradoForzado),
@@ -62,6 +106,8 @@ class MapeadorCosecha {
     'fecha': fila.fecha.toUtc().toIso8601String(),
     'cantidad_kg': fila.cantidadKg,
     'observaciones': fila.observaciones,
+    'tipo_producto': fila.tipoProducto,
+    'foto_path': fila.fotoPath,
     'created_at': fila.createdAt.toUtc().toIso8601String(),
     'deleted_at': fila.deletedAt?.toUtc().toIso8601String(),
   };
@@ -75,8 +121,10 @@ class MapeadorCosecha {
       id: Value(fila['id']! as String),
       loteId: Value(fila['lote_id']! as String),
       fecha: Value(_fecha(fila['fecha'])!),
-      cantidadKg: Value((fila['cantidad_kg']! as num).toDouble()),
+      cantidadKg: Value(_numero(fila['cantidad_kg'])!),
       observaciones: Value(fila['observaciones'] as String?),
+      tipoProducto: Value(fila['tipo_producto'] as String?),
+      fotoPath: Value(fila['foto_path'] as String?),
       createdAt: Value(_fecha(fila['created_at'])!),
       updatedAt: Value(sello),
       deletedAt: Value(_fecha(fila['deleted_at']) ?? borradoForzado),

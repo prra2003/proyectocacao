@@ -3,6 +3,7 @@ import 'package:cacao_app/data/local/enums.dart';
 import 'package:cacao_app/data/repositories/lote_repository.dart';
 import 'package:cacao_app/data/repositories/perfil_repository.dart';
 import 'package:cacao_app/data/sync/api_falsa.dart';
+import 'package:cacao_app/data/sync/mapeadores_registros.dart';
 import 'package:cacao_app/data/sync/api_remota.dart';
 import 'package:cacao_app/data/sync/sync_result.dart';
 import 'package:cacao_app/data/sync/sync_service.dart';
@@ -176,6 +177,42 @@ void main() {
       contar: () async => (await db.select(db.diagnosticos).get()).length,
     ),
   ];
+
+  test('los datos completos de la labor viajan al servidor y vuelven',
+      () async {
+    // El documento del SENA pide responsable, costo, producto y lo propio de
+    // la siembra. De nada sirve guardarlos si se quedan en el teléfono.
+    final id = await registros.registrarActividad(
+      loteId: loteId,
+      tipo: TipoActividad.siembra,
+      fecha: DateTime(2026, 3, 1),
+      responsable: 'Juan Pérez',
+      costo: 350000,
+      arbolesSembrados: 200,
+      edadPlantulaMeses: 4,
+      insumos: 'Bolsas biodegradables',
+      producto: 'NPK 15-15-15',
+      cantidadAplicada: '25 kg',
+    );
+
+    await sync.sincronizar();
+
+    final subida = api
+        .filasDe('actividades_agricolas')
+        .firstWhere((f) => f['id'] == id);
+    expect(subida['tipo_actividad'], 'siembra');
+    expect(subida['responsable'], 'Juan Pérez');
+    expect(subida['costo'], 350000);
+    expect(subida['arboles_sembrados'], 200);
+    expect(subida['producto'], 'NPK 15-15-15');
+
+    // Y de vuelta: un teléfono nuevo que baje esa fila la reconstruye igual.
+    final traida = MapeadorActividad.deRemoto(subida);
+    expect(traida.responsable.value, 'Juan Pérez');
+    expect(traida.costo.value, 350000);
+    expect(traida.arbolesSembrados.value, 200);
+    expect(traida.insumos.value, 'Bolsas biodegradables');
+  });
 
   for (final caso in casos()) {
     group(caso.entidad, () {

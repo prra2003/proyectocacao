@@ -70,6 +70,20 @@ La huella SHA-1 se saca así, desde la carpeta `android` del proyecto:
 > *Administrar implementaciones → editar → Versión: Nueva*). Si no, la URL
 > sigue sirviendo el código viejo y parece que el cambio no hubiera servido.
 
+## Cuando la app gana campos nuevos
+
+Agregue la columna en `TABLAS`, dentro de `Codigo.gs`, y **vuelva a ejecutar
+`instalar()`**: a las hojas que ya tienen datos les agrega al final las
+columnas que falten, sin mover las que ya están. Después, **publique una
+versión nueva** de la aplicación web.
+
+Mientras no lo haga, la app sigue funcionando: los campos nuevos se guardan en
+el teléfono y simplemente no suben, porque el script escribe según el
+encabezado real de la hoja. No se pierde nada ya guardado.
+
+> Lo que **no** debe hacer es renombrar o borrar columnas existentes. Agregar
+> al final es seguro; mover no.
+
 ## Cómo se habla con el servidor
 
 Todo es `POST` a la URL del `/exec`, con el cuerpo en JSON pero enviado como
