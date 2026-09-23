@@ -173,6 +173,7 @@ class FilaDato extends StatelessWidget {
 }
 
 IconData iconoActividad(TipoActividad tipo) => switch (tipo) {
+  TipoActividad.siembra => Icons.spa_outlined,
   TipoActividad.poda => Icons.content_cut,
   TipoActividad.fertilizacion => Icons.grass,
   TipoActividad.controlFitosanitario => Icons.pest_control,

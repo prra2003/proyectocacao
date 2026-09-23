@@ -235,6 +235,18 @@ class FincasDao extends DatabaseAccessor<AppDatabase> with _$FincasDaoMixin {
 
   Future<void> aplicarRemoto(FincasCompanion fila) =>
       into(fincas).insertOnConflictUpdate(fila);
+
+  Stream<List<Lote>> watchLotesDeProductor(String productorId) {
+    final consulta = select(lotes).join([
+      innerJoin(fincas, fincas.id.equalsExp(lotes.fincaId)),
+    ])
+      ..where(fincas.productorId.equals(productorId))
+      ..where(lotes.deletedAt.isNull())
+      ..where(fincas.deletedAt.isNull());
+    return consulta
+        .watch()
+        .map((filas) => [for (final fila in filas) fila.readTable(lotes)]);
+  }
 }
 
 @DriftAccessor(tables: [Lotes])
@@ -575,6 +587,97 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
     );
     return id;
   }
+
+  /// Historial consolidado de la finca: labores, cosechas y diagnósticos de
+  /// **todos** sus lotes, en una sola línea de tiempo.
+  ///
+  /// Se arma con una consulta SQL (UNION) en vez de combinar tres streams de
+  /// Drift por separado: así el orden cronológico sale de la base, no de
+  /// mezclar listas ya ordenadas en Dart, y una sola consulta cubre las tres
+  /// tablas con los índices que ya existen.
+  Stream<List<EventoHistorial>> watchHistorialDeFinca(String fincaId) {
+    final consulta = customSelect(
+      '''
+      SELECT a.id AS id, 'actividad' AS evento, a.lote_id AS lote_id,
+             l.nombre AS lote_nombre, a.fecha AS fecha,
+             a.tipo_actividad AS subtipo, a.observaciones AS detalle,
+             NULL AS cantidad_kg, NULL AS foto_path
+      FROM actividades_agricolas a
+      JOIN lotes l ON l.id = a.lote_id
+      WHERE a.deleted_at IS NULL AND l.finca_id = ?1
+
+      UNION ALL
+
+      SELECT c.id, 'cosecha', c.lote_id, l.nombre, c.fecha,
+             NULL, c.observaciones, c.cantidad_kg, NULL
+      FROM cosechas c
+      JOIN lotes l ON l.id = c.lote_id
+      WHERE c.deleted_at IS NULL AND l.finca_id = ?1
+
+      UNION ALL
+
+      SELECT d.id, 'diagnostico', d.lote_id, l.nombre, d.fecha,
+             d.estado_fenologico, d.notas, NULL, d.foto_path
+      FROM diagnosticos d
+      JOIN lotes l ON l.id = d.lote_id
+      WHERE d.deleted_at IS NULL AND l.finca_id = ?1
+
+      ORDER BY fecha DESC
+      ''',
+      variables: [Variable(fincaId)],
+      readsFrom: {actividadesAgricolas, cosechas, diagnosticos, lotes},
+    );
+    return consulta.watch().map(
+          (filas) => [for (final fila in filas) EventoHistorial.desdeFila(fila)],
+    );
+  }
+
+  /// Igual que [watchHistorialDeFinca], pero de **todas** las fincas del
+  /// productor a la vez, y con el nombre de la finca de cada evento. Es lo
+  /// que usa Reportes en su vista "Todas mis fincas".
+  Stream<List<EventoHistorial>> watchHistorialDeProductor(String productorId) {
+    final consulta = customSelect(
+      '''
+      SELECT a.id AS id, 'actividad' AS evento, a.lote_id AS lote_id,
+             l.nombre AS lote_nombre, f.id AS finca_id, f.nombre AS finca_nombre,
+             a.fecha AS fecha, a.tipo_actividad AS subtipo,
+             a.observaciones AS detalle, NULL AS cantidad_kg, NULL AS foto_path
+      FROM actividades_agricolas a
+      JOIN lotes l ON l.id = a.lote_id
+      JOIN fincas f ON f.id = l.finca_id
+      WHERE a.deleted_at IS NULL AND l.deleted_at IS NULL AND f.deleted_at IS NULL
+        AND f.productor_id = ?1
+
+      UNION ALL
+
+      SELECT c.id, 'cosecha', c.lote_id, l.nombre, f.id, f.nombre,
+             c.fecha, NULL, c.observaciones, c.cantidad_kg, NULL
+      FROM cosechas c
+      JOIN lotes l ON l.id = c.lote_id
+      JOIN fincas f ON f.id = l.finca_id
+      WHERE c.deleted_at IS NULL AND l.deleted_at IS NULL AND f.deleted_at IS NULL
+        AND f.productor_id = ?1
+
+      UNION ALL
+
+      SELECT d.id, 'diagnostico', d.lote_id, l.nombre, f.id, f.nombre,
+             d.fecha, d.estado_fenologico, d.notas, NULL, d.foto_path
+      FROM diagnosticos d
+      JOIN lotes l ON l.id = d.lote_id
+      JOIN fincas f ON f.id = l.finca_id
+      WHERE d.deleted_at IS NULL AND l.deleted_at IS NULL AND f.deleted_at IS NULL
+        AND f.productor_id = ?1
+
+      ORDER BY fecha DESC
+      ''',
+      variables: [Variable(productorId)],
+      readsFrom: {actividadesAgricolas, cosechas, diagnosticos, lotes, fincas},
+    );
+    return consulta.watch().map(
+          (filas) =>
+      [for (final fila in filas) EventoHistorial.desdeFilaConFinca(fila)],
+    );
+  }
 }
 
 /// Identidad de la instalación y cursores de descarga.
@@ -742,3 +845,92 @@ class SyncDao extends DatabaseAccessor<AppDatabase> with _$SyncDaoMixin {
     );
   }
 }
+
+/// Tipo de evento dentro del historial consolidado.
+enum TipoEvento { actividad, cosecha, diagnostico }
+
+/// Una fila del historial: puede ser una labor, una cosecha o un diagnóstico.
+///
+/// Es una sola clase para las tres cosas a propósito: la pantalla de
+/// historial no necesita saber de tablas de Drift, solo pintar una lista
+/// ordenada por fecha con lo que aplique según [tipo].
+class EventoHistorial {
+  const EventoHistorial({
+    required this.id,
+    required this.tipo,
+    required this.loteId,
+    required this.loteNombre,
+    required this.fecha,
+    this.fincaId,
+    this.fincaNombre,
+    this.subtipo,
+    this.detalle,
+    this.cantidadKg,
+    this.fotoPath,
+  });
+
+  final String id;
+  final TipoEvento tipo;
+  final String loteId;
+  final String loteNombre;
+  final DateTime fecha;
+
+  /// Solo vienen con datos cuando el historial es de **todas** las fincas del
+  /// productor (ver [RegistrosDao.watchHistorialDeProductor]); en el
+  /// historial de una sola finca no hace falta repetirlo.
+  final String? fincaId;
+  final String? fincaNombre;
+
+  /// El tipo de labor (para actividades) o el estado fenológico (para
+  /// diagnósticos), guardado como texto crudo del enum de la tabla.
+  final String? subtipo;
+
+  /// Observaciones o notas, según el tipo de evento.
+  final String? detalle;
+
+  /// Solo presente en cosechas.
+  final double? cantidadKg;
+
+  /// Solo presente en diagnósticos con foto.
+  final String? fotoPath;
+
+  factory EventoHistorial.desdeFila(QueryRow fila) {
+    return EventoHistorial(
+      id: fila.read<String>('id'),
+      tipo: switch (fila.read<String>('evento')) {
+        'cosecha' => TipoEvento.cosecha,
+        'diagnostico' => TipoEvento.diagnostico,
+        _ => TipoEvento.actividad,
+      },
+      loteId: fila.read<String>('lote_id'),
+      loteNombre: fila.read<String>('lote_nombre'),
+      fecha: fila.read<DateTime>('fecha'),
+      subtipo: fila.readNullable<String>('subtipo'),
+      detalle: fila.readNullable<String>('detalle'),
+      cantidadKg: fila.readNullable<double>('cantidad_kg'),
+      fotoPath: fila.readNullable<String>('foto_path'),
+    );
+  }
+
+  factory EventoHistorial.desdeFilaConFinca(QueryRow fila) {
+    return EventoHistorial(
+      id: fila.read<String>('id'),
+      tipo: switch (fila.read<String>('evento')) {
+        'cosecha' => TipoEvento.cosecha,
+        'diagnostico' => TipoEvento.diagnostico,
+        _ => TipoEvento.actividad,
+      },
+      loteId: fila.read<String>('lote_id'),
+      loteNombre: fila.read<String>('lote_nombre'),
+      fincaId: fila.read<String>('finca_id'),
+      fincaNombre: fila.read<String>('finca_nombre'),
+      fecha: fila.read<DateTime>('fecha'),
+      subtipo: fila.readNullable<String>('subtipo'),
+      detalle: fila.readNullable<String>('detalle'),
+      cantidadKg: fila.readNullable<double>('cantidad_kg'),
+      fotoPath: fila.readNullable<String>('foto_path'),
+    );
+  }
+}
+
+/// Identidad de la instalación y cursores de descarga.

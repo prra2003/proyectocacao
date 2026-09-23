@@ -12,7 +12,17 @@ enum TipoDocumento {
 }
 
 /// Tipos de labor cultural que el productor registra en un lote.
-enum TipoActividad { poda, fertilizacion, controlFitosanitario, riego, otro }
+enum TipoActividad {
+  /// El punto de partida del lote. Va en la misma tabla que las demás labores
+  /// porque comparte fecha, responsable, costo y foto; lo suyo (árboles
+  /// sembrados, marco de plantación) son columnas que solo ella llena.
+  siembra,
+  poda,
+  fertilizacion,
+  controlFitosanitario,
+  riego,
+  otro,
+}
 
 /// Estado fenológico del cultivo al momento del diagnóstico.
 enum EstadoFenologico {

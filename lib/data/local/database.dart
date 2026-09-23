@@ -41,11 +41,64 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, desde, hasta) async {
+      // v8 a v12: lo que trajo el módulo de reportes. Van numeradas encima de
+      // la v7 de este repositorio; en la copia del equipo tenían otros
+      // números porque partieron de la v5.
+      if (desde < 12) {
+        await m.addColumn(cosechas, cosechas.tipoProducto);
+        await m.addColumn(cosechas, cosechas.fotoPath);
+      }
+      if (desde < 11) {
+        await m.addColumn(actividadesAgricolas, actividadesAgricolas.producto);
+        await m.addColumn(
+          actividadesAgricolas,
+          actividadesAgricolas.cantidadAplicada,
+        );
+        await m.addColumn(actividadesAgricolas, actividadesAgricolas.incidencia);
+      }
+      if (desde < 10) {
+        await m.addColumn(
+          actividadesAgricolas,
+          actividadesAgricolas.subtipoLabor,
+        );
+        await m.addColumn(
+          actividadesAgricolas,
+          actividadesAgricolas.arbolesAfectados,
+        );
+        await m.addColumn(
+          actividadesAgricolas,
+          actividadesAgricolas.edadCultivoAnios,
+        );
+        await m.addColumn(
+          actividadesAgricolas,
+          actividadesAgricolas.resultadoEsperado,
+        );
+      }
+      if (desde < 9) {
+        await m.addColumn(
+          actividadesAgricolas,
+          actividadesAgricolas.responsable,
+        );
+        await m.addColumn(actividadesAgricolas, actividadesAgricolas.costo);
+        await m.addColumn(actividadesAgricolas, actividadesAgricolas.fotoPath);
+        await m.addColumn(
+          actividadesAgricolas,
+          actividadesAgricolas.arbolesSembrados,
+        );
+        await m.addColumn(
+          actividadesAgricolas,
+          actividadesAgricolas.edadPlantulaMeses,
+        );
+        await m.addColumn(actividadesAgricolas, actividadesAgricolas.insumos);
+      }
+      if (desde < 8) {
+        await m.addColumn(lotes, lotes.codigo);
+      }
       // A diferencia de `sesion`/`syncMeta` (que nacen ya completas en la rama
       // `desde < 2` porque `createTable` usa la definición actual), la tabla
       // `productores` existe desde la v1: cualquier versión anterior a esta le

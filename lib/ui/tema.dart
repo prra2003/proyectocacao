@@ -247,3 +247,21 @@ class FondoCacao extends StatelessWidget {
     );
   }
 }
+
+/// Reemplazo directo de `MaterialPageRoute`: mismo uso (`RutaCacao(builder:
+/// ...)`), pero bastante más lento a propósito — casi el doble que un
+/// cambio de pantalla normal — para que el giro de `_TransicionCacao`
+/// alcance a verse completo y no solo un parpadeo.
+class RutaCacao<T> extends MaterialPageRoute<T> {
+  RutaCacao({
+    required super.builder,
+    super.settings,
+    super.fullscreenDialog,
+  });
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 480);
+
+  @override
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 380);
+}

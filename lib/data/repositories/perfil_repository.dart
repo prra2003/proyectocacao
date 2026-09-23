@@ -135,4 +135,9 @@ class PerfilRepository {
   /// Área sembrada total de la finca, en hectáreas.
   static double areaTotal(List<Lote> lotes) =>
       lotes.fold<double>(0, (suma, l) => suma + l.areaSembradaHa);
+
+  /// Todos los lotes del productor, de todas sus fincas. Lo usa la pantalla
+  /// de reportes, que mira la finca entera y no un lote a la vez.
+  Stream<List<Lote>> watchLotesDeProductor(String productorId) =>
+      _fincas.watchLotesDeProductor(productorId);
 }

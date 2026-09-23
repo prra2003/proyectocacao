@@ -7,12 +7,14 @@ import '../data/local/database.dart';
 import '../data/repositories/lote_repository.dart';
 import '../data/repositories/perfil_repository.dart';
 import '../data/sync/sync_service.dart';
-import 'dialogos/dialogo_actividad.dart';
-import 'dialogos/dialogo_cosecha.dart';
+import '../data/repositories/reportes_repository.dart';
 import 'bienvenida_screen.dart';
 import 'cuenta_screens.dart';
+import 'dialogos/dialogo_actividad.dart';
+import 'dialogos/dialogo_cosecha.dart';
 import 'inicio_screen.dart';
 import 'perfil_screen.dart';
+import 'reportes_screen.dart';
 import 'tema.dart';
 import 'widgets/comunes.dart';
 
@@ -208,16 +210,28 @@ class _CascaronScreenState extends State<CascaronScreen> {
             db: widget.db,
             sync: widget.sync,
           ),
+          ReportesScreen(
+            repo: widget.repo,
+            lotesRepo: widget.lotesRepo,
+            reportesRepo: ReportesRepository(widget.db),
+          ),
           PerfilScreen(repo: widget.repo, db: widget.db, sync: widget.sync),
         ],
       ),
-      floatingActionButton: FloatingActionButton.large(
-        onPressed: _anotar,
-        backgroundColor: PaletaCacao.maduro,
-        foregroundColor: Colors.white,
-        shape: const CircleBorder(),
-        tooltip: 'Anotar',
-        child: const Icon(Icons.add, size: 40),
+      // Antes era `FloatingActionButton.large` (96 px). Con la pestaña de
+      // Reportes en la barra, ese tamaño le tapaba el nombre al botón vecino.
+      // 64 px se toca igual de fácil sin comerse al de al lado.
+      floatingActionButton: SizedBox(
+        width: 64,
+        height: 64,
+        child: FloatingActionButton(
+          onPressed: _anotar,
+          backgroundColor: PaletaCacao.maduro,
+          foregroundColor: Colors.white,
+          shape: const CircleBorder(),
+          tooltip: 'Anotar',
+          child: const Icon(Icons.add, size: 30),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
@@ -237,12 +251,18 @@ class _CascaronScreenState extends State<CascaronScreen> {
               activo: _pestana == 0,
               onTap: () => setState(() => _pestana = 0),
             ),
+            _BotonBarra(
+              icono: Icons.insert_chart_outlined_rounded,
+              texto: 'Reportes',
+              activo: _pestana == 1,
+              onTap: () => setState(() => _pestana = 1),
+            ),
             const SizedBox(width: 72),
             _BotonBarra(
               icono: Icons.person_rounded,
               texto: 'Perfil',
-              activo: _pestana == 1,
-              onTap: () => setState(() => _pestana = 1),
+              activo: _pestana == 2,
+              onTap: () => setState(() => _pestana = 2),
             ),
           ],
         ),

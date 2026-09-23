@@ -1008,7 +1008,7 @@ class Productor extends DataClass implements Insertable<Productor> {
 
   /// Dueño del registro: la identidad local de esta instalación (ver [Sesion]).
   /// Es lo que sustituye al viejo "toma el primer productor vivo" y lo que se
-  /// traduce al `auth.uid()` de Supabase al subir.
+  /// traduce al identificador de la cuenta de Google al subir.
   final String? usuarioId;
   final String nombreCompleto;
   final String? telefono;
@@ -2394,6 +2394,16 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _codigoMeta = const VerificationMeta('codigo');
+  @override
+  late final GeneratedColumn<String> codigo = GeneratedColumn<String>(
+    'codigo',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _variedadCacaoMeta = const VerificationMeta(
     'variedadCacao',
   );
@@ -2428,6 +2438,7 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
     fincaId,
     nombre,
     areaSembradaHa,
+    codigo,
     variedadCacao,
     fechaSiembra,
   ];
@@ -2506,6 +2517,12 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
     } else if (isInserting) {
       context.missing(_areaSembradaHaMeta);
     }
+    if (data.containsKey('codigo')) {
+      context.handle(
+        _codigoMeta,
+        codigo.isAcceptableOrUnknown(data['codigo']!, _codigoMeta),
+      );
+    }
     if (data.containsKey('variedad_cacao')) {
       context.handle(
         _variedadCacaoMeta,
@@ -2579,6 +2596,10 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
         DriftSqlType.double,
         data['${effectivePrefix}area_sembrada_ha'],
       )!,
+      codigo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}codigo'],
+      )!,
       variedadCacao: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}variedad_cacao'],
@@ -2615,6 +2636,11 @@ class Lote extends DataClass implements Insertable<Lote> {
   final String fincaId;
   final String nombre;
   final double areaSembradaHa;
+
+  /// Código corto del lote ("Lote 001"), aparte del nombre libre: el nombre
+  /// puede cambiar o ser descriptivo, el código es la referencia que se usa en
+  /// reportes e historiales.
+  final String codigo;
   final String variedadCacao;
 
   /// Se guarda la fecha de siembra, no la edad: la edad se calcula en la app y
@@ -2631,6 +2657,7 @@ class Lote extends DataClass implements Insertable<Lote> {
     required this.fincaId,
     required this.nombre,
     required this.areaSembradaHa,
+    required this.codigo,
     required this.variedadCacao,
     required this.fechaSiembra,
   });
@@ -2657,6 +2684,7 @@ class Lote extends DataClass implements Insertable<Lote> {
     map['finca_id'] = Variable<String>(fincaId);
     map['nombre'] = Variable<String>(nombre);
     map['area_sembrada_ha'] = Variable<double>(areaSembradaHa);
+    map['codigo'] = Variable<String>(codigo);
     map['variedad_cacao'] = Variable<String>(variedadCacao);
     map['fecha_siembra'] = Variable<DateTime>(fechaSiembra);
     return map;
@@ -2680,6 +2708,7 @@ class Lote extends DataClass implements Insertable<Lote> {
       fincaId: Value(fincaId),
       nombre: Value(nombre),
       areaSembradaHa: Value(areaSembradaHa),
+      codigo: Value(codigo),
       variedadCacao: Value(variedadCacao),
       fechaSiembra: Value(fechaSiembra),
     );
@@ -2703,6 +2732,7 @@ class Lote extends DataClass implements Insertable<Lote> {
       fincaId: serializer.fromJson<String>(json['fincaId']),
       nombre: serializer.fromJson<String>(json['nombre']),
       areaSembradaHa: serializer.fromJson<double>(json['areaSembradaHa']),
+      codigo: serializer.fromJson<String>(json['codigo']),
       variedadCacao: serializer.fromJson<String>(json['variedadCacao']),
       fechaSiembra: serializer.fromJson<DateTime>(json['fechaSiembra']),
     );
@@ -2723,6 +2753,7 @@ class Lote extends DataClass implements Insertable<Lote> {
       'fincaId': serializer.toJson<String>(fincaId),
       'nombre': serializer.toJson<String>(nombre),
       'areaSembradaHa': serializer.toJson<double>(areaSembradaHa),
+      'codigo': serializer.toJson<String>(codigo),
       'variedadCacao': serializer.toJson<String>(variedadCacao),
       'fechaSiembra': serializer.toJson<DateTime>(fechaSiembra),
     };
@@ -2739,6 +2770,7 @@ class Lote extends DataClass implements Insertable<Lote> {
     String? fincaId,
     String? nombre,
     double? areaSembradaHa,
+    String? codigo,
     String? variedadCacao,
     DateTime? fechaSiembra,
   }) => Lote(
@@ -2754,6 +2786,7 @@ class Lote extends DataClass implements Insertable<Lote> {
     fincaId: fincaId ?? this.fincaId,
     nombre: nombre ?? this.nombre,
     areaSembradaHa: areaSembradaHa ?? this.areaSembradaHa,
+    codigo: codigo ?? this.codigo,
     variedadCacao: variedadCacao ?? this.variedadCacao,
     fechaSiembra: fechaSiembra ?? this.fechaSiembra,
   );
@@ -2775,6 +2808,7 @@ class Lote extends DataClass implements Insertable<Lote> {
       areaSembradaHa: data.areaSembradaHa.present
           ? data.areaSembradaHa.value
           : this.areaSembradaHa,
+      codigo: data.codigo.present ? data.codigo.value : this.codigo,
       variedadCacao: data.variedadCacao.present
           ? data.variedadCacao.value
           : this.variedadCacao,
@@ -2797,6 +2831,7 @@ class Lote extends DataClass implements Insertable<Lote> {
           ..write('fincaId: $fincaId, ')
           ..write('nombre: $nombre, ')
           ..write('areaSembradaHa: $areaSembradaHa, ')
+          ..write('codigo: $codigo, ')
           ..write('variedadCacao: $variedadCacao, ')
           ..write('fechaSiembra: $fechaSiembra')
           ..write(')'))
@@ -2815,6 +2850,7 @@ class Lote extends DataClass implements Insertable<Lote> {
     fincaId,
     nombre,
     areaSembradaHa,
+    codigo,
     variedadCacao,
     fechaSiembra,
   );
@@ -2832,6 +2868,7 @@ class Lote extends DataClass implements Insertable<Lote> {
           other.fincaId == this.fincaId &&
           other.nombre == this.nombre &&
           other.areaSembradaHa == this.areaSembradaHa &&
+          other.codigo == this.codigo &&
           other.variedadCacao == this.variedadCacao &&
           other.fechaSiembra == this.fechaSiembra);
 }
@@ -2847,6 +2884,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
   final Value<String> fincaId;
   final Value<String> nombre;
   final Value<double> areaSembradaHa;
+  final Value<String> codigo;
   final Value<String> variedadCacao;
   final Value<DateTime> fechaSiembra;
   final Value<int> rowid;
@@ -2861,6 +2899,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     this.fincaId = const Value.absent(),
     this.nombre = const Value.absent(),
     this.areaSembradaHa = const Value.absent(),
+    this.codigo = const Value.absent(),
     this.variedadCacao = const Value.absent(),
     this.fechaSiembra = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2876,6 +2915,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     required String fincaId,
     required String nombre,
     required double areaSembradaHa,
+    this.codigo = const Value.absent(),
     required String variedadCacao,
     required DateTime fechaSiembra,
     this.rowid = const Value.absent(),
@@ -2895,6 +2935,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     Expression<String>? fincaId,
     Expression<String>? nombre,
     Expression<double>? areaSembradaHa,
+    Expression<String>? codigo,
     Expression<String>? variedadCacao,
     Expression<DateTime>? fechaSiembra,
     Expression<int>? rowid,
@@ -2910,6 +2951,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
       if (fincaId != null) 'finca_id': fincaId,
       if (nombre != null) 'nombre': nombre,
       if (areaSembradaHa != null) 'area_sembrada_ha': areaSembradaHa,
+      if (codigo != null) 'codigo': codigo,
       if (variedadCacao != null) 'variedad_cacao': variedadCacao,
       if (fechaSiembra != null) 'fecha_siembra': fechaSiembra,
       if (rowid != null) 'rowid': rowid,
@@ -2927,6 +2969,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     Value<String>? fincaId,
     Value<String>? nombre,
     Value<double>? areaSembradaHa,
+    Value<String>? codigo,
     Value<String>? variedadCacao,
     Value<DateTime>? fechaSiembra,
     Value<int>? rowid,
@@ -2942,6 +2985,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
       fincaId: fincaId ?? this.fincaId,
       nombre: nombre ?? this.nombre,
       areaSembradaHa: areaSembradaHa ?? this.areaSembradaHa,
+      codigo: codigo ?? this.codigo,
       variedadCacao: variedadCacao ?? this.variedadCacao,
       fechaSiembra: fechaSiembra ?? this.fechaSiembra,
       rowid: rowid ?? this.rowid,
@@ -2983,6 +3027,9 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     if (areaSembradaHa.present) {
       map['area_sembrada_ha'] = Variable<double>(areaSembradaHa.value);
     }
+    if (codigo.present) {
+      map['codigo'] = Variable<String>(codigo.value);
+    }
     if (variedadCacao.present) {
       map['variedad_cacao'] = Variable<String>(variedadCacao.value);
     }
@@ -3008,6 +3055,7 @@ class LotesCompanion extends UpdateCompanion<Lote> {
           ..write('fincaId: $fincaId, ')
           ..write('nombre: $nombre, ')
           ..write('areaSembradaHa: $areaSembradaHa, ')
+          ..write('codigo: $codigo, ')
           ..write('variedadCacao: $variedadCacao, ')
           ..write('fechaSiembra: $fechaSiembra, ')
           ..write('rowid: $rowid')
@@ -3146,6 +3194,148 @@ class $ActividadesAgricolasTable extends ActividadesAgricolas
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _responsableMeta = const VerificationMeta(
+    'responsable',
+  );
+  @override
+  late final GeneratedColumn<String> responsable = GeneratedColumn<String>(
+    'responsable',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _costoMeta = const VerificationMeta('costo');
+  @override
+  late final GeneratedColumn<double> costo = GeneratedColumn<double>(
+    'costo',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fotoPathMeta = const VerificationMeta(
+    'fotoPath',
+  );
+  @override
+  late final GeneratedColumn<String> fotoPath = GeneratedColumn<String>(
+    'foto_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subtipoLaborMeta = const VerificationMeta(
+    'subtipoLabor',
+  );
+  @override
+  late final GeneratedColumn<String> subtipoLabor = GeneratedColumn<String>(
+    'subtipo_labor',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _productoMeta = const VerificationMeta(
+    'producto',
+  );
+  @override
+  late final GeneratedColumn<String> producto = GeneratedColumn<String>(
+    'producto',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cantidadAplicadaMeta = const VerificationMeta(
+    'cantidadAplicada',
+  );
+  @override
+  late final GeneratedColumn<String> cantidadAplicada = GeneratedColumn<String>(
+    'cantidad_aplicada',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _incidenciaMeta = const VerificationMeta(
+    'incidencia',
+  );
+  @override
+  late final GeneratedColumn<String> incidencia = GeneratedColumn<String>(
+    'incidencia',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _arbolesAfectadosMeta = const VerificationMeta(
+    'arbolesAfectados',
+  );
+  @override
+  late final GeneratedColumn<int> arbolesAfectados = GeneratedColumn<int>(
+    'arboles_afectados',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _edadCultivoAniosMeta = const VerificationMeta(
+    'edadCultivoAnios',
+  );
+  @override
+  late final GeneratedColumn<int> edadCultivoAnios = GeneratedColumn<int>(
+    'edad_cultivo_anios',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _arbolesSembradosMeta = const VerificationMeta(
+    'arbolesSembrados',
+  );
+  @override
+  late final GeneratedColumn<int> arbolesSembrados = GeneratedColumn<int>(
+    'arboles_sembrados',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _edadPlantulaMesesMeta = const VerificationMeta(
+    'edadPlantulaMeses',
+  );
+  @override
+  late final GeneratedColumn<int> edadPlantulaMeses = GeneratedColumn<int>(
+    'edad_plantula_meses',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _insumosMeta = const VerificationMeta(
+    'insumos',
+  );
+  @override
+  late final GeneratedColumn<String> insumos = GeneratedColumn<String>(
+    'insumos',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _resultadoEsperadoMeta = const VerificationMeta(
+    'resultadoEsperado',
+  );
+  @override
+  late final GeneratedColumn<String> resultadoEsperado =
+      GeneratedColumn<String>(
+        'resultado_esperado',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3159,6 +3349,19 @@ class $ActividadesAgricolasTable extends ActividadesAgricolas
     tipoActividad,
     fecha,
     observaciones,
+    responsable,
+    costo,
+    fotoPath,
+    subtipoLabor,
+    producto,
+    cantidadAplicada,
+    incidencia,
+    arbolesAfectados,
+    edadCultivoAnios,
+    arbolesSembrados,
+    edadPlantulaMeses,
+    insumos,
+    resultadoEsperado,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3233,6 +3436,108 @@ class $ActividadesAgricolasTable extends ActividadesAgricolas
         ),
       );
     }
+    if (data.containsKey('responsable')) {
+      context.handle(
+        _responsableMeta,
+        responsable.isAcceptableOrUnknown(
+          data['responsable']!,
+          _responsableMeta,
+        ),
+      );
+    }
+    if (data.containsKey('costo')) {
+      context.handle(
+        _costoMeta,
+        costo.isAcceptableOrUnknown(data['costo']!, _costoMeta),
+      );
+    }
+    if (data.containsKey('foto_path')) {
+      context.handle(
+        _fotoPathMeta,
+        fotoPath.isAcceptableOrUnknown(data['foto_path']!, _fotoPathMeta),
+      );
+    }
+    if (data.containsKey('subtipo_labor')) {
+      context.handle(
+        _subtipoLaborMeta,
+        subtipoLabor.isAcceptableOrUnknown(
+          data['subtipo_labor']!,
+          _subtipoLaborMeta,
+        ),
+      );
+    }
+    if (data.containsKey('producto')) {
+      context.handle(
+        _productoMeta,
+        producto.isAcceptableOrUnknown(data['producto']!, _productoMeta),
+      );
+    }
+    if (data.containsKey('cantidad_aplicada')) {
+      context.handle(
+        _cantidadAplicadaMeta,
+        cantidadAplicada.isAcceptableOrUnknown(
+          data['cantidad_aplicada']!,
+          _cantidadAplicadaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('incidencia')) {
+      context.handle(
+        _incidenciaMeta,
+        incidencia.isAcceptableOrUnknown(data['incidencia']!, _incidenciaMeta),
+      );
+    }
+    if (data.containsKey('arboles_afectados')) {
+      context.handle(
+        _arbolesAfectadosMeta,
+        arbolesAfectados.isAcceptableOrUnknown(
+          data['arboles_afectados']!,
+          _arbolesAfectadosMeta,
+        ),
+      );
+    }
+    if (data.containsKey('edad_cultivo_anios')) {
+      context.handle(
+        _edadCultivoAniosMeta,
+        edadCultivoAnios.isAcceptableOrUnknown(
+          data['edad_cultivo_anios']!,
+          _edadCultivoAniosMeta,
+        ),
+      );
+    }
+    if (data.containsKey('arboles_sembrados')) {
+      context.handle(
+        _arbolesSembradosMeta,
+        arbolesSembrados.isAcceptableOrUnknown(
+          data['arboles_sembrados']!,
+          _arbolesSembradosMeta,
+        ),
+      );
+    }
+    if (data.containsKey('edad_plantula_meses')) {
+      context.handle(
+        _edadPlantulaMesesMeta,
+        edadPlantulaMeses.isAcceptableOrUnknown(
+          data['edad_plantula_meses']!,
+          _edadPlantulaMesesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('insumos')) {
+      context.handle(
+        _insumosMeta,
+        insumos.isAcceptableOrUnknown(data['insumos']!, _insumosMeta),
+      );
+    }
+    if (data.containsKey('resultado_esperado')) {
+      context.handle(
+        _resultadoEsperadoMeta,
+        resultadoEsperado.isAcceptableOrUnknown(
+          data['resultado_esperado']!,
+          _resultadoEsperadoMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3290,6 +3595,58 @@ class $ActividadesAgricolasTable extends ActividadesAgricolas
         DriftSqlType.string,
         data['${effectivePrefix}observaciones'],
       ),
+      responsable: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}responsable'],
+      ),
+      costo: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}costo'],
+      ),
+      fotoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}foto_path'],
+      ),
+      subtipoLabor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subtipo_labor'],
+      ),
+      producto: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}producto'],
+      ),
+      cantidadAplicada: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cantidad_aplicada'],
+      ),
+      incidencia: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}incidencia'],
+      ),
+      arbolesAfectados: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}arboles_afectados'],
+      ),
+      edadCultivoAnios: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}edad_cultivo_anios'],
+      ),
+      arbolesSembrados: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}arboles_sembrados'],
+      ),
+      edadPlantulaMeses: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}edad_plantula_meses'],
+      ),
+      insumos: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}insumos'],
+      ),
+      resultadoEsperado: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}resultado_esperado'],
+      ),
     );
   }
 
@@ -3324,6 +3681,37 @@ class ActividadAgricola extends DataClass
   final TipoActividad tipoActividad;
   final DateTime fecha;
   final String? observaciones;
+
+  /// Quién hizo la labor. El que ejecuta en campo no siempre es el que
+  /// registra en la app: puede ser un jornalero o un técnico.
+  final String? responsable;
+
+  /// Lo gastado en esa labor (insumos, jornales), cuando aplica.
+  final double? costo;
+
+  /// Foto de la labor, guardada en el propio teléfono.
+  final String? fotoPath;
+
+  /// Subtipo, para las labores que lo tienen: poda de formación, de
+  /// mantenimiento o de rehabilitación; fertilización química u orgánica.
+  final String? subtipoLabor;
+
+  /// Producto aplicado y cuánto, para fertilización y control fitosanitario.
+  final String? producto;
+  final String? cantidadAplicada;
+
+  /// Qué tan extendido estaba el problema (control fitosanitario).
+  final String? incidencia;
+
+  /// Cuántos árboles tocó la labor y qué edad tenía el cultivo ese día.
+  final int? arbolesAfectados;
+  final int? edadCultivoAnios;
+
+  /// Solo para la siembra.
+  final int? arbolesSembrados;
+  final int? edadPlantulaMeses;
+  final String? insumos;
+  final String? resultadoEsperado;
   const ActividadAgricola({
     required this.id,
     required this.createdAt,
@@ -3336,6 +3724,19 @@ class ActividadAgricola extends DataClass
     required this.tipoActividad,
     required this.fecha,
     this.observaciones,
+    this.responsable,
+    this.costo,
+    this.fotoPath,
+    this.subtipoLabor,
+    this.producto,
+    this.cantidadAplicada,
+    this.incidencia,
+    this.arbolesAfectados,
+    this.edadCultivoAnios,
+    this.arbolesSembrados,
+    this.edadPlantulaMeses,
+    this.insumos,
+    this.resultadoEsperado,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3367,6 +3768,45 @@ class ActividadAgricola extends DataClass
     if (!nullToAbsent || observaciones != null) {
       map['observaciones'] = Variable<String>(observaciones);
     }
+    if (!nullToAbsent || responsable != null) {
+      map['responsable'] = Variable<String>(responsable);
+    }
+    if (!nullToAbsent || costo != null) {
+      map['costo'] = Variable<double>(costo);
+    }
+    if (!nullToAbsent || fotoPath != null) {
+      map['foto_path'] = Variable<String>(fotoPath);
+    }
+    if (!nullToAbsent || subtipoLabor != null) {
+      map['subtipo_labor'] = Variable<String>(subtipoLabor);
+    }
+    if (!nullToAbsent || producto != null) {
+      map['producto'] = Variable<String>(producto);
+    }
+    if (!nullToAbsent || cantidadAplicada != null) {
+      map['cantidad_aplicada'] = Variable<String>(cantidadAplicada);
+    }
+    if (!nullToAbsent || incidencia != null) {
+      map['incidencia'] = Variable<String>(incidencia);
+    }
+    if (!nullToAbsent || arbolesAfectados != null) {
+      map['arboles_afectados'] = Variable<int>(arbolesAfectados);
+    }
+    if (!nullToAbsent || edadCultivoAnios != null) {
+      map['edad_cultivo_anios'] = Variable<int>(edadCultivoAnios);
+    }
+    if (!nullToAbsent || arbolesSembrados != null) {
+      map['arboles_sembrados'] = Variable<int>(arbolesSembrados);
+    }
+    if (!nullToAbsent || edadPlantulaMeses != null) {
+      map['edad_plantula_meses'] = Variable<int>(edadPlantulaMeses);
+    }
+    if (!nullToAbsent || insumos != null) {
+      map['insumos'] = Variable<String>(insumos);
+    }
+    if (!nullToAbsent || resultadoEsperado != null) {
+      map['resultado_esperado'] = Variable<String>(resultadoEsperado);
+    }
     return map;
   }
 
@@ -3391,6 +3831,45 @@ class ActividadAgricola extends DataClass
       observaciones: observaciones == null && nullToAbsent
           ? const Value.absent()
           : Value(observaciones),
+      responsable: responsable == null && nullToAbsent
+          ? const Value.absent()
+          : Value(responsable),
+      costo: costo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(costo),
+      fotoPath: fotoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fotoPath),
+      subtipoLabor: subtipoLabor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subtipoLabor),
+      producto: producto == null && nullToAbsent
+          ? const Value.absent()
+          : Value(producto),
+      cantidadAplicada: cantidadAplicada == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cantidadAplicada),
+      incidencia: incidencia == null && nullToAbsent
+          ? const Value.absent()
+          : Value(incidencia),
+      arbolesAfectados: arbolesAfectados == null && nullToAbsent
+          ? const Value.absent()
+          : Value(arbolesAfectados),
+      edadCultivoAnios: edadCultivoAnios == null && nullToAbsent
+          ? const Value.absent()
+          : Value(edadCultivoAnios),
+      arbolesSembrados: arbolesSembrados == null && nullToAbsent
+          ? const Value.absent()
+          : Value(arbolesSembrados),
+      edadPlantulaMeses: edadPlantulaMeses == null && nullToAbsent
+          ? const Value.absent()
+          : Value(edadPlantulaMeses),
+      insumos: insumos == null && nullToAbsent
+          ? const Value.absent()
+          : Value(insumos),
+      resultadoEsperado: resultadoEsperado == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resultadoEsperado),
     );
   }
 
@@ -3414,6 +3893,21 @@ class ActividadAgricola extends DataClass
           .fromJson(serializer.fromJson<String>(json['tipoActividad'])),
       fecha: serializer.fromJson<DateTime>(json['fecha']),
       observaciones: serializer.fromJson<String?>(json['observaciones']),
+      responsable: serializer.fromJson<String?>(json['responsable']),
+      costo: serializer.fromJson<double?>(json['costo']),
+      fotoPath: serializer.fromJson<String?>(json['fotoPath']),
+      subtipoLabor: serializer.fromJson<String?>(json['subtipoLabor']),
+      producto: serializer.fromJson<String?>(json['producto']),
+      cantidadAplicada: serializer.fromJson<String?>(json['cantidadAplicada']),
+      incidencia: serializer.fromJson<String?>(json['incidencia']),
+      arbolesAfectados: serializer.fromJson<int?>(json['arbolesAfectados']),
+      edadCultivoAnios: serializer.fromJson<int?>(json['edadCultivoAnios']),
+      arbolesSembrados: serializer.fromJson<int?>(json['arbolesSembrados']),
+      edadPlantulaMeses: serializer.fromJson<int?>(json['edadPlantulaMeses']),
+      insumos: serializer.fromJson<String?>(json['insumos']),
+      resultadoEsperado: serializer.fromJson<String?>(
+        json['resultadoEsperado'],
+      ),
     );
   }
   @override
@@ -3437,6 +3931,19 @@ class ActividadAgricola extends DataClass
       ),
       'fecha': serializer.toJson<DateTime>(fecha),
       'observaciones': serializer.toJson<String?>(observaciones),
+      'responsable': serializer.toJson<String?>(responsable),
+      'costo': serializer.toJson<double?>(costo),
+      'fotoPath': serializer.toJson<String?>(fotoPath),
+      'subtipoLabor': serializer.toJson<String?>(subtipoLabor),
+      'producto': serializer.toJson<String?>(producto),
+      'cantidadAplicada': serializer.toJson<String?>(cantidadAplicada),
+      'incidencia': serializer.toJson<String?>(incidencia),
+      'arbolesAfectados': serializer.toJson<int?>(arbolesAfectados),
+      'edadCultivoAnios': serializer.toJson<int?>(edadCultivoAnios),
+      'arbolesSembrados': serializer.toJson<int?>(arbolesSembrados),
+      'edadPlantulaMeses': serializer.toJson<int?>(edadPlantulaMeses),
+      'insumos': serializer.toJson<String?>(insumos),
+      'resultadoEsperado': serializer.toJson<String?>(resultadoEsperado),
     };
   }
 
@@ -3452,6 +3959,19 @@ class ActividadAgricola extends DataClass
     TipoActividad? tipoActividad,
     DateTime? fecha,
     Value<String?> observaciones = const Value.absent(),
+    Value<String?> responsable = const Value.absent(),
+    Value<double?> costo = const Value.absent(),
+    Value<String?> fotoPath = const Value.absent(),
+    Value<String?> subtipoLabor = const Value.absent(),
+    Value<String?> producto = const Value.absent(),
+    Value<String?> cantidadAplicada = const Value.absent(),
+    Value<String?> incidencia = const Value.absent(),
+    Value<int?> arbolesAfectados = const Value.absent(),
+    Value<int?> edadCultivoAnios = const Value.absent(),
+    Value<int?> arbolesSembrados = const Value.absent(),
+    Value<int?> edadPlantulaMeses = const Value.absent(),
+    Value<String?> insumos = const Value.absent(),
+    Value<String?> resultadoEsperado = const Value.absent(),
   }) => ActividadAgricola(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -3468,6 +3988,31 @@ class ActividadAgricola extends DataClass
     observaciones: observaciones.present
         ? observaciones.value
         : this.observaciones,
+    responsable: responsable.present ? responsable.value : this.responsable,
+    costo: costo.present ? costo.value : this.costo,
+    fotoPath: fotoPath.present ? fotoPath.value : this.fotoPath,
+    subtipoLabor: subtipoLabor.present ? subtipoLabor.value : this.subtipoLabor,
+    producto: producto.present ? producto.value : this.producto,
+    cantidadAplicada: cantidadAplicada.present
+        ? cantidadAplicada.value
+        : this.cantidadAplicada,
+    incidencia: incidencia.present ? incidencia.value : this.incidencia,
+    arbolesAfectados: arbolesAfectados.present
+        ? arbolesAfectados.value
+        : this.arbolesAfectados,
+    edadCultivoAnios: edadCultivoAnios.present
+        ? edadCultivoAnios.value
+        : this.edadCultivoAnios,
+    arbolesSembrados: arbolesSembrados.present
+        ? arbolesSembrados.value
+        : this.arbolesSembrados,
+    edadPlantulaMeses: edadPlantulaMeses.present
+        ? edadPlantulaMeses.value
+        : this.edadPlantulaMeses,
+    insumos: insumos.present ? insumos.value : this.insumos,
+    resultadoEsperado: resultadoEsperado.present
+        ? resultadoEsperado.value
+        : this.resultadoEsperado,
   );
   ActividadAgricola copyWithCompanion(ActividadesAgricolasCompanion data) {
     return ActividadAgricola(
@@ -3490,6 +4035,37 @@ class ActividadAgricola extends DataClass
       observaciones: data.observaciones.present
           ? data.observaciones.value
           : this.observaciones,
+      responsable: data.responsable.present
+          ? data.responsable.value
+          : this.responsable,
+      costo: data.costo.present ? data.costo.value : this.costo,
+      fotoPath: data.fotoPath.present ? data.fotoPath.value : this.fotoPath,
+      subtipoLabor: data.subtipoLabor.present
+          ? data.subtipoLabor.value
+          : this.subtipoLabor,
+      producto: data.producto.present ? data.producto.value : this.producto,
+      cantidadAplicada: data.cantidadAplicada.present
+          ? data.cantidadAplicada.value
+          : this.cantidadAplicada,
+      incidencia: data.incidencia.present
+          ? data.incidencia.value
+          : this.incidencia,
+      arbolesAfectados: data.arbolesAfectados.present
+          ? data.arbolesAfectados.value
+          : this.arbolesAfectados,
+      edadCultivoAnios: data.edadCultivoAnios.present
+          ? data.edadCultivoAnios.value
+          : this.edadCultivoAnios,
+      arbolesSembrados: data.arbolesSembrados.present
+          ? data.arbolesSembrados.value
+          : this.arbolesSembrados,
+      edadPlantulaMeses: data.edadPlantulaMeses.present
+          ? data.edadPlantulaMeses.value
+          : this.edadPlantulaMeses,
+      insumos: data.insumos.present ? data.insumos.value : this.insumos,
+      resultadoEsperado: data.resultadoEsperado.present
+          ? data.resultadoEsperado.value
+          : this.resultadoEsperado,
     );
   }
 
@@ -3506,13 +4082,26 @@ class ActividadAgricola extends DataClass
           ..write('loteId: $loteId, ')
           ..write('tipoActividad: $tipoActividad, ')
           ..write('fecha: $fecha, ')
-          ..write('observaciones: $observaciones')
+          ..write('observaciones: $observaciones, ')
+          ..write('responsable: $responsable, ')
+          ..write('costo: $costo, ')
+          ..write('fotoPath: $fotoPath, ')
+          ..write('subtipoLabor: $subtipoLabor, ')
+          ..write('producto: $producto, ')
+          ..write('cantidadAplicada: $cantidadAplicada, ')
+          ..write('incidencia: $incidencia, ')
+          ..write('arbolesAfectados: $arbolesAfectados, ')
+          ..write('edadCultivoAnios: $edadCultivoAnios, ')
+          ..write('arbolesSembrados: $arbolesSembrados, ')
+          ..write('edadPlantulaMeses: $edadPlantulaMeses, ')
+          ..write('insumos: $insumos, ')
+          ..write('resultadoEsperado: $resultadoEsperado')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     createdAt,
     updatedAt,
@@ -3524,7 +4113,20 @@ class ActividadAgricola extends DataClass
     tipoActividad,
     fecha,
     observaciones,
-  );
+    responsable,
+    costo,
+    fotoPath,
+    subtipoLabor,
+    producto,
+    cantidadAplicada,
+    incidencia,
+    arbolesAfectados,
+    edadCultivoAnios,
+    arbolesSembrados,
+    edadPlantulaMeses,
+    insumos,
+    resultadoEsperado,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3539,7 +4141,20 @@ class ActividadAgricola extends DataClass
           other.loteId == this.loteId &&
           other.tipoActividad == this.tipoActividad &&
           other.fecha == this.fecha &&
-          other.observaciones == this.observaciones);
+          other.observaciones == this.observaciones &&
+          other.responsable == this.responsable &&
+          other.costo == this.costo &&
+          other.fotoPath == this.fotoPath &&
+          other.subtipoLabor == this.subtipoLabor &&
+          other.producto == this.producto &&
+          other.cantidadAplicada == this.cantidadAplicada &&
+          other.incidencia == this.incidencia &&
+          other.arbolesAfectados == this.arbolesAfectados &&
+          other.edadCultivoAnios == this.edadCultivoAnios &&
+          other.arbolesSembrados == this.arbolesSembrados &&
+          other.edadPlantulaMeses == this.edadPlantulaMeses &&
+          other.insumos == this.insumos &&
+          other.resultadoEsperado == this.resultadoEsperado);
 }
 
 class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
@@ -3554,6 +4169,19 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
   final Value<TipoActividad> tipoActividad;
   final Value<DateTime> fecha;
   final Value<String?> observaciones;
+  final Value<String?> responsable;
+  final Value<double?> costo;
+  final Value<String?> fotoPath;
+  final Value<String?> subtipoLabor;
+  final Value<String?> producto;
+  final Value<String?> cantidadAplicada;
+  final Value<String?> incidencia;
+  final Value<int?> arbolesAfectados;
+  final Value<int?> edadCultivoAnios;
+  final Value<int?> arbolesSembrados;
+  final Value<int?> edadPlantulaMeses;
+  final Value<String?> insumos;
+  final Value<String?> resultadoEsperado;
   final Value<int> rowid;
   const ActividadesAgricolasCompanion({
     this.id = const Value.absent(),
@@ -3567,6 +4195,19 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
     this.tipoActividad = const Value.absent(),
     this.fecha = const Value.absent(),
     this.observaciones = const Value.absent(),
+    this.responsable = const Value.absent(),
+    this.costo = const Value.absent(),
+    this.fotoPath = const Value.absent(),
+    this.subtipoLabor = const Value.absent(),
+    this.producto = const Value.absent(),
+    this.cantidadAplicada = const Value.absent(),
+    this.incidencia = const Value.absent(),
+    this.arbolesAfectados = const Value.absent(),
+    this.edadCultivoAnios = const Value.absent(),
+    this.arbolesSembrados = const Value.absent(),
+    this.edadPlantulaMeses = const Value.absent(),
+    this.insumos = const Value.absent(),
+    this.resultadoEsperado = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ActividadesAgricolasCompanion.insert({
@@ -3581,6 +4222,19 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
     required TipoActividad tipoActividad,
     required DateTime fecha,
     this.observaciones = const Value.absent(),
+    this.responsable = const Value.absent(),
+    this.costo = const Value.absent(),
+    this.fotoPath = const Value.absent(),
+    this.subtipoLabor = const Value.absent(),
+    this.producto = const Value.absent(),
+    this.cantidadAplicada = const Value.absent(),
+    this.incidencia = const Value.absent(),
+    this.arbolesAfectados = const Value.absent(),
+    this.edadCultivoAnios = const Value.absent(),
+    this.arbolesSembrados = const Value.absent(),
+    this.edadPlantulaMeses = const Value.absent(),
+    this.insumos = const Value.absent(),
+    this.resultadoEsperado = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : loteId = Value(loteId),
        tipoActividad = Value(tipoActividad),
@@ -3597,6 +4251,19 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
     Expression<String>? tipoActividad,
     Expression<DateTime>? fecha,
     Expression<String>? observaciones,
+    Expression<String>? responsable,
+    Expression<double>? costo,
+    Expression<String>? fotoPath,
+    Expression<String>? subtipoLabor,
+    Expression<String>? producto,
+    Expression<String>? cantidadAplicada,
+    Expression<String>? incidencia,
+    Expression<int>? arbolesAfectados,
+    Expression<int>? edadCultivoAnios,
+    Expression<int>? arbolesSembrados,
+    Expression<int>? edadPlantulaMeses,
+    Expression<String>? insumos,
+    Expression<String>? resultadoEsperado,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3611,6 +4278,19 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
       if (tipoActividad != null) 'tipo_actividad': tipoActividad,
       if (fecha != null) 'fecha': fecha,
       if (observaciones != null) 'observaciones': observaciones,
+      if (responsable != null) 'responsable': responsable,
+      if (costo != null) 'costo': costo,
+      if (fotoPath != null) 'foto_path': fotoPath,
+      if (subtipoLabor != null) 'subtipo_labor': subtipoLabor,
+      if (producto != null) 'producto': producto,
+      if (cantidadAplicada != null) 'cantidad_aplicada': cantidadAplicada,
+      if (incidencia != null) 'incidencia': incidencia,
+      if (arbolesAfectados != null) 'arboles_afectados': arbolesAfectados,
+      if (edadCultivoAnios != null) 'edad_cultivo_anios': edadCultivoAnios,
+      if (arbolesSembrados != null) 'arboles_sembrados': arbolesSembrados,
+      if (edadPlantulaMeses != null) 'edad_plantula_meses': edadPlantulaMeses,
+      if (insumos != null) 'insumos': insumos,
+      if (resultadoEsperado != null) 'resultado_esperado': resultadoEsperado,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3627,6 +4307,19 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
     Value<TipoActividad>? tipoActividad,
     Value<DateTime>? fecha,
     Value<String?>? observaciones,
+    Value<String?>? responsable,
+    Value<double?>? costo,
+    Value<String?>? fotoPath,
+    Value<String?>? subtipoLabor,
+    Value<String?>? producto,
+    Value<String?>? cantidadAplicada,
+    Value<String?>? incidencia,
+    Value<int?>? arbolesAfectados,
+    Value<int?>? edadCultivoAnios,
+    Value<int?>? arbolesSembrados,
+    Value<int?>? edadPlantulaMeses,
+    Value<String?>? insumos,
+    Value<String?>? resultadoEsperado,
     Value<int>? rowid,
   }) {
     return ActividadesAgricolasCompanion(
@@ -3641,6 +4334,19 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
       tipoActividad: tipoActividad ?? this.tipoActividad,
       fecha: fecha ?? this.fecha,
       observaciones: observaciones ?? this.observaciones,
+      responsable: responsable ?? this.responsable,
+      costo: costo ?? this.costo,
+      fotoPath: fotoPath ?? this.fotoPath,
+      subtipoLabor: subtipoLabor ?? this.subtipoLabor,
+      producto: producto ?? this.producto,
+      cantidadAplicada: cantidadAplicada ?? this.cantidadAplicada,
+      incidencia: incidencia ?? this.incidencia,
+      arbolesAfectados: arbolesAfectados ?? this.arbolesAfectados,
+      edadCultivoAnios: edadCultivoAnios ?? this.edadCultivoAnios,
+      arbolesSembrados: arbolesSembrados ?? this.arbolesSembrados,
+      edadPlantulaMeses: edadPlantulaMeses ?? this.edadPlantulaMeses,
+      insumos: insumos ?? this.insumos,
+      resultadoEsperado: resultadoEsperado ?? this.resultadoEsperado,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3687,6 +4393,45 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
     if (observaciones.present) {
       map['observaciones'] = Variable<String>(observaciones.value);
     }
+    if (responsable.present) {
+      map['responsable'] = Variable<String>(responsable.value);
+    }
+    if (costo.present) {
+      map['costo'] = Variable<double>(costo.value);
+    }
+    if (fotoPath.present) {
+      map['foto_path'] = Variable<String>(fotoPath.value);
+    }
+    if (subtipoLabor.present) {
+      map['subtipo_labor'] = Variable<String>(subtipoLabor.value);
+    }
+    if (producto.present) {
+      map['producto'] = Variable<String>(producto.value);
+    }
+    if (cantidadAplicada.present) {
+      map['cantidad_aplicada'] = Variable<String>(cantidadAplicada.value);
+    }
+    if (incidencia.present) {
+      map['incidencia'] = Variable<String>(incidencia.value);
+    }
+    if (arbolesAfectados.present) {
+      map['arboles_afectados'] = Variable<int>(arbolesAfectados.value);
+    }
+    if (edadCultivoAnios.present) {
+      map['edad_cultivo_anios'] = Variable<int>(edadCultivoAnios.value);
+    }
+    if (arbolesSembrados.present) {
+      map['arboles_sembrados'] = Variable<int>(arbolesSembrados.value);
+    }
+    if (edadPlantulaMeses.present) {
+      map['edad_plantula_meses'] = Variable<int>(edadPlantulaMeses.value);
+    }
+    if (insumos.present) {
+      map['insumos'] = Variable<String>(insumos.value);
+    }
+    if (resultadoEsperado.present) {
+      map['resultado_esperado'] = Variable<String>(resultadoEsperado.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3707,6 +4452,19 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
           ..write('tipoActividad: $tipoActividad, ')
           ..write('fecha: $fecha, ')
           ..write('observaciones: $observaciones, ')
+          ..write('responsable: $responsable, ')
+          ..write('costo: $costo, ')
+          ..write('fotoPath: $fotoPath, ')
+          ..write('subtipoLabor: $subtipoLabor, ')
+          ..write('producto: $producto, ')
+          ..write('cantidadAplicada: $cantidadAplicada, ')
+          ..write('incidencia: $incidencia, ')
+          ..write('arbolesAfectados: $arbolesAfectados, ')
+          ..write('edadCultivoAnios: $edadCultivoAnios, ')
+          ..write('arbolesSembrados: $arbolesSembrados, ')
+          ..write('edadPlantulaMeses: $edadPlantulaMeses, ')
+          ..write('insumos: $insumos, ')
+          ..write('resultadoEsperado: $resultadoEsperado, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3839,6 +4597,28 @@ class $CosechasTable extends Cosechas with TableInfo<$CosechasTable, Cosecha> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _tipoProductoMeta = const VerificationMeta(
+    'tipoProducto',
+  );
+  @override
+  late final GeneratedColumn<String> tipoProducto = GeneratedColumn<String>(
+    'tipo_producto',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fotoPathMeta = const VerificationMeta(
+    'fotoPath',
+  );
+  @override
+  late final GeneratedColumn<String> fotoPath = GeneratedColumn<String>(
+    'foto_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3852,6 +4632,8 @@ class $CosechasTable extends Cosechas with TableInfo<$CosechasTable, Cosecha> {
     fecha,
     cantidadKg,
     observaciones,
+    tipoProducto,
+    fotoPath,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3934,6 +4716,21 @@ class $CosechasTable extends Cosechas with TableInfo<$CosechasTable, Cosecha> {
         ),
       );
     }
+    if (data.containsKey('tipo_producto')) {
+      context.handle(
+        _tipoProductoMeta,
+        tipoProducto.isAcceptableOrUnknown(
+          data['tipo_producto']!,
+          _tipoProductoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('foto_path')) {
+      context.handle(
+        _fotoPathMeta,
+        fotoPath.isAcceptableOrUnknown(data['foto_path']!, _fotoPathMeta),
+      );
+    }
     return context;
   }
 
@@ -3989,6 +4786,14 @@ class $CosechasTable extends Cosechas with TableInfo<$CosechasTable, Cosecha> {
         DriftSqlType.string,
         data['${effectivePrefix}observaciones'],
       ),
+      tipoProducto: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tipo_producto'],
+      ),
+      fotoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}foto_path'],
+      ),
     );
   }
 
@@ -4018,6 +4823,12 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
   final DateTime fecha;
   final double cantidadKg;
   final String? observaciones;
+
+  /// En qué estado salió el cacao: en baba, fermentado o seco.
+  final String? tipoProducto;
+
+  /// Evidencia fotográfica de la entrega, en el propio teléfono.
+  final String? fotoPath;
   const Cosecha({
     required this.id,
     required this.createdAt,
@@ -4030,6 +4841,8 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
     required this.fecha,
     required this.cantidadKg,
     this.observaciones,
+    this.tipoProducto,
+    this.fotoPath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4057,6 +4870,12 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
     if (!nullToAbsent || observaciones != null) {
       map['observaciones'] = Variable<String>(observaciones);
     }
+    if (!nullToAbsent || tipoProducto != null) {
+      map['tipo_producto'] = Variable<String>(tipoProducto);
+    }
+    if (!nullToAbsent || fotoPath != null) {
+      map['foto_path'] = Variable<String>(fotoPath);
+    }
     return map;
   }
 
@@ -4081,6 +4900,12 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
       observaciones: observaciones == null && nullToAbsent
           ? const Value.absent()
           : Value(observaciones),
+      tipoProducto: tipoProducto == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tipoProducto),
+      fotoPath: fotoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fotoPath),
     );
   }
 
@@ -4103,6 +4928,8 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
       fecha: serializer.fromJson<DateTime>(json['fecha']),
       cantidadKg: serializer.fromJson<double>(json['cantidadKg']),
       observaciones: serializer.fromJson<String?>(json['observaciones']),
+      tipoProducto: serializer.fromJson<String?>(json['tipoProducto']),
+      fotoPath: serializer.fromJson<String?>(json['fotoPath']),
     );
   }
   @override
@@ -4122,6 +4949,8 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
       'fecha': serializer.toJson<DateTime>(fecha),
       'cantidadKg': serializer.toJson<double>(cantidadKg),
       'observaciones': serializer.toJson<String?>(observaciones),
+      'tipoProducto': serializer.toJson<String?>(tipoProducto),
+      'fotoPath': serializer.toJson<String?>(fotoPath),
     };
   }
 
@@ -4137,6 +4966,8 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
     DateTime? fecha,
     double? cantidadKg,
     Value<String?> observaciones = const Value.absent(),
+    Value<String?> tipoProducto = const Value.absent(),
+    Value<String?> fotoPath = const Value.absent(),
   }) => Cosecha(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -4153,6 +4984,8 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
     observaciones: observaciones.present
         ? observaciones.value
         : this.observaciones,
+    tipoProducto: tipoProducto.present ? tipoProducto.value : this.tipoProducto,
+    fotoPath: fotoPath.present ? fotoPath.value : this.fotoPath,
   );
   Cosecha copyWithCompanion(CosechasCompanion data) {
     return Cosecha(
@@ -4175,6 +5008,10 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
       observaciones: data.observaciones.present
           ? data.observaciones.value
           : this.observaciones,
+      tipoProducto: data.tipoProducto.present
+          ? data.tipoProducto.value
+          : this.tipoProducto,
+      fotoPath: data.fotoPath.present ? data.fotoPath.value : this.fotoPath,
     );
   }
 
@@ -4191,7 +5028,9 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
           ..write('loteId: $loteId, ')
           ..write('fecha: $fecha, ')
           ..write('cantidadKg: $cantidadKg, ')
-          ..write('observaciones: $observaciones')
+          ..write('observaciones: $observaciones, ')
+          ..write('tipoProducto: $tipoProducto, ')
+          ..write('fotoPath: $fotoPath')
           ..write(')'))
         .toString();
   }
@@ -4209,6 +5048,8 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
     fecha,
     cantidadKg,
     observaciones,
+    tipoProducto,
+    fotoPath,
   );
   @override
   bool operator ==(Object other) =>
@@ -4224,7 +5065,9 @@ class Cosecha extends DataClass implements Insertable<Cosecha> {
           other.loteId == this.loteId &&
           other.fecha == this.fecha &&
           other.cantidadKg == this.cantidadKg &&
-          other.observaciones == this.observaciones);
+          other.observaciones == this.observaciones &&
+          other.tipoProducto == this.tipoProducto &&
+          other.fotoPath == this.fotoPath);
 }
 
 class CosechasCompanion extends UpdateCompanion<Cosecha> {
@@ -4239,6 +5082,8 @@ class CosechasCompanion extends UpdateCompanion<Cosecha> {
   final Value<DateTime> fecha;
   final Value<double> cantidadKg;
   final Value<String?> observaciones;
+  final Value<String?> tipoProducto;
+  final Value<String?> fotoPath;
   final Value<int> rowid;
   const CosechasCompanion({
     this.id = const Value.absent(),
@@ -4252,6 +5097,8 @@ class CosechasCompanion extends UpdateCompanion<Cosecha> {
     this.fecha = const Value.absent(),
     this.cantidadKg = const Value.absent(),
     this.observaciones = const Value.absent(),
+    this.tipoProducto = const Value.absent(),
+    this.fotoPath = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CosechasCompanion.insert({
@@ -4266,6 +5113,8 @@ class CosechasCompanion extends UpdateCompanion<Cosecha> {
     required DateTime fecha,
     required double cantidadKg,
     this.observaciones = const Value.absent(),
+    this.tipoProducto = const Value.absent(),
+    this.fotoPath = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : loteId = Value(loteId),
        fecha = Value(fecha),
@@ -4282,6 +5131,8 @@ class CosechasCompanion extends UpdateCompanion<Cosecha> {
     Expression<DateTime>? fecha,
     Expression<double>? cantidadKg,
     Expression<String>? observaciones,
+    Expression<String>? tipoProducto,
+    Expression<String>? fotoPath,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4296,6 +5147,8 @@ class CosechasCompanion extends UpdateCompanion<Cosecha> {
       if (fecha != null) 'fecha': fecha,
       if (cantidadKg != null) 'cantidad_kg': cantidadKg,
       if (observaciones != null) 'observaciones': observaciones,
+      if (tipoProducto != null) 'tipo_producto': tipoProducto,
+      if (fotoPath != null) 'foto_path': fotoPath,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4312,6 +5165,8 @@ class CosechasCompanion extends UpdateCompanion<Cosecha> {
     Value<DateTime>? fecha,
     Value<double>? cantidadKg,
     Value<String?>? observaciones,
+    Value<String?>? tipoProducto,
+    Value<String?>? fotoPath,
     Value<int>? rowid,
   }) {
     return CosechasCompanion(
@@ -4326,6 +5181,8 @@ class CosechasCompanion extends UpdateCompanion<Cosecha> {
       fecha: fecha ?? this.fecha,
       cantidadKg: cantidadKg ?? this.cantidadKg,
       observaciones: observaciones ?? this.observaciones,
+      tipoProducto: tipoProducto ?? this.tipoProducto,
+      fotoPath: fotoPath ?? this.fotoPath,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4368,6 +5225,12 @@ class CosechasCompanion extends UpdateCompanion<Cosecha> {
     if (observaciones.present) {
       map['observaciones'] = Variable<String>(observaciones.value);
     }
+    if (tipoProducto.present) {
+      map['tipo_producto'] = Variable<String>(tipoProducto.value);
+    }
+    if (fotoPath.present) {
+      map['foto_path'] = Variable<String>(fotoPath.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4388,6 +5251,8 @@ class CosechasCompanion extends UpdateCompanion<Cosecha> {
           ..write('fecha: $fecha, ')
           ..write('cantidadKg: $cantidadKg, ')
           ..write('observaciones: $observaciones, ')
+          ..write('tipoProducto: $tipoProducto, ')
+          ..write('fotoPath: $fotoPath, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7487,6 +8352,7 @@ typedef $$LotesTableCreateCompanionBuilder = LotesCompanion Function({
   required String fincaId,
   required String nombre,
   required double areaSembradaHa,
+  Value<String> codigo,
   required String variedadCacao,
   required DateTime fechaSiembra,
   Value<int> rowid,
@@ -7502,6 +8368,7 @@ typedef $$LotesTableUpdateCompanionBuilder = LotesCompanion Function({
   Value<String> fincaId,
   Value<String> nombre,
   Value<double> areaSembradaHa,
+  Value<String> codigo,
   Value<String> variedadCacao,
   Value<DateTime> fechaSiembra,
   Value<int> rowid,
@@ -7642,6 +8509,11 @@ class $$LotesTableFilterComposer extends Composer<_$AppDatabase, $LotesTable> {
 
   ColumnFilters<double> get areaSembradaHa => $composableBuilder(
     column: $table.areaSembradaHa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get codigo => $composableBuilder(
+    column: $table.codigo,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7808,6 +8680,11 @@ class $$LotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get codigo => $composableBuilder(
+    column: $table.codigo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get variedadCacao => $composableBuilder(
     column: $table.variedadCacao,
     builder: (column) => ColumnOrderings(column),
@@ -7884,6 +8761,9 @@ class $$LotesTableAnnotationComposer
     column: $table.areaSembradaHa,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get codigo =>
+      $composableBuilder(column: $table.codigo, builder: (column) => column);
 
   GeneratedColumn<String> get variedadCacao => $composableBuilder(
     column: $table.variedadCacao,
@@ -8038,6 +8918,7 @@ class $$LotesTableTableManager
                 Value<String> fincaId = const Value.absent(),
                 Value<String> nombre = const Value.absent(),
                 Value<double> areaSembradaHa = const Value.absent(),
+                Value<String> codigo = const Value.absent(),
                 Value<String> variedadCacao = const Value.absent(),
                 Value<DateTime> fechaSiembra = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -8052,6 +8933,7 @@ class $$LotesTableTableManager
                 fincaId: fincaId,
                 nombre: nombre,
                 areaSembradaHa: areaSembradaHa,
+                codigo: codigo,
                 variedadCacao: variedadCacao,
                 fechaSiembra: fechaSiembra,
                 rowid: rowid,
@@ -8068,6 +8950,7 @@ class $$LotesTableTableManager
                 required String fincaId,
                 required String nombre,
                 required double areaSembradaHa,
+                Value<String> codigo = const Value.absent(),
                 required String variedadCacao,
                 required DateTime fechaSiembra,
                 Value<int> rowid = const Value.absent(),
@@ -8082,6 +8965,7 @@ class $$LotesTableTableManager
                 fincaId: fincaId,
                 nombre: nombre,
                 areaSembradaHa: areaSembradaHa,
+                codigo: codigo,
                 variedadCacao: variedadCacao,
                 fechaSiembra: fechaSiembra,
                 rowid: rowid,
@@ -8237,6 +9121,19 @@ typedef $$ActividadesAgricolasTableCreateCompanionBuilder =
       required TipoActividad tipoActividad,
       required DateTime fecha,
       Value<String?> observaciones,
+      Value<String?> responsable,
+      Value<double?> costo,
+      Value<String?> fotoPath,
+      Value<String?> subtipoLabor,
+      Value<String?> producto,
+      Value<String?> cantidadAplicada,
+      Value<String?> incidencia,
+      Value<int?> arbolesAfectados,
+      Value<int?> edadCultivoAnios,
+      Value<int?> arbolesSembrados,
+      Value<int?> edadPlantulaMeses,
+      Value<String?> insumos,
+      Value<String?> resultadoEsperado,
       Value<int> rowid,
     });
 typedef $$ActividadesAgricolasTableUpdateCompanionBuilder =
@@ -8252,6 +9149,19 @@ typedef $$ActividadesAgricolasTableUpdateCompanionBuilder =
       Value<TipoActividad> tipoActividad,
       Value<DateTime> fecha,
       Value<String?> observaciones,
+      Value<String?> responsable,
+      Value<double?> costo,
+      Value<String?> fotoPath,
+      Value<String?> subtipoLabor,
+      Value<String?> producto,
+      Value<String?> cantidadAplicada,
+      Value<String?> incidencia,
+      Value<int?> arbolesAfectados,
+      Value<int?> edadCultivoAnios,
+      Value<int?> arbolesSembrados,
+      Value<int?> edadPlantulaMeses,
+      Value<String?> insumos,
+      Value<String?> resultadoEsperado,
       Value<int> rowid,
     });
 
@@ -8347,6 +9257,71 @@ class $$ActividadesAgricolasTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get responsable => $composableBuilder(
+    column: $table.responsable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get costo => $composableBuilder(
+    column: $table.costo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fotoPath => $composableBuilder(
+    column: $table.fotoPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subtipoLabor => $composableBuilder(
+    column: $table.subtipoLabor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get producto => $composableBuilder(
+    column: $table.producto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cantidadAplicada => $composableBuilder(
+    column: $table.cantidadAplicada,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get incidencia => $composableBuilder(
+    column: $table.incidencia,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get arbolesAfectados => $composableBuilder(
+    column: $table.arbolesAfectados,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get edadCultivoAnios => $composableBuilder(
+    column: $table.edadCultivoAnios,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get arbolesSembrados => $composableBuilder(
+    column: $table.arbolesSembrados,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get edadPlantulaMeses => $composableBuilder(
+    column: $table.edadPlantulaMeses,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get insumos => $composableBuilder(
+    column: $table.insumos,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resultadoEsperado => $composableBuilder(
+    column: $table.resultadoEsperado,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LotesTableFilterComposer get loteId {
     final $$LotesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -8430,6 +9405,71 @@ class $$ActividadesAgricolasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get responsable => $composableBuilder(
+    column: $table.responsable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get costo => $composableBuilder(
+    column: $table.costo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fotoPath => $composableBuilder(
+    column: $table.fotoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subtipoLabor => $composableBuilder(
+    column: $table.subtipoLabor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get producto => $composableBuilder(
+    column: $table.producto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cantidadAplicada => $composableBuilder(
+    column: $table.cantidadAplicada,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get incidencia => $composableBuilder(
+    column: $table.incidencia,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get arbolesAfectados => $composableBuilder(
+    column: $table.arbolesAfectados,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get edadCultivoAnios => $composableBuilder(
+    column: $table.edadCultivoAnios,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get arbolesSembrados => $composableBuilder(
+    column: $table.arbolesSembrados,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get edadPlantulaMeses => $composableBuilder(
+    column: $table.edadPlantulaMeses,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get insumos => $composableBuilder(
+    column: $table.insumos,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resultadoEsperado => $composableBuilder(
+    column: $table.resultadoEsperado,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LotesTableOrderingComposer get loteId {
     final $$LotesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -8500,6 +9540,63 @@ class $$ActividadesAgricolasTableAnnotationComposer
 
   GeneratedColumn<String> get observaciones => $composableBuilder(
     column: $table.observaciones,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get responsable => $composableBuilder(
+    column: $table.responsable,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get costo =>
+      $composableBuilder(column: $table.costo, builder: (column) => column);
+
+  GeneratedColumn<String> get fotoPath =>
+      $composableBuilder(column: $table.fotoPath, builder: (column) => column);
+
+  GeneratedColumn<String> get subtipoLabor => $composableBuilder(
+    column: $table.subtipoLabor,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get producto =>
+      $composableBuilder(column: $table.producto, builder: (column) => column);
+
+  GeneratedColumn<String> get cantidadAplicada => $composableBuilder(
+    column: $table.cantidadAplicada,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get incidencia => $composableBuilder(
+    column: $table.incidencia,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get arbolesAfectados => $composableBuilder(
+    column: $table.arbolesAfectados,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get edadCultivoAnios => $composableBuilder(
+    column: $table.edadCultivoAnios,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get arbolesSembrados => $composableBuilder(
+    column: $table.arbolesSembrados,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get edadPlantulaMeses => $composableBuilder(
+    column: $table.edadPlantulaMeses,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get insumos =>
+      $composableBuilder(column: $table.insumos, builder: (column) => column);
+
+  GeneratedColumn<String> get resultadoEsperado => $composableBuilder(
+    column: $table.resultadoEsperado,
     builder: (column) => column,
   );
 
@@ -8574,6 +9671,19 @@ class $$ActividadesAgricolasTableTableManager
                 Value<TipoActividad> tipoActividad = const Value.absent(),
                 Value<DateTime> fecha = const Value.absent(),
                 Value<String?> observaciones = const Value.absent(),
+                Value<String?> responsable = const Value.absent(),
+                Value<double?> costo = const Value.absent(),
+                Value<String?> fotoPath = const Value.absent(),
+                Value<String?> subtipoLabor = const Value.absent(),
+                Value<String?> producto = const Value.absent(),
+                Value<String?> cantidadAplicada = const Value.absent(),
+                Value<String?> incidencia = const Value.absent(),
+                Value<int?> arbolesAfectados = const Value.absent(),
+                Value<int?> edadCultivoAnios = const Value.absent(),
+                Value<int?> arbolesSembrados = const Value.absent(),
+                Value<int?> edadPlantulaMeses = const Value.absent(),
+                Value<String?> insumos = const Value.absent(),
+                Value<String?> resultadoEsperado = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ActividadesAgricolasCompanion(
                 id: id,
@@ -8587,6 +9697,19 @@ class $$ActividadesAgricolasTableTableManager
                 tipoActividad: tipoActividad,
                 fecha: fecha,
                 observaciones: observaciones,
+                responsable: responsable,
+                costo: costo,
+                fotoPath: fotoPath,
+                subtipoLabor: subtipoLabor,
+                producto: producto,
+                cantidadAplicada: cantidadAplicada,
+                incidencia: incidencia,
+                arbolesAfectados: arbolesAfectados,
+                edadCultivoAnios: edadCultivoAnios,
+                arbolesSembrados: arbolesSembrados,
+                edadPlantulaMeses: edadPlantulaMeses,
+                insumos: insumos,
+                resultadoEsperado: resultadoEsperado,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8602,6 +9725,19 @@ class $$ActividadesAgricolasTableTableManager
                 required TipoActividad tipoActividad,
                 required DateTime fecha,
                 Value<String?> observaciones = const Value.absent(),
+                Value<String?> responsable = const Value.absent(),
+                Value<double?> costo = const Value.absent(),
+                Value<String?> fotoPath = const Value.absent(),
+                Value<String?> subtipoLabor = const Value.absent(),
+                Value<String?> producto = const Value.absent(),
+                Value<String?> cantidadAplicada = const Value.absent(),
+                Value<String?> incidencia = const Value.absent(),
+                Value<int?> arbolesAfectados = const Value.absent(),
+                Value<int?> edadCultivoAnios = const Value.absent(),
+                Value<int?> arbolesSembrados = const Value.absent(),
+                Value<int?> edadPlantulaMeses = const Value.absent(),
+                Value<String?> insumos = const Value.absent(),
+                Value<String?> resultadoEsperado = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ActividadesAgricolasCompanion.insert(
                 id: id,
@@ -8615,6 +9751,19 @@ class $$ActividadesAgricolasTableTableManager
                 tipoActividad: tipoActividad,
                 fecha: fecha,
                 observaciones: observaciones,
+                responsable: responsable,
+                costo: costo,
+                fotoPath: fotoPath,
+                subtipoLabor: subtipoLabor,
+                producto: producto,
+                cantidadAplicada: cantidadAplicada,
+                incidencia: incidencia,
+                arbolesAfectados: arbolesAfectados,
+                edadCultivoAnios: edadCultivoAnios,
+                arbolesSembrados: arbolesSembrados,
+                edadPlantulaMeses: edadPlantulaMeses,
+                insumos: insumos,
+                resultadoEsperado: resultadoEsperado,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -8694,6 +9843,8 @@ typedef $$CosechasTableCreateCompanionBuilder = CosechasCompanion Function({
   required DateTime fecha,
   required double cantidadKg,
   Value<String?> observaciones,
+  Value<String?> tipoProducto,
+  Value<String?> fotoPath,
   Value<int> rowid,
 });
 typedef $$CosechasTableUpdateCompanionBuilder = CosechasCompanion Function({
@@ -8708,6 +9859,8 @@ typedef $$CosechasTableUpdateCompanionBuilder = CosechasCompanion Function({
   Value<DateTime> fecha,
   Value<double> cantidadKg,
   Value<String?> observaciones,
+  Value<String?> tipoProducto,
+  Value<String?> fotoPath,
   Value<int> rowid,
 });
 
@@ -8790,6 +9943,16 @@ class $$CosechasTableFilterComposer
 
   ColumnFilters<String> get observaciones => $composableBuilder(
     column: $table.observaciones,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tipoProducto => $composableBuilder(
+    column: $table.tipoProducto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fotoPath => $composableBuilder(
+    column: $table.fotoPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8876,6 +10039,16 @@ class $$CosechasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get tipoProducto => $composableBuilder(
+    column: $table.tipoProducto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fotoPath => $composableBuilder(
+    column: $table.fotoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LotesTableOrderingComposer get loteId {
     final $$LotesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -8948,6 +10121,14 @@ class $$CosechasTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get tipoProducto => $composableBuilder(
+    column: $table.tipoProducto,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fotoPath =>
+      $composableBuilder(column: $table.fotoPath, builder: (column) => column);
+
   $$LotesTableAnnotationComposer get loteId {
     final $$LotesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -9011,6 +10192,8 @@ class $$CosechasTableTableManager
                 Value<DateTime> fecha = const Value.absent(),
                 Value<double> cantidadKg = const Value.absent(),
                 Value<String?> observaciones = const Value.absent(),
+                Value<String?> tipoProducto = const Value.absent(),
+                Value<String?> fotoPath = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CosechasCompanion(
                 id: id,
@@ -9024,6 +10207,8 @@ class $$CosechasTableTableManager
                 fecha: fecha,
                 cantidadKg: cantidadKg,
                 observaciones: observaciones,
+                tipoProducto: tipoProducto,
+                fotoPath: fotoPath,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9039,6 +10224,8 @@ class $$CosechasTableTableManager
                 required DateTime fecha,
                 required double cantidadKg,
                 Value<String?> observaciones = const Value.absent(),
+                Value<String?> tipoProducto = const Value.absent(),
+                Value<String?> fotoPath = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CosechasCompanion.insert(
                 id: id,
@@ -9052,6 +10239,8 @@ class $$CosechasTableTableManager
                 fecha: fecha,
                 cantidadKg: cantidadKg,
                 observaciones: observaciones,
+                tipoProducto: tipoProducto,
+                fotoPath: fotoPath,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
