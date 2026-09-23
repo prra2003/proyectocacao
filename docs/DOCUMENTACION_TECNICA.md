@@ -276,15 +276,16 @@ instalación A                     instalación B
         Apps Script / Sheets
 ```
 
-### 5.2 Vincular, nunca registrar
+### 5.2 Lo anotado antes de entrar no se pierde
 
-**Regla dura del código.** Si existe una sesión anónima con datos, la cuenta se
-vincula con `updateUser(email, password)`, que **conserva el mismo
-`auth.uid()`**. Los datos ya subidos siguen perteneciendo a esa cuenta y las
-políticas de seguridad siguen encajando sin tocar una fila.
+**Regla dura del código.** Todo lo que el productor anota sin haber entrado
+queda `pending` en el teléfono. Al entrar con Google, la primera sincronización
+lo sube y el servidor lo escribe a nombre de esa cuenta (`usuario_id` sale de la
+sesión, no del teléfono). No hay que "migrar" ni "vincular" nada.
 
-`signUp()` crearía un usuario **nuevo**, con otro uid, y dejaría los datos
-anteriores huérfanos: invisibles para el RLS, imposibles de recuperar.
+> Con Supabase la regla era otra: la sesión anónima se vinculaba con
+> `updateUser()` para conservar el `auth.uid()`, porque `signUp()` habría dejado
+> los datos huérfanos. Ese problema desapareció con el cambio de backend.
 
 ### 5.3 La identidad la da Google
 
@@ -326,24 +327,32 @@ columna en la hoja rompe la sincronización. Está avisado en `backend/README.md
 Tres decisiones que no son obvias:
 
 1. **No existen `sync_status` ni `sync_error`** en el servidor.
-2. **`updated_at` lo escribe siempre un trigger** con `now()`, ignorando al
-   cliente.
-3. **Todas las fechas son `timestamptz`, nunca `date`.** Con `date`, un valor
-   local con hora volvería a medianoche al bajar, la fila se vería "cambiada" en
-   cada ciclo y se produciría un bucle de escrituras infinito.
+2. **`updated_at` lo escribe siempre el servidor** (`nuevoSello()`),
+   ignorando al cliente. Dos escrituras en el mismo milisegundo reciben sellos
+   distintos, para que el cursor `(updated_at, id)` no pierda filas.
+3. **Todas las fechas viajan como texto ISO-8601 en UTC, con hora.** Si una
+   fecha perdiera la hora, volvería a medianoche al bajar, la fila se vería
+   "cambiada" en cada ciclo y se produciría un bucle de escrituras infinito.
 
-### 6.2 Seguridad por fila (RLS)
+### 6.2 Seguridad por fila
 
-Activo en las siete tablas. `productores` filtra por `usuario_id = auth.uid()`;
-las demás llegan por *join* hasta el productor. El `with check` impide además
-crear filas a nombre de otro.
+Todas las hojas de datos llevan `usuario_id`, y lo escribe **el servidor**,
+sacado de la sesión; lo que mande el teléfono en ese campo se ignora.
+
+- **Al descargar**, `descargar()` solo entrega las filas cuyo `usuario_id` es
+  el de la sesión (salvo las tablas públicas, como `asociaciones`).
+- **Al subir**, `subir()` rechaza pisar una fila que ya tiene otro dueño. Las
+  escrituras van en serie con `LockService`, para que dos peticiones no se
+  pisen.
 
 Resultado: un usuario **no puede leer ni modificar** lo de otro, y la misma
 cuenta **sí** puede entrar desde varios dispositivos.
 
-La app usa **solo la llave publicable**, que es pública por diseño: lo que
-protege los datos es el RLS. La `service_role` no está en el código ni debe
-estarlo nunca.
+Los identificadores de OAuth que lleva la app son públicos por diseño. Lo que
+protege los datos es que el servidor verifique el token de Google y su `aud`
+(sección 5.3). El **secreto del cliente** no se usa ni debe estar en el
+repositorio. Y, como la hoja **es** la base de datos, quien tenga permiso de
+edición sobre ella lo ve todo: se comparte solo con el equipo.
 
 ---
 
@@ -430,7 +439,7 @@ anota tres cosechas sin señal, esa diferencia lo es todo.
 propiedad de filas y aislamiento entre usuarios, con su propio reloj monótono
 para sellar. Eso permite probar sin red cosas que de otro modo exigirían dos
 teléfonos y un servidor: sincronización A↔B, conflictos, aislamiento entre
-cuentas, confirmación de correo.
+cuentas, entrada con Google y cambio de cuenta.
 
 La separación **servidor / cliente** dentro del doble es lo que permite simular
 dos instalaciones distintas hablando con el mismo backend.
@@ -447,10 +456,13 @@ Están documentadas en `test/utiles.dart` porque cuestan horas si no se saben:
 
 ### 8.3 Qué se verificó contra el servidor real
 
-En emulador Android, contra el proyecto real: creación del esquema, sesión
-anónima, subida de productor, finca y lote con sello de PostgreSQL, borrado
-suave viajando como `deleted_at`, y vinculación de cuenta con correo y
-contraseña.
+En emulador Android, contra el servidor real de Apps Script: creación de las
+hojas con `instalar()`, entrada con Google, subida de productor, finca y lote
+con sello del servidor y borrado suave viajando como `deleted_at`.
+
+> ✏️ **Pendiente de confirmar por el equipo:** ajustar esta lista a lo que se
+> probó de verdad tras el cambio a Apps Script. Lo que se verificó contra
+> Supabase (sesión anónima, vinculación con correo y contraseña) ya no aplica.
 
 La recuperación completa en un segundo teléfono está implementada y cubierta por
 tests contra el doble; **falta dejar registro formal de esa prueba con dos
@@ -473,7 +485,7 @@ Esta sección existe porque cada uno de estos costó tiempo y podría volver.
 | Chips ilegibles | `labelStyle` sin color en el tema: Material dejaba de resolverlo | Color explícito para chip normal y seleccionado |
 | Desbordamiento de 12 px | Relleno propio de `BottomAppBar` | `padding: EdgeInsets.zero` |
 | El degradado no pintaba | `DecoratedBox` sin hijo no toma tamaño en `flexibleSpace` | `SizedBox.expand` |
-| "La sincronización no funciona" | `mailer_autoconfirm = false` con un correo inventado | Confirmar con un correo real + avisar en la app |
+| "La sincronización no funciona" (época de Supabase) | `mailer_autoconfirm = false` con un correo inventado | Confirmar con un correo real + avisar en la app. Desapareció al pasar a Google |
 
 ---
 
@@ -482,8 +494,6 @@ Esta sección existe porque cada uno de estos costó tiempo y podría volver.
 - **Las fotos no salen del teléfono.** Al servidor viaja la ruta, no la imagen.
   Si el productor cambia de equipo, los diagnósticos llegan sin foto. Falta
   Google Drive.
-- **No hay recuperación de contraseña.** Necesita enlaces profundos hacia la app
-  y configuración de la URL de redirección.
 - **Los límites de Apps Script**: 90 minutos de ejecución al día en cuentas
   gratuitas de Gmail, y las escrituras se hacen de a una con candado. Con
   decenas de productores va bien; con cientos, se sentiría lento. Y
@@ -508,7 +518,7 @@ Ordenado por lo que más valor da:
    en la consola. De paso desaparece un problema silencioso: **en modo de
    prueba las sesiones de Google caducan a los 7 días**.
 4. **Panel web para técnicos** — el navegador es el sitio natural para ver muchos
-   productores. Ojo: exige otro modelo de permisos, porque hoy el RLS aísla a
+   productores. Ojo: exige otro modelo de permisos, porque hoy el servidor aísla a
    cada productor.
 
 Y lo que **no** haría sin hablar antes con el SENA: agregar módulos nuevos. Que

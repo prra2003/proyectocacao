@@ -8,6 +8,10 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<!-- Sin esta clave, iOS cierra la app al pedir la ubicacion y la App Store
 	     rechaza el envio. El texto es lo que lee el productor en el dialogo. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Para dictar las observaciones en vez de escribirlas.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Para convertir en texto lo que usted dicta.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Para tomar la foto del cultivo cuando registra un diagnóstico del lote.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

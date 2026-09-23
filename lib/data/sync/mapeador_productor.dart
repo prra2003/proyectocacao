@@ -28,7 +28,7 @@ class MapeadorProductor {
   };
 
   /// [usuarioLocal] es la identidad de esta instalación: lo que llega del
-  /// servidor viene filtrado por RLS, así que es todo de este usuario.
+  /// servidor viene filtrado por `usuario_id`, así que es todo de este usuario.
   static ProductoresCompanion deRemoto(FilaRemota fila, String usuarioLocal) {
     final sello = selloDe(fila);
     return ProductoresCompanion(

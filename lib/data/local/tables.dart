@@ -86,11 +86,21 @@ class Lotes extends Table with SyncColumns {
   TextColumn get fincaId => text().references(Fincas, #id)();
   TextColumn get nombre => text()();
   RealColumn get areaSembradaHa => real()();
+
+  /// Código corto del lote ("Lote 001"), aparte del nombre libre: el nombre
+  /// puede cambiar o ser descriptivo, el código es la referencia que se usa en
+  /// reportes e historiales.
+  TextColumn get codigo => text().withDefault(const Constant(''))();
+
   TextColumn get variedadCacao => text()();
 
   /// Se guarda la fecha de siembra, no la edad: la edad se calcula en la app y
   /// así el dato no se desactualiza solo.
   DateTimeColumn get fechaSiembra => dateTime()();
+
+  /// Foto del lote, para reconocerlo sin leer el nombre. Vive solo en este
+  /// teléfono: no viaja al servidor (la ruta no le sirve a otro equipo).
+  TextColumn get fotoPath => text().nullable()();
 }
 
 @DataClassName('ActividadAgricola')
@@ -99,6 +109,37 @@ class ActividadesAgricolas extends Table with SyncColumns {
   TextColumn get tipoActividad => textEnum<TipoActividad>()();
   DateTimeColumn get fecha => dateTime()();
   TextColumn get observaciones => text().nullable()();
+
+  /// Quién hizo la labor. El que ejecuta en campo no siempre es el que
+  /// registra en la app: puede ser un jornalero o un técnico.
+  TextColumn get responsable => text().nullable()();
+
+  /// Lo gastado en esa labor (insumos, jornales), cuando aplica.
+  RealColumn get costo => real().nullable()();
+
+  /// Foto de la labor, guardada en el propio teléfono.
+  TextColumn get fotoPath => text().nullable()();
+
+  /// Subtipo, para las labores que lo tienen: poda de formación, de
+  /// mantenimiento o de rehabilitación; fertilización química u orgánica.
+  TextColumn get subtipoLabor => text().nullable()();
+
+  /// Producto aplicado y cuánto, para fertilización y control fitosanitario.
+  TextColumn get producto => text().nullable()();
+  TextColumn get cantidadAplicada => text().nullable()();
+
+  /// Qué tan extendido estaba el problema (control fitosanitario).
+  TextColumn get incidencia => text().nullable()();
+
+  /// Cuántos árboles tocó la labor y qué edad tenía el cultivo ese día.
+  IntColumn get arbolesAfectados => integer().nullable()();
+  IntColumn get edadCultivoAnios => integer().nullable()();
+
+  /// Solo para la siembra.
+  IntColumn get arbolesSembrados => integer().nullable()();
+  IntColumn get edadPlantulaMeses => integer().nullable()();
+  TextColumn get insumos => text().nullable()();
+  TextColumn get resultadoEsperado => text().nullable()();
 }
 
 @DataClassName('Cosecha')
@@ -107,6 +148,12 @@ class Cosechas extends Table with SyncColumns {
   DateTimeColumn get fecha => dateTime()();
   RealColumn get cantidadKg => real()();
   TextColumn get observaciones => text().nullable()();
+
+  /// En qué estado salió el cacao: en baba, fermentado o seco.
+  TextColumn get tipoProducto => text().nullable()();
+
+  /// Evidencia fotográfica de la entrega, en el propio teléfono.
+  TextColumn get fotoPath => text().nullable()();
 }
 
 @DataClassName('Diagnostico')
@@ -148,6 +195,10 @@ class Sesion extends Table {
   /// El token de Google dura una hora; esta sesión dura meses. Guardarla es lo
   /// que evita tener que pedir la cuenta en cada arranque de la app.
   TextColumn get tokenNube => text().nullable()();
+
+  /// Nombre de la persona en su cuenta de Google. Sirve para no pedírselo otra
+  /// vez al registrarse.
+  TextColumn get nombreCuenta => text().nullable()();
 
   /// ¿Ya terminó la primera descarga tras entrar con una cuenta existente?
   ///

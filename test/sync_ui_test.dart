@@ -41,18 +41,14 @@ void main() {
   Future<void> abrirApp(WidgetTester tester) async {
     pantallaAlta(tester);
     await tester.pumpWidget(
-      CacaoApp(
-        repo: repo,
-        lotesRepo: LoteRepository(db),
-        db: db,
-        sync: sync,
-      ),
+      CacaoApp(repo: repo, lotesRepo: LoteRepository(db), db: db, sync: sync),
     );
     await asentar(tester);
   }
 
-  testWidgets('al abrir, la app sincroniza sola y la cinta lo dice',
-      (tester) async {
+  testWidgets('al abrir, la app sincroniza sola y la cinta lo dice', (
+    tester,
+  ) async {
     await abrirApp(tester);
 
     // El productor y la finca ya subieron sin que nadie tocara nada.
@@ -62,8 +58,9 @@ void main() {
     await desmontar(tester);
   });
 
-  testWidgets('lo que se anota sin señal queda contado y se envía al tocar',
-      (tester) async {
+  testWidgets('lo que se anota sin señal queda contado y se envía al tocar', (
+    tester,
+  ) async {
     await abrirApp(tester);
 
     // Se anota algo nuevo: la cinta lo cuenta al instante.
@@ -91,8 +88,9 @@ void main() {
     await desmontar(tester);
   });
 
-  testWidgets('si la sincronización falla, lo anotado sigue contado',
-      (tester) async {
+  testWidgets('si la sincronización falla, lo anotado sigue contado', (
+    tester,
+  ) async {
     await abrirApp(tester);
     await conAsync(
       tester,

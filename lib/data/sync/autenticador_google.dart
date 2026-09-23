@@ -76,7 +76,9 @@ class AutenticadorGoogle {
       return await espera.future.timeout(const Duration(seconds: 20));
     } on TimeoutException {
       _esperando = null;
-      throw const ErrorRemoto('Google no devolvió la cuenta. Intente otra vez.');
+      throw const ErrorRemoto(
+        'Google no devolvió la cuenta. Intente otra vez.',
+      );
     }
   }
 

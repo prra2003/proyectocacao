@@ -11,10 +11,14 @@ class SesionRemota {
     required this.usuarioId,
     required this.correo,
     this.token,
+    this.nombre,
   });
 
   final String usuarioId;
   final String correo;
+
+  /// Nombre de la persona en su cuenta, si se conoce.
+  final String? nombre;
 
   /// Sesión del servidor, si la implementación usa una. Se guarda en el
   /// teléfono para no tener que pedir la cuenta de Google en cada arranque.

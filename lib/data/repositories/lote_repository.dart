@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart' show Value;
+
 import '../daos/daos.dart';
 import '../local/database.dart';
 import '../local/enums.dart';
@@ -23,6 +25,29 @@ class LoteRepository {
   /// Borra el lote y, en cascada, sus labores, cosechas y diagnósticos.
   Future<void> borrarLote(String loteId) => _lotes.borrar(loteId);
 
+  /// Crea un lote nuevo, o edita uno existente si se pasa [id].
+  Future<String> guardarLote({
+    String? id,
+    required String fincaId,
+    required String nombre,
+    String? codigo,
+    required double areaSembradaHa,
+    required String variedadCacao,
+    required DateTime fechaSiembra,
+    Value<String?> fotoPath = const Value.absent(),
+  }) {
+    return _lotes.guardar(
+      id: id,
+      fincaId: fincaId,
+      nombre: nombre,
+      codigo: codigo,
+      areaSembradaHa: areaSembradaHa,
+      variedadCacao: variedadCacao,
+      fechaSiembra: fechaSiembra,
+      fotoPath: fotoPath,
+    );
+  }
+
   Stream<List<ActividadAgricola>> watchActividades(String loteId) =>
       _registros.watchActividadesDe(loteId);
 
@@ -31,12 +56,38 @@ class LoteRepository {
     required TipoActividad tipo,
     required DateTime fecha,
     String? observaciones,
+    String? responsable,
+    double? costo,
+    String? fotoPath,
+    String? subtipoLabor,
+    String? producto,
+    String? cantidadAplicada,
+    String? incidencia,
+    int? arbolesAfectados,
+    int? edadCultivoAnios,
+    int? arbolesSembrados,
+    int? edadPlantulaMeses,
+    String? insumos,
+    String? resultadoEsperado,
   }) {
     return _registros.registrarActividad(
       loteId: loteId,
       tipo: tipo,
       fecha: fecha,
       observaciones: observaciones,
+      responsable: responsable,
+      costo: costo,
+      fotoPath: fotoPath,
+      subtipoLabor: subtipoLabor,
+      producto: producto,
+      cantidadAplicada: cantidadAplicada,
+      incidencia: incidencia,
+      arbolesAfectados: arbolesAfectados,
+      edadCultivoAnios: edadCultivoAnios,
+      arbolesSembrados: arbolesSembrados,
+      edadPlantulaMeses: edadPlantulaMeses,
+      insumos: insumos,
+      resultadoEsperado: resultadoEsperado,
     );
   }
 
@@ -50,12 +101,16 @@ class LoteRepository {
     required DateTime fecha,
     required double cantidadKg,
     String? observaciones,
+    String? tipoProducto,
+    String? fotoPath,
   }) {
     return _registros.registrarCosecha(
       loteId: loteId,
       fecha: fecha,
       cantidadKg: cantidadKg,
       observaciones: observaciones,
+      tipoProducto: tipoProducto,
+      fotoPath: fotoPath,
     );
   }
 

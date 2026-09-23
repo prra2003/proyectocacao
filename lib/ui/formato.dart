@@ -50,6 +50,7 @@ String haceCuanto(DateTime fecha, {DateTime? hoy}) {
 }
 
 String etiquetaActividad(TipoActividad tipo) => switch (tipo) {
+  TipoActividad.siembra => 'Siembra',
   TipoActividad.poda => 'Poda',
   TipoActividad.fertilizacion => 'Fertilización',
   TipoActividad.controlFitosanitario => 'Control fitosanitario',

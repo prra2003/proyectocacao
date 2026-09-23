@@ -76,27 +76,37 @@ void main() {
     }
   }
 
-  test('borrar el lote arrastra actividades, cosechas y diagnósticos',
-      () async {
-    await perfil.borrarLote(loteId);
+  test(
+    'borrar el lote arrastra actividades, cosechas y diagnósticos',
+    () async {
+      await perfil.borrarLote(loteId);
 
-    expect((await db.select(db.lotes).getSingle()).deletedAt, isA<DateTime>());
-    esperarTodasBorradasYPendientes(await hijas());
-    // Borrado suave: nada desaparece físicamente.
-    expect(await db.select(db.cosechas).get(), hasLength(1));
-  });
+      expect(
+        (await db.select(db.lotes).getSingle()).deletedAt,
+        isA<DateTime>(),
+      );
+      esperarTodasBorradasYPendientes(await hijas());
+      // Borrado suave: nada desaparece físicamente.
+      expect(await db.select(db.cosechas).get(), hasLength(1));
+    },
+  );
 
-  test('borrar la finca arrastra sus lotes y los hijos de esos lotes',
-      () async {
-    await db.fincasDao.borrar(fincaId);
+  test(
+    'borrar la finca arrastra sus lotes y los hijos de esos lotes',
+    () async {
+      await db.fincasDao.borrar(fincaId);
 
-    expect((await db.select(db.fincas).getSingle()).deletedAt, isA<DateTime>());
-    final lote = await db.select(db.lotes).getSingle();
-    expect(lote.deletedAt, isA<DateTime>());
-    expect(lote.syncStatus, SyncStatus.pending);
-    esperarTodasBorradasYPendientes(await hijas());
-    expect(await perfil.watchLotes(fincaId).first, isEmpty);
-  });
+      expect(
+        (await db.select(db.fincas).getSingle()).deletedAt,
+        isA<DateTime>(),
+      );
+      final lote = await db.select(db.lotes).getSingle();
+      expect(lote.deletedAt, isA<DateTime>());
+      expect(lote.syncStatus, SyncStatus.pending);
+      esperarTodasBorradasYPendientes(await hijas());
+      expect(await perfil.watchLotes(fincaId).first, isEmpty);
+    },
+  );
 
   test('borrar el productor arrastra fincas, lotes e hijos', () async {
     await borrarProductorEnCascada(db, productorId);
@@ -111,14 +121,16 @@ void main() {
     expect(await perfil.watchProductor().first, isNull);
   });
 
-  test('repetir el borrado no cambia la fecha de lo que ya estaba borrado',
-      () async {
-    await perfil.borrarLote(loteId);
-    final primera = (await db.select(db.cosechas).getSingle()).deletedAt;
+  test(
+    'repetir el borrado no cambia la fecha de lo que ya estaba borrado',
+    () async {
+      await perfil.borrarLote(loteId);
+      final primera = (await db.select(db.cosechas).getSingle()).deletedAt;
 
-    await Future<void>.delayed(const Duration(milliseconds: 1100));
-    await perfil.borrarLote(loteId);
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      await perfil.borrarLote(loteId);
 
-    expect((await db.select(db.cosechas).getSingle()).deletedAt, primera);
-  });
+      expect((await db.select(db.cosechas).getSingle()).deletedAt, primera);
+    },
+  );
 }

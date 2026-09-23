@@ -36,8 +36,9 @@ void main() {
       variedadCacao: 'CCN-51',
       fechaSiembra: DateTime(2020, 3, 15),
     );
-    lote = (await perfil.watchLotes(fincaId).first)
-        .firstWhere((l) => l.id == loteId);
+    lote = (await perfil.watchLotes(fincaId).first).firstWhere(
+      (l) => l.id == loteId,
+    );
   });
   tearDown(() => db.close());
 
@@ -59,8 +60,9 @@ void main() {
     await asentar(tester);
   }
 
-  testWidgets('las dos pestañas arrancan vacías y explican para qué sirven',
-      (tester) async {
+  testWidgets('las dos pestañas arrancan vacías y explican para qué sirven', (
+    tester,
+  ) async {
     await abrirLote(tester);
 
     expect(find.text('CCN-51'), findsOneWidget);
@@ -78,8 +80,9 @@ void main() {
     await desmontar(tester);
   });
 
-  testWidgets('registrar un diagnóstico desde el diálogo lo deja en la lista',
-      (tester) async {
+  testWidgets('registrar un diagnóstico desde el diálogo lo deja en la lista', (
+    tester,
+  ) async {
     await abrirLote(tester);
 
     await tester.tap(find.text('Estado'));
@@ -97,28 +100,32 @@ void main() {
     await asentar(tester);
 
     expect(find.text('Maduración'), findsOneWidget);
-    expect(
-      find.textContaining('Mazorcas listas para corte'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Mazorcas listas para corte'), findsOneWidget);
 
     await desmontar(tester);
   });
 
-  testWidgets('registrar una labor desde el diálogo la deja en la lista',
-      (tester) async {
+  testWidgets('registrar una labor desde el diálogo la deja en la lista', (
+    tester,
+  ) async {
     await abrirLote(tester);
 
     await tester.tap(find.widgetWithText(FloatingActionButton, 'Labor'));
     await asentar(tester);
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Fertilización'));
+    // En el formulario la labor se llama como en el campo: "Abonar". En la
+    // lista sale con su nombre técnico, "Fertilización".
+    await tester.tap(find.text('Abonar'));
+    await asentar(tester);
+    // Las notas van dentro de "Agregar más detalles", que arranca cerrado.
+    await tester.tap(find.byKey(const Key('boton_mas_detalles')));
     await asentar(tester);
     await tester.enterText(
       find.byKey(const Key('campo_observaciones_actividad')),
       'Abono orgánico, 2 kg por árbol',
     );
     await tester.tap(find.widgetWithText(FilledButton, 'Registrar'));
+    await asentar(tester);
     await asentar(tester);
 
     expect(find.text('Fertilización'), findsOneWidget);
@@ -130,8 +137,9 @@ void main() {
     await desmontar(tester);
   });
 
-  testWidgets('registrar una cosecha suma a la producción del año',
-      (tester) async {
+  testWidgets('registrar una cosecha suma a la producción del año', (
+    tester,
+  ) async {
     await abrirLote(tester);
 
     await tester.tap(find.text('Cosechas'));
@@ -150,8 +158,9 @@ void main() {
     await desmontar(tester);
   });
 
-  testWidgets('borrar el lote pide confirmación y se lleva sus registros',
-      (tester) async {
+  testWidgets('borrar el lote pide confirmación y se lleva sus registros', (
+    tester,
+  ) async {
     await conAsync(
       tester,
       () => repo.registrarCosecha(
@@ -164,7 +173,10 @@ void main() {
 
     await tester.tap(find.byTooltip('Borrar lote'));
     await asentar(tester);
-    expect(find.textContaining('Se borran también sus labores'), findsOneWidget);
+    expect(
+      find.textContaining('Se borran también sus labores'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.widgetWithText(FilledButton, 'Borrar'));
     await asentar(tester);
@@ -183,49 +195,53 @@ void main() {
     await desmontar(tester);
   });
 
-  test('las labores y cosechas se listan de la más reciente a la más vieja',
-      () async {
-    await repo.registrarActividad(
-      loteId: lote.id,
-      tipo: TipoActividad.poda,
-      fecha: DateTime(2026, 1, 10),
-    );
-    await repo.registrarActividad(
-      loteId: lote.id,
-      tipo: TipoActividad.riego,
-      fecha: DateTime(2026, 5, 20),
-    );
+  test(
+    'las labores y cosechas se listan de la más reciente a la más vieja',
+    () async {
+      await repo.registrarActividad(
+        loteId: lote.id,
+        tipo: TipoActividad.poda,
+        fecha: DateTime(2026, 1, 10),
+      );
+      await repo.registrarActividad(
+        loteId: lote.id,
+        tipo: TipoActividad.riego,
+        fecha: DateTime(2026, 5, 20),
+      );
 
-    final actividades = await repo.watchActividades(lote.id).first;
-    expect(
-      actividades.map((a) => a.tipoActividad),
-      [TipoActividad.riego, TipoActividad.poda],
-    );
-  });
+      final actividades = await repo.watchActividades(lote.id).first;
+      expect(actividades.map((a) => a.tipoActividad), [
+        TipoActividad.riego,
+        TipoActividad.poda,
+      ]);
+    },
+  );
 
-  test('la producción del año ignora otros años y las cosechas borradas',
-      () async {
-    await repo.registrarCosecha(
-      loteId: lote.id,
-      fecha: DateTime(2026, 3, 1),
-      cantidadKg: 100,
-    );
-    final borrada = await repo.registrarCosecha(
-      loteId: lote.id,
-      fecha: DateTime(2026, 4, 1),
-      cantidadKg: 50,
-    );
-    await repo.registrarCosecha(
-      loteId: lote.id,
-      fecha: DateTime(2025, 4, 1),
-      cantidadKg: 999,
-    );
+  test(
+    'la producción del año ignora otros años y las cosechas borradas',
+    () async {
+      await repo.registrarCosecha(
+        loteId: lote.id,
+        fecha: DateTime(2026, 3, 1),
+        cantidadKg: 100,
+      );
+      final borrada = await repo.registrarCosecha(
+        loteId: lote.id,
+        fecha: DateTime(2026, 4, 1),
+        cantidadKg: 50,
+      );
+      await repo.registrarCosecha(
+        loteId: lote.id,
+        fecha: DateTime(2025, 4, 1),
+        cantidadKg: 999,
+      );
 
-    expect(await repo.watchKgDelAnio(lote.id, 2026).first, 150);
+      expect(await repo.watchKgDelAnio(lote.id, 2026).first, 150);
 
-    await repo.borrarCosecha(borrada);
+      await repo.borrarCosecha(borrada);
 
-    expect(await repo.watchKgDelAnio(lote.id, 2026).first, 100);
-    expect(await repo.watchCosechas(lote.id).first, hasLength(2));
-  });
+      expect(await repo.watchKgDelAnio(lote.id, 2026).first, 100);
+      expect(await repo.watchCosechas(lote.id).first, hasLength(2));
+    },
+  );
 }

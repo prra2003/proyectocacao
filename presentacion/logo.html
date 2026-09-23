@@ -1,0 +1,420 @@
+<title>Logo Red Cacao</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap">
+<style>
+:root{
+  --cafe-osc:#33200F; --cafe:#7A4A2B; --verde:#3D7A3F; --maduro:#C26A1E;
+  --crema:#FBF2EA; --fondo:#EFE4D6; --tinta:#2A1A0D; --gris:#6E5A4C; --borde:#D8C3B2;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+body{background:var(--fondo);color:var(--tinta);font-family:Roboto,system-ui,sans-serif;font-size:16px;padding-inline:16px;padding-block:28px 60px}
+.envoltura{max-width:980px;margin:0 auto}
+h1{font-family:Fraunces,Georgia,serif;font-size:2rem;margin:0 0 10px;color:var(--cafe-osc);text-wrap:balance}
+.intro{max-width:60ch;line-height:1.55;margin:0 0 8px}
+.aviso{background:#FFF4C2;border-radius:14px;padding:14px 16px;line-height:1.5;margin:18px 0 30px;max-width:60ch}
+.opcion{background:#fff;border-radius:22px;padding:24px;margin-bottom:26px;box-shadow:0 10px 26px -20px rgba(51,32,15,.5)}
+.cabeza{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+.cabeza h2{font-family:Fraunces,Georgia,serif;font-size:1.4rem;margin:0;color:var(--cafe-osc)}
+.cabeza .etiqueta{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--maduro);font-weight:700}
+.idea{color:var(--gris);line-height:1.5;margin:0 0 20px;max-width:62ch}
+.fila{display:flex;gap:26px;align-items:flex-end;flex-wrap:wrap}
+.muestra{text-align:center}
+.muestra span{display:block;margin-top:8px;font-size:.78rem;color:var(--gris)}
+.lienzo{border-radius:22px;display:grid;place-items:center;border:1px solid var(--borde)}
+.claro{background:var(--crema)}
+.oscuro{background:linear-gradient(135deg,#2F7A3C 0%,#5A5A30 55%,#7A4A2B 100%);border-color:transparent}
+.redondo{border-radius:50%;overflow:hidden}
+.prueba{margin-top:22px;padding-top:18px;border-top:1px dashed var(--borde);display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+.prueba p{margin:0;color:var(--gris);line-height:1.5;flex:1;min-width:240px}
+.tel{width:190px;height:150px;border-radius:18px;background:#111;padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-content:start}
+.app{text-align:center;color:#fff;font-size:8px}
+.app .caja{width:100%;aspect-ratio:1;border-radius:11px;display:grid;place-items:center;overflow:hidden}
+@media (max-width:560px){ .fila{gap:18px} }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- A · Granos en red: los granos de adentro son los nodos -->
+  <symbol id="logo-a" viewBox="0 0 100 100">
+    <path d="M50 8 C74 8 88 30 88 52 C88 76 70 92 50 92 C30 92 12 76 12 52 C12 30 26 8 50 8Z"
+          fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round"/>
+    <g stroke="currentColor" stroke-width="5" stroke-linecap="round">
+      <path d="M50 28 L32 47 M50 28 L68 47 M32 47 L50 66 M68 47 L50 66 M32 47 L68 47"/>
+    </g>
+    <g fill="currentColor">
+      <circle cx="50" cy="28" r="7"/><circle cx="32" cy="47" r="7"/>
+      <circle cx="68" cy="47" r="7"/><circle cx="50" cy="66" r="7"/>
+    </g>
+  </symbol>
+
+  <!-- B · Mazorca conectada: la finca como nodo de la Red -->
+  <symbol id="logo-b" viewBox="0 0 100 100">
+    <g stroke="currentColor" stroke-width="5" stroke-linecap="round">
+      <path d="M50 50 L18 24 M50 50 L82 24 M50 50 L18 78 M50 50 L82 78"/>
+    </g>
+    <g fill="currentColor">
+      <circle cx="18" cy="24" r="8"/><circle cx="82" cy="24" r="8"/>
+      <circle cx="18" cy="78" r="8"/><circle cx="82" cy="78" r="8"/>
+    </g>
+    <path d="M50 18 C64 18 72 33 72 50 C72 68 62 82 50 82 C38 82 28 68 28 50 C28 33 36 18 50 18Z"
+          fill="currentColor"/>
+    <path d="M50 24 C50 40 50 60 50 76 M39 28 C35 44 35 56 39 72 M61 28 C65 44 65 56 61 72"
+          fill="none" stroke="var(--fondoLogo, #FBF2EA)" stroke-width="4" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- C · Surcos en red: los surcos de la mazorca son las líneas -->
+  <symbol id="logo-c" viewBox="0 0 100 100">
+    <path d="M50 8 C74 8 88 30 88 52 C88 76 70 92 50 92 C30 92 12 76 12 52 C12 30 26 8 50 8Z"
+          fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round"/>
+    <g stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none">
+      <path d="M50 14 L50 86"/>
+      <path d="M28 26 C22 48 22 56 28 78"/>
+      <path d="M72 26 C78 48 78 56 72 78"/>
+    </g>
+    <g fill="currentColor">
+      <circle cx="50" cy="32" r="8"/><circle cx="24" cy="52" r="8"/>
+      <circle cx="76" cy="52" r="8"/><circle cx="50" cy="72" r="8"/>
+    </g>
+  </symbol>
+
+  <!-- D · El campesino dentro de la mazorca (figura-fondo) -->
+  <symbol id="logo-d" viewBox="0 0 100 100">
+    <path d="M50 5 C75 5 87 29 87 53 C87 79 69 95 50 95 C31 95 13 79 13 53 C13 29 25 5 50 5Z"
+          fill="currentColor"/>
+    <g fill="var(--fondoLogo, #FBF2EA)">
+      <path d="M24 44 C24 40 76 40 76 44 C76 48 24 48 24 44Z"/>
+      <path d="M35 44 C35 27 65 27 65 44Z"/>
+      <circle cx="50" cy="56" r="9"/>
+      <path d="M29 92 C29 73 71 73 71 92 Z"/>
+    </g>
+  </symbol>
+
+  <!-- E · El campo dentro de la mazorca (figura-fondo) -->
+  <symbol id="logo-e" viewBox="0 0 100 100">
+    <path d="M50 5 C75 5 87 29 87 53 C87 79 69 95 50 95 C31 95 13 79 13 53 C13 29 25 5 50 5Z"
+          fill="currentColor"/>
+    <g fill="var(--fondoLogo, #FBF2EA)">
+      <circle cx="50" cy="34" r="11"/>
+      <path d="M17 78 C28 56 40 56 50 74 C58 58 70 56 83 78 Z"/>
+    </g>
+  </symbol>
+
+  <!-- F · Mazorca con gajos, campesino adentro -->
+  <symbol id="logo-f" viewBox="0 0 100 100">
+    <path d="M50 5 C75 5 87 29 87 53 C87 79 69 95 50 95 C31 95 13 79 13 53 C13 29 25 5 50 5Z"
+          fill="currentColor"/>
+    <g stroke="var(--fondoLogo, #FBF2EA)" stroke-width="3.5" fill="none" stroke-linecap="round">
+      <path d="M26 24 C18 46 18 62 27 82"/>
+      <path d="M74 24 C82 46 82 62 73 82"/>
+    </g>
+    <g fill="var(--fondoLogo, #FBF2EA)">
+      <path d="M31 46 C31 42 69 42 69 46 C69 50 31 50 31 46Z"/>
+      <path d="M39 46 C39 31 61 31 61 46Z"/>
+      <circle cx="50" cy="57" r="8"/>
+      <path d="M34 88 C34 72 66 72 66 88 Z"/>
+    </g>
+  </symbol>
+
+  <!-- G · Ilustración: dos mazorcas en la rama, campesino en la cerrada -->
+  <symbol id="ilustra" viewBox="0 0 200 150">
+    <g stroke="#5A3A1E" stroke-width="5" fill="none" stroke-linecap="round">
+      <path d="M40 30 C80 16 130 16 172 26"/>
+    </g>
+    <path d="M40 31 C24 20 20 34 30 42 C40 49 54 44 56 34 Z" fill="#6E9B3A"/>
+    <path d="M36 33 C42 36 50 37 54 36" stroke="#4C6E26" stroke-width="2" fill="none"/>
+    <path d="M168 27 C186 20 190 36 179 43 C168 49 156 42 155 32 Z" fill="#6E9B3A"/>
+    <path d="M172 30 C166 34 160 35 157 34" stroke="#4C6E26" stroke-width="2" fill="none"/>
+    <g stroke="#5A3A1E" stroke-width="4" fill="none" stroke-linecap="round">
+      <path d="M78 26 C74 34 74 38 76 44"/><path d="M126 24 C130 32 130 38 128 44"/>
+    </g>
+
+    <!-- mazorca cerrada, con el campesino en negativo -->
+    <path d="M76 44 C98 44 108 66 108 90 C108 116 94 134 76 134 C58 134 44 116 44 90 C44 66 54 44 76 44Z"
+          fill="#7A4A2B"/>
+    <g stroke="#5A3A1E" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".75">
+      <path d="M57 52 C50 72 50 104 58 124"/><path d="M95 52 C102 72 102 104 94 124"/>
+    </g>
+    <g fill="#FBF2EA">
+      <path d="M58 82 C58 78 94 78 94 82 C94 86 58 86 58 82Z"/>
+      <path d="M65 82 C65 68 87 68 87 82Z"/>
+      <circle cx="76" cy="92" r="7"/>
+      <path d="M61 124 C61 108 91 108 91 124 Z"/>
+    </g>
+
+    <!-- mazorca abierta, con los granos -->
+    <path d="M128 44 C150 44 160 66 160 90 C160 116 146 134 128 134 C110 134 96 116 96 90 C96 66 106 44 128 44Z"
+          fill="#8B5A33"/>
+    <path d="M128 50 C146 50 154 70 154 90 C154 112 142 128 128 128 C114 128 102 112 102 90 C102 70 110 50 128 50Z"
+          fill="#C98A3C"/>
+    <g fill="#FBF2EA">
+      <ellipse cx="128" cy="64" rx="9" ry="6"/><ellipse cx="128" cy="78" rx="10" ry="6"/>
+      <ellipse cx="128" cy="92" rx="10" ry="6"/><ellipse cx="128" cy="106" rx="9" ry="6"/>
+      <ellipse cx="128" cy="119" rx="7" ry="5"/>
+    </g>
+  </symbol>
+
+  <!-- H · La marca simplificada que sale de la ilustración -->
+  <symbol id="logo-h" viewBox="0 0 100 100">
+    <path d="M50 12 C50 4 58 2 64 4" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M50 14 C74 14 86 38 86 60 C86 82 70 96 50 96 C30 96 14 82 14 60 C14 38 26 14 50 14Z"
+          fill="currentColor"/>
+    <g fill="var(--fondoLogo, #FBF2EA)">
+      <path d="M26 54 C26 49 74 49 74 54 C74 59 26 59 26 54Z"/>
+      <path d="M36 54 C36 36 64 36 64 54Z"/>
+      <circle cx="50" cy="66" r="10"/>
+      <path d="M30 94 C30 76 70 76 70 94 Z"/>
+    </g>
+  </symbol>
+
+  <!-- I · Emblema circular: hojas, dos mazorcas, campesino con canasto -->
+  <symbol id="emblema" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="93" fill="none" stroke="#3E2A18" stroke-width="5"/>
+
+    <!-- rama y hojas -->
+    <path d="M100 22 L100 60" stroke="#3E2A18" stroke-width="5" stroke-linecap="round"/>
+    <path d="M97 44 C72 22 44 30 36 50 C56 72 86 68 97 44Z" fill="#7D9A4A" stroke="#3E2A18" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M103 44 C128 22 156 30 164 50 C144 72 114 68 103 44Z" fill="#7D9A4A" stroke="#3E2A18" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M58 44 C72 48 88 48 95 44 M142 44 C128 48 112 48 105 44" stroke="#3E2A18" stroke-width="2.5" fill="none"/>
+    <path d="M98 28 C86 16 70 18 66 28 C76 40 92 38 98 28Z" fill="#7D9A4A" stroke="#3E2A18" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M102 28 C114 16 130 18 134 28 C124 40 108 38 102 28Z" fill="#7D9A4A" stroke="#3E2A18" stroke-width="3.5" stroke-linejoin="round"/>
+
+    <!-- mazorca cerrada, verde, con el campesino en negativo -->
+    <path d="M70 58 C90 58 99 84 99 112 C99 144 87 166 70 166 C53 166 41 144 41 112 C41 84 50 58 70 58Z"
+          fill="#7D9A4A" stroke="#3E2A18" stroke-width="4.5" stroke-linejoin="round"/>
+    <path d="M55 70 C48 92 48 134 56 156 M85 70 C92 92 92 134 84 156" stroke="#3E2A18" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+    <g fill="#F6EEDC" stroke="#3E2A18" stroke-width="3" stroke-linejoin="round">
+      <path d="M50 98 C50 92 90 92 90 98 C90 104 50 104 50 98Z"/>
+      <path d="M59 97 C59 80 81 80 81 97Z"/>
+      <path d="M62 106 C62 100 78 100 78 106 C78 114 72 118 70 118 C68 118 62 114 62 106Z"/>
+      <path d="M54 160 C54 130 86 130 86 160Z"/>
+    </g>
+    <!-- el canasto -->
+    <path d="M56 130 C56 126 84 126 84 130 L80 156 C80 160 60 160 60 156Z"
+          fill="#C98A3C" stroke="#3E2A18" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M60 138 H80 M61 146 H79 M64 130 L62 158 M70 129 L70 158 M76 130 L78 158"
+          stroke="#3E2A18" stroke-width="2" fill="none"/>
+    <g fill="#E6B34A" stroke="#3E2A18" stroke-width="2">
+      <circle cx="63" cy="127" r="4"/><circle cx="71" cy="125" r="4"/><circle cx="79" cy="127" r="4"/>
+    </g>
+
+    <!-- mazorca abierta, con los granos -->
+    <path d="M132 58 C152 58 161 84 161 112 C161 144 149 166 132 166 C115 166 103 144 103 112 C103 84 112 58 132 58Z"
+          fill="#F6EEDC" stroke="#3E2A18" stroke-width="4.5" stroke-linejoin="round"/>
+    <path d="M132 68 C147 68 154 90 154 112 C154 138 144 157 132 157 C120 157 110 138 110 112 C110 90 117 68 132 68Z"
+          fill="none" stroke="#D9A03C" stroke-width="4"/>
+    <g fill="#F6EEDC" stroke="#3E2A18" stroke-width="2.4">
+      <ellipse cx="125" cy="82" rx="7" ry="5"/><ellipse cx="139" cy="82" rx="7" ry="5"/>
+      <ellipse cx="124" cy="96" rx="7" ry="5"/><ellipse cx="140" cy="96" rx="7" ry="5"/>
+      <ellipse cx="124" cy="110" rx="7" ry="5"/><ellipse cx="140" cy="110" rx="7" ry="5"/>
+      <ellipse cx="125" cy="124" rx="7" ry="5"/><ellipse cx="139" cy="124" rx="7" ry="5"/>
+      <ellipse cx="127" cy="138" rx="6" ry="4.5"/><ellipse cx="137" cy="138" rx="6" ry="4.5"/>
+    </g>
+
+    <!-- granos sueltos -->
+    <g fill="#D9A03C">
+      <ellipse cx="26" cy="96" rx="5" ry="7" transform="rotate(-20 26 96)"/>
+      <ellipse cx="174" cy="96" rx="5" ry="7" transform="rotate(20 174 96)"/>
+      <ellipse cx="100" cy="178" rx="5" ry="7"/>
+    </g>
+  </symbol>
+</svg>
+
+<div class="envoltura">
+  <h1>Bocetos del logo</h1>
+  <p class="intro">
+    Arriba, el camino de figura-fondo: la mazorca como mancha y la figura salida
+    del fondo. Abajo, los tres primeros bocetos con la idea de red.
+  </p>
+  <div class="aviso">
+    <strong>Mire primero el tamaño de 48 píxeles</strong>, el cuarto de cada fila.
+    Así es como se va a ver de verdad en el celular, entre WhatsApp y la cámara.
+    Lo que a ese tamaño se vuelve una mancha, no sirve, por bonito que se vea grande.
+  </div>
+
+
+
+
+  <section class="opcion" style="border:2px solid var(--cafe-osc)">
+    <div class="cabeza"><span class="etiqueta">Emblema</span><h2>Como el que usted mandó, sin el nombre</h2></div>
+    <p class="idea">
+      Escudo circular, hojas arriba, las dos mazorcas: la cerrada con el campesino
+      y su canasto en negativo, la abierta con los granos. Sirve para la
+      bienvenida, el afiche y la presentación. Al lado está lo mismo reducido al
+      tamaño del icono, para que vea por qué hacen falta las dos piezas.
+    </p>
+    <div class="fila">
+      <div class="muestra">
+        <div class="lienzo claro" style="width:280px;height:280px"><svg width="250" height="250"><use href="#emblema"/></svg></div>
+        <span>emblema completo</span>
+      </div>
+      <div class="muestra">
+        <div class="lienzo claro" style="width:120px;height:120px"><svg width="104" height="104"><use href="#emblema"/></svg></div>
+        <span>104 px</span>
+      </div>
+      <div class="muestra">
+        <div class="lienzo claro redondo" style="width:48px;height:48px"><svg width="46" height="46"><use href="#emblema"/></svg></div>
+        <span>48 px · se pierde</span>
+      </div>
+      <div class="muestra">
+        <div class="lienzo claro redondo" style="width:48px;height:48px;--fondoLogo:#FBF2EA"><svg width="38" height="38" style="color:var(--cafe)"><use href="#logo-h"/></svg></div>
+        <span>48 px · la marca</span>
+      </div>
+    </div>
+    <div class="prueba">
+      <p>
+        Compare los dos cuadritos de 48 píxeles. El emblema se vuelve una mancha
+        verde y café; la marca simplificada todavía deja ver un sombrero y unos
+        hombros. <strong>Por eso van juntos</strong>: el emblema para lo grande,
+        la marca para el icono del celular.
+      </p>
+    </div>
+  </section>
+
+  <section class="opcion" style="border:2px solid var(--verde)">
+    <div class="cabeza"><span class="etiqueta">La pareja</span><h2>Ilustración y marca</h2></div>
+    <p class="idea">
+      A la izquierda, la ilustración: para la bienvenida, el afiche, la
+      presentación al SENA. A la derecha, la marca que sale de ella: la misma
+      mazorca con el campesino adentro, pero despojada de todo lo que no
+      sobrevive al tamaño pequeño. No son dos logos, es el mismo con dos niveles
+      de detalle.
+    </p>
+    <div class="fila">
+      <div class="muestra">
+        <div class="lienzo claro" style="width:300px;height:230px"><svg width="270" height="200"><use href="#ilustra"/></svg></div>
+        <span>ilustración · bienvenida</span>
+      </div>
+      <div class="muestra">
+        <div class="lienzo claro" style="width:150px;height:150px;--fondoLogo:#FBF2EA"><svg width="112" height="112" style="color:var(--cafe)"><use href="#logo-h"/></svg></div>
+        <span>marca · grande</span>
+      </div>
+      <div class="muestra">
+        <div class="lienzo claro redondo" style="width:48px;height:48px;--fondoLogo:#FBF2EA"><svg width="38" height="38" style="color:var(--cafe)"><use href="#logo-h"/></svg></div>
+        <span>48 px · real</span>
+      </div>
+      <div class="muestra">
+        <div class="lienzo oscuro" style="width:150px;height:150px;--fondoLogo:#4A5B32"><svg width="112" height="112" style="color:#fff"><use href="#logo-h"/></svg></div>
+        <span>sobre el degradado</span>
+      </div>
+    </div>
+    <div class="prueba">
+      <div class="tel">
+        <div class="app"><div class="caja" style="background:#25D366">💬</div>WhatsApp</div>
+        <div class="app"><div class="caja" style="background:var(--cafe);--fondoLogo:#7A4A2B"><svg width="32" height="32" style="color:#FBF2EA"><use href="#logo-h"/></svg></div>Cacao</div>
+        <div class="app"><div class="caja" style="background:#FBF2EA;--fondoLogo:#FBF2EA"><svg width="32" height="32" style="color:var(--cafe)"><use href="#logo-h"/></svg></div>Cacao</div>
+        <div class="app"><div class="caja" style="background:var(--verde);--fondoLogo:#3D7A3F"><svg width="32" height="32" style="color:#FBF2EA"><use href="#logo-h"/></svg></div>Cacao</div>
+      </div>
+      <p>
+        Las tres cajas de la derecha son la misma marca con distinto fondo: café,
+        crema y verde. A ese tamaño se sigue leyendo el sombrero y los hombros,
+        que es lo que hace que uno vea una persona y no una mancha.
+      </p>
+    </div>
+  </section>
+
+  <section class="opcion" style="border:2px solid var(--maduro)">
+    <div class="cabeza"><span class="etiqueta">Figura-fondo</span><h2>El campesino dentro de la mazorca</h2></div>
+    <p class="idea">
+      Aquí la mazorca es la mancha y lo que se ve adentro <strong>no está dibujado</strong>:
+      es el fondo que asoma. Eso es lo que hace que el ojo lo lea de golpe, sin
+      detalle. Es el camino más difícil de resolver y el que mejor se recuerda
+      cuando sale bien.
+    </p>
+    <div class="fila">
+      <div class="muestra"><div class="lienzo claro" style="width:150px;height:150px;--fondoLogo:#FBF2EA"><svg width="110" height="110" style="color:var(--cafe)"><use href="#logo-d"/></svg></div><span>D · campesino</span></div>
+      <div class="muestra"><div class="lienzo claro redondo" style="width:96px;height:96px;--fondoLogo:#FBF2EA"><svg width="70" height="70" style="color:var(--cafe)"><use href="#logo-d"/></svg></div><span>96 px</span></div>
+      <div class="muestra"><div class="lienzo claro redondo" style="width:48px;height:48px;--fondoLogo:#FBF2EA"><svg width="36" height="36" style="color:var(--cafe)"><use href="#logo-d"/></svg></div><span>48 px · real</span></div>
+      <div class="muestra"><div class="lienzo oscuro" style="width:150px;height:150px;--fondoLogo:#4A5B32"><svg width="110" height="110" style="color:#fff"><use href="#logo-d"/></svg></div><span>sobre el degradado</span></div>
+    </div>
+    <div class="fila" style="margin-top:22px">
+      <div class="muestra"><div class="lienzo claro" style="width:150px;height:150px;--fondoLogo:#FBF2EA"><svg width="110" height="110" style="color:var(--verde)"><use href="#logo-e"/></svg></div><span>E · el campo</span></div>
+      <div class="muestra"><div class="lienzo claro redondo" style="width:48px;height:48px;--fondoLogo:#FBF2EA"><svg width="36" height="36" style="color:var(--verde)"><use href="#logo-e"/></svg></div><span>48 px · real</span></div>
+      <div class="muestra"><div class="lienzo claro" style="width:150px;height:150px;--fondoLogo:#FBF2EA"><svg width="110" height="110" style="color:var(--cafe)"><use href="#logo-f"/></svg></div><span>F · con gajos</span></div>
+      <div class="muestra"><div class="lienzo claro redondo" style="width:48px;height:48px;--fondoLogo:#FBF2EA"><svg width="36" height="36" style="color:var(--cafe)"><use href="#logo-f"/></svg></div><span>48 px · real</span></div>
+    </div>
+    <div class="prueba">
+      <div class="tel">
+        <div class="app"><div class="caja" style="background:#25D366">💬</div>WhatsApp</div>
+        <div class="app"><div class="caja" style="background:var(--cafe);--fondoLogo:#7A4A2B"><svg width="30" height="30" style="color:#fff"><use href="#logo-d"/></svg></div>Cacao D</div>
+        <div class="app"><div class="caja" style="background:var(--verde);--fondoLogo:#3D7A3F"><svg width="30" height="30" style="color:#fff"><use href="#logo-e"/></svg></div>Cacao E</div>
+        <div class="app"><div class="caja" style="background:var(--maduro);--fondoLogo:#C26A1E"><svg width="30" height="30" style="color:#fff"><use href="#logo-f"/></svg></div>Cacao F</div>
+      </div>
+      <p>
+        <strong>D</strong> es la mazorca con un campesino de sombrero adentro.
+        <strong>E</strong> cambia la persona por el campo: sol y dos lomas.
+        <strong>F</strong> es la D más los gajos de la fruta, como en la imagen que
+        usted mandó. Fíjese cuál sigue leyéndose a 48 píxeles: ahí es donde estos
+        logos se ganan o se pierden.
+      </p>
+    </div>
+  </section>
+
+  <section class="opcion">
+    <div class="cabeza"><span class="etiqueta">Opción A</span><h2>Granos en red</h2></div>
+    <p class="idea">
+      La silueta de la mazorca por fuera; adentro, los granos convertidos en nodos
+      unidos entre sí. La idea: lo valioso está adentro y está conectado. Es la más
+      equilibrada, pero también la que más depende de que el trazo sea grueso.
+    </p>
+    <div class="fila">
+      <div class="muestra"><div class="lienzo claro" style="width:150px;height:150px"><svg width="110" height="110" style="color:var(--cafe)"><use href="#logo-a"/></svg></div><span>fondo claro</span></div>
+      <div class="muestra"><div class="lienzo oscuro" style="width:150px;height:150px"><svg width="110" height="110" style="color:#fff"><use href="#logo-a"/></svg></div><span>sobre el degradado</span></div>
+      <div class="muestra"><div class="lienzo claro redondo" style="width:96px;height:96px"><svg width="66" height="66" style="color:var(--cafe)"><use href="#logo-a"/></svg></div><span>96 px</span></div>
+      <div class="muestra"><div class="lienzo claro redondo" style="width:48px;height:48px"><svg width="34" height="34" style="color:var(--cafe)"><use href="#logo-a"/></svg></div><span>48 px · real</span></div>
+    </div>
+  </section>
+
+  <section class="opcion">
+    <div class="cabeza"><span class="etiqueta">Opción B</span><h2>La finca conectada</h2></div>
+    <p class="idea">
+      La mazorca llena, sólida, con cuatro puntos alrededor unidos a ella. La idea:
+      cada finca es un nodo de la Red. Es la que mejor aguanta el tamaño pequeño,
+      porque la mazorca es una mancha maciza que se reconoce de lejos.
+    </p>
+    <div class="fila">
+      <div class="muestra"><div class="lienzo claro" style="width:150px;height:150px;--fondoLogo:#FBF2EA"><svg width="110" height="110" style="color:var(--cafe)"><use href="#logo-b"/></svg></div><span>fondo claro</span></div>
+      <div class="muestra"><div class="lienzo oscuro" style="width:150px;height:150px;--fondoLogo:#4A5B32"><svg width="110" height="110" style="color:#fff"><use href="#logo-b"/></svg></div><span>sobre el degradado</span></div>
+      <div class="muestra"><div class="lienzo claro redondo" style="width:96px;height:96px;--fondoLogo:#FBF2EA"><svg width="66" height="66" style="color:var(--cafe)"><use href="#logo-b"/></svg></div><span>96 px</span></div>
+      <div class="muestra"><div class="lienzo claro redondo" style="width:48px;height:48px;--fondoLogo:#FBF2EA"><svg width="34" height="34" style="color:var(--cafe)"><use href="#logo-b"/></svg></div><span>48 px · real</span></div>
+    </div>
+  </section>
+
+  <section class="opcion">
+    <div class="cabeza"><span class="etiqueta">Opción C</span><h2>Surcos en red</h2></div>
+    <p class="idea">
+      Los surcos de la mazorca, que ya existen en la fruta, se vuelven las líneas de
+      la red, con nodos donde se cruzan. Es la más sutil: quien no sepa, ve una
+      mazorca; quien sepa, ve la red. Riesgo: a tamaño pequeño puede leerse solo
+      como una mazorca con puntos.
+    </p>
+    <div class="fila">
+      <div class="muestra"><div class="lienzo claro" style="width:150px;height:150px"><svg width="110" height="110" style="color:var(--cafe)"><use href="#logo-c"/></svg></div><span>fondo claro</span></div>
+      <div class="muestra"><div class="lienzo oscuro" style="width:150px;height:150px"><svg width="110" height="110" style="color:#fff"><use href="#logo-c"/></svg></div><span>sobre el degradado</span></div>
+      <div class="muestra"><div class="lienzo claro redondo" style="width:96px;height:96px"><svg width="66" height="66" style="color:var(--cafe)"><use href="#logo-c"/></svg></div><span>96 px</span></div>
+      <div class="muestra"><div class="lienzo claro redondo" style="width:48px;height:48px"><svg width="34" height="34" style="color:var(--cafe)"><use href="#logo-c"/></svg></div><span>48 px · real</span></div>
+    </div>
+  </section>
+
+  <section class="opcion">
+    <div class="cabeza"><span class="etiqueta">La prueba</span><h2>Entre las demás apps</h2></div>
+    <p class="idea">
+      Así se verían en la pantalla de un celular, al lado de las apps que el
+      productor ya tiene. Aquí es donde se decide: la que usted reconozca primero,
+      sin leer, es la que sirve.
+    </p>
+    <div class="prueba">
+      <div class="tel">
+        <div class="app"><div class="caja" style="background:#25D366">💬</div>WhatsApp</div>
+        <div class="app"><div class="caja" style="background:var(--maduro);--fondoLogo:#C26A1E"><svg width="30" height="30" style="color:#fff"><use href="#logo-a"/></svg></div>Cacao A</div>
+        <div class="app"><div class="caja" style="background:var(--verde);--fondoLogo:#3D7A3F"><svg width="30" height="30" style="color:#fff"><use href="#logo-b"/></svg></div>Cacao B</div>
+        <div class="app"><div class="caja" style="background:var(--cafe);--fondoLogo:#7A4A2B"><svg width="30" height="30" style="color:#fff"><use href="#logo-c"/></svg></div>Cacao C</div>
+      </div>
+      <p>
+        Dígame cuál lo convence y la afino: puedo cambiarle el color de fondo, el
+        grosor del trazo o el número de nodos. También podemos cruzar ideas, por
+        ejemplo la mazorca maciza de la B con los surcos de la C.
+      </p>
+    </div>
+  </section>
+</div>

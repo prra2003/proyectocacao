@@ -39,7 +39,10 @@ var MAXIMO_POR_PAGINA = 200;
 
 // --------------------------------------------------------------- tablas ----
 //
-// El orden de las columnas manda: así se lee y se escribe cada fila.
+// Esta lista dice qué columnas debe tener cada hoja. El **orden real** lo
+// manda el encabezado de la hoja (ver `encabezados`), no esta lista: así,
+// agregar una columna aquí y volver a ejecutar `instalar()` no descoloca las
+// filas que ya están guardadas.
 // Las cuatro últimas de cada tabla de datos son comunes (ver SyncColumns
 // en lib/data/local/tables.dart).
 
@@ -53,12 +56,17 @@ var TABLAS = {
                .concat(COMUNES),
   fincas: ['id', 'productor_id', 'nombre', 'latitud', 'longitud', 'municipio',
            'departamento'].concat(COMUNES),
-  lotes: ['id', 'finca_id', 'nombre', 'area_sembrada_ha', 'variedad_cacao',
-          'fecha_siembra'].concat(COMUNES),
+  lotes: ['id', 'finca_id', 'nombre', 'codigo', 'area_sembrada_ha',
+          'variedad_cacao', 'fecha_siembra'].concat(COMUNES),
   actividades_agricolas: ['id', 'lote_id', 'tipo_actividad', 'fecha',
-                          'observaciones'].concat(COMUNES),
-  cosechas: ['id', 'lote_id', 'fecha', 'cantidad_kg',
-             'observaciones'].concat(COMUNES),
+                          'observaciones', 'responsable', 'costo', 'foto_path',
+                          'subtipo_labor', 'producto', 'cantidad_aplicada',
+                          'incidencia', 'arboles_afectados',
+                          'edad_cultivo_anios', 'arboles_sembrados',
+                          'edad_plantula_meses', 'insumos',
+                          'resultado_esperado'].concat(COMUNES),
+  cosechas: ['id', 'lote_id', 'fecha', 'cantidad_kg', 'observaciones',
+             'tipo_producto', 'foto_path'].concat(COMUNES),
   diagnosticos: ['id', 'lote_id', 'fecha', 'foto_path', 'estado_fenologico',
                  'notas'].concat(COMUNES),
 };
@@ -93,6 +101,18 @@ function crearHoja(libro, nombre, columnas) {
     hoja.getRange(1, 1, 1, columnas.length).setValues([columnas])
         .setFontWeight('bold');
     hoja.setFrozenRows(1);
+  } else {
+    // La hoja ya existía: se agregan al final las columnas que falten, sin
+    // mover las que ya están. Mover una columna con datos sería mezclar
+    // valores de una fila con otra.
+    var actuales = encabezados(hoja);
+    var faltantes = columnas.filter(function (c) {
+      return actuales.indexOf(c) === -1;
+    });
+    if (faltantes.length) {
+      hoja.getRange(1, actuales.length + 1, 1, faltantes.length)
+          .setValues([faltantes]).setFontWeight('bold');
+    }
   }
   // Todo como texto: sin esto, Sheets convierte las fechas ISO y los UUID
   // con guiones en cosas que ya no son iguales a lo que mandó el teléfono.
@@ -235,11 +255,14 @@ function descargar(p) {
   var sesion = sesionDe(p.token);
   if (!sesion) return { ok: false, error: 'Sesión vencida', reentrar: true };
 
-  var columnas = TABLAS[p.entidad];
-  if (!columnas) return { ok: false, error: 'Tabla desconocida: ' + p.entidad };
+  if (!TABLAS[p.entidad]) {
+    return { ok: false, error: 'Tabla desconocida: ' + p.entidad };
+  }
 
   var publica = TABLAS_PUBLICAS.indexOf(p.entidad) !== -1;
-  var valores = hojaDe(p.entidad).getDataRange().getValues();
+  var hoja = hojaDe(p.entidad);
+  var columnas = encabezados(hoja);
+  var valores = hoja.getDataRange().getValues();
   var limite = Math.min(Number(p.limite) || 100, MAXIMO_POR_PAGINA);
   var desde = p.desde || '';
   var desdeId = p.desdeId || '';
@@ -275,8 +298,9 @@ function subir(p) {
   var sesion = sesionDe(p.token);
   if (!sesion) return { ok: false, error: 'Sesión vencida', reentrar: true };
 
-  var columnas = TABLAS[p.entidad];
-  if (!columnas) return { ok: false, error: 'Tabla desconocida: ' + p.entidad };
+  if (!TABLAS[p.entidad]) {
+    return { ok: false, error: 'Tabla desconocida: ' + p.entidad };
+  }
   if (TABLAS_PUBLICAS.indexOf(p.entidad) !== -1) {
     return { ok: false, error: 'Esa tabla es de solo lectura' };
   }
@@ -293,6 +317,7 @@ function subir(p) {
 
   try {
     var hoja = hojaDe(p.entidad);
+    var columnas = encabezados(hoja);
     var valores = hoja.getDataRange().getValues();
     var dondeEsta = {};
     for (var i = 1; i < valores.length; i++) {
@@ -341,6 +366,17 @@ function subir(p) {
 }
 
 // ------------------------------------------------------------- utilidades --
+
+/// Los nombres de columna tal como están en la hoja, en su orden real.
+///
+/// Todo se lee y se escribe por este orden y no por el de TABLAS: así, si
+/// alguien agrega una columna o el script gana campos nuevos, las filas que ya
+/// existen siguen cuadrando.
+function encabezados(hoja) {
+  var ancho = hoja.getLastColumn();
+  if (!ancho) return [];
+  return hoja.getRange(1, 1, 1, ancho).getValues()[0].map(String);
+}
 
 function hojaDe(nombre) {
   var libro = SpreadsheetApp.getActiveSpreadsheet();

@@ -28,20 +28,19 @@ void main() {
   Future<void> abrirApp(WidgetTester tester) async {
     pantallaAlta(tester);
     await tester.pumpWidget(
-      CacaoApp(
-        repo: repo,
-        lotesRepo: LoteRepository(db),
-        db: db,
-        sync: sync,
-      ),
+      CacaoApp(repo: repo, lotesRepo: LoteRepository(db), db: db, sync: sync),
     );
     await asentar(tester);
   }
 
-  testWidgets('la bienvenida ofrece entrar con la cuenta de Google',
-      (tester) async {
+  testWidgets('la bienvenida ofrece entrar con la cuenta de Google', (
+    tester,
+  ) async {
     await abrirApp(tester);
 
+    // La bienvenida entra animada: se espera a que terminen de aparecer
+    // los botones.
+    await asentar(tester);
     expect(find.text('Comenzar registro'), findsOneWidget);
     expect(find.text('Ya tengo cuenta'), findsOneWidget);
 
@@ -55,26 +54,29 @@ void main() {
     await desmontar(tester);
   });
 
-  testWidgets('si la descarga de la cuenta falla, el registro sigue bloqueado',
-      (tester) async {
-    // Estado de "entré con una cuenta y la descarga no ha terminado".
-    await sync.entrarConGoogle();
-    await db.syncDao.empezarDescargaInicial();
-    // Y sin red, para que el intento automático del arranque no la termine.
-    api.fallosProgramados = 5;
-    await abrirApp(tester);
+  testWidgets(
+    'si la descarga de la cuenta falla, el registro sigue bloqueado',
+    (tester) async {
+      // Estado de "entré con una cuenta y la descarga no ha terminado".
+      await sync.entrarConGoogle();
+      await db.syncDao.empezarDescargaInicial();
+      // Y sin red, para que el intento automático del arranque no la termine.
+      api.fallosProgramados = 5;
+      await abrirApp(tester);
 
-    // Lo importante: no hay puerta al registro mientras no sepamos si esa
-    // cuenta ya tenía datos.
-    expect(find.text('Comenzar registro'), findsNothing);
-    expect(find.text('No se pudieron recuperar sus datos'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Reintentar'), findsOneWidget);
+      // Lo importante: no hay puerta al registro mientras no sepamos si esa
+      // cuenta ya tenía datos.
+      expect(find.text('Comenzar registro'), findsNothing);
+      expect(find.text('No se pudieron recuperar sus datos'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Reintentar'), findsOneWidget);
 
-    await desmontar(tester);
-  });
+      await desmontar(tester);
+    },
+  );
 
-  testWidgets('cuando la descarga termina bien, el bloqueo se levanta',
-      (tester) async {
+  testWidgets('cuando la descarga termina bien, el bloqueo se levanta', (
+    tester,
+  ) async {
     await sync.entrarConGoogle();
     await db.syncDao.empezarDescargaInicial();
     await abrirApp(tester);
@@ -87,8 +89,9 @@ void main() {
     await desmontar(tester);
   });
 
-  testWidgets('desde el perfil se entra con Google y queda a la vista',
-      (tester) async {
+  testWidgets('desde el perfil se entra con Google y queda a la vista', (
+    tester,
+  ) async {
     final productorId = await repo.guardarProductor(
       nombreCompleto: 'Diego Parra',
     );
@@ -119,22 +122,24 @@ void main() {
     await desmontar(tester);
   });
 
-  testWidgets('si la persona cierra la ventana de Google, el perfil no cambia',
-      (tester) async {
-    await repo.guardarProductor(nombreCompleto: 'Diego Parra');
-    api.googleCancela = true;
-    await abrirApp(tester);
+  testWidgets(
+    'si la persona cierra la ventana de Google, el perfil no cambia',
+    (tester) async {
+      await repo.guardarProductor(nombreCompleto: 'Diego Parra');
+      api.googleCancela = true;
+      await abrirApp(tester);
 
-    await tester.tap(find.text('Perfil'));
-    await asentar(tester);
-    await tester.tap(find.widgetWithText(FilledButton, 'Entrar con Google'));
-    await asentar(tester);
-    await tester.tap(find.widgetWithText(FilledButton, 'Continuar'));
-    await asentar(tester);
+      await tester.tap(find.text('Perfil'));
+      await asentar(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Entrar con Google'));
+      await asentar(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Continuar'));
+      await asentar(tester);
 
-    expect(find.text('Sin cuenta'), findsOneWidget);
-    expect((await db.syncDao.sesionActual())!.correo, isNull);
+      expect(find.text('Sin cuenta'), findsOneWidget);
+      expect((await db.syncDao.sesionActual())!.correo, isNull);
 
-    await desmontar(tester);
-  });
+      await desmontar(tester);
+    },
+  );
 }

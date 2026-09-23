@@ -32,7 +32,7 @@ class Mazorca extends StatelessWidget {
       child: CustomPaint(
         painter: _PintorMazorca(
           cuerpo: color ?? esquema.primary,
-          hoja: colorHoja ?? PaletaCacao.verde,
+          hoja: colorHoja ?? PaletaCacao.verdeOscuro,
           conHoja: conHoja,
         ),
       ),

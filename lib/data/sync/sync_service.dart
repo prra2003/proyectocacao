@@ -105,6 +105,7 @@ class SyncService {
         usuarioRemoto: sesion.usuarioId,
         correo: sesion.correo,
         token: sesion.token,
+        nombre: sesion.nombre,
       );
       await _db.syncDao.empezarDescargaInicial();
     } on ErrorRemoto catch (e) {

@@ -86,7 +86,8 @@ class ApiRemotaFalsa implements ApiRemota {
     : servidor = ServidorFalso(desde: desde);
 
   /// Otro "teléfono" contra el mismo servidor.
-  ApiRemotaFalsa.deServidor(this.servidor, {
+  ApiRemotaFalsa.deServidor(
+    this.servidor, {
     this.correoDeGoogle = 'productor@gmail.com',
   });
 
@@ -199,8 +200,7 @@ class ApiRemotaFalsa implements ApiRemota {
           // UTC desde el servidor.
           return sello.isAtSameMomentAs(desde) &&
               (fila['id']! as String).compareTo(desdeId) > 0;
-        }).toList()
-        ..sort((a, b) {
+        }).toList()..sort((a, b) {
           final porSello = (a['updated_at']! as String).compareTo(
             b['updated_at']! as String,
           );

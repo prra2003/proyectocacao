@@ -53,16 +53,27 @@ Productor
 - **Borrado suave con cascada**: borrar un lote arrastra sus registros y nada se
   borra físicamente.
 - **Funcionamiento sin internet** de toda la app.
+- **Anotar rápido**: la labor se registra con solo el tipo (seis botones grandes
+  con ícono) y la fecha; lo demás va en "Agregar más detalles". La edad del
+  cultivo no se pregunta: se calcula con la fecha de siembra.
+- **Palabras del campo** en los formularios ("¿Cuántos árboles podó?",
+  "Abonar") y **dictado por voz** en las observaciones.
+- **Recordatorios** en el Inicio ("El Alto lleva 95 días sin poda") y
+  **comparación con el año pasado a la misma fecha**.
+- **Foto de cada lote** (se queda en el teléfono).
+- **Ubicación de la finca con el GPS** ("Estoy en la finca") o en el mapa, sin
+  escribir coordenadas.
+- Registro con la **cédula ya elegida** y el **nombre y correo de la cuenta de
+  Google**.
 - **Sincronización con la nube**: subida de cambios pendientes, descarga
   incremental, reglas de conflicto y cascadas remotas.
-- **Cuenta**: sesión anónima automática y vinculación con correo y contraseña,
-  con aviso mientras el correo está **pendiente de confirmar**.
+- **Cuenta con Google**: el productor entra con su cuenta de Google, que llega
+  ya verificada; la app nunca ve ni guarda contraseñas.
 - **Inicio de sesión** en otra instalación para recuperar los datos.
 - **Cerrar sesión** y **cambiar de cuenta**, que borran los datos de ese
   teléfono avisando antes si hay cambios sin enviar.
 
-Lo que **todavía no** está: fotos en la nube, recuperación de contraseña, cambio
-de cuenta en un teléfono con datos, compilación de iOS. Ver
+Lo que **todavía no** está: fotos en la nube y compilación de iOS. Ver
 [Estado del proyecto](#12-estado-del-proyecto).
 
 ---
@@ -384,22 +395,27 @@ Y se abre en `http://localhost:8099`.
 | `sync_lotes_test.dart` | Paginación con sellos repetidos, conflictos |
 | `sync_registros_test.dart` | Las tres hojas, parametrizado |
 | `sync_ui_test.dart` | Cinta de sincronización y estado pendiente |
-| `cuentas_test.dart` | Vinculación, confirmación de correo, login, cerrar sesión, dos instalaciones, aislamiento |
+| `cuentas_test.dart` | Entrar con Google, teléfono nuevo, dos instalaciones, conflictos, aislamiento, cerrar sesión, cambiar de cuenta |
 | `cuentas_ui_test.dart` | Pantallas de cuenta y bloqueo de la descarga inicial |
 
 ### Qué se probó contra el doble (`ApiRemotaFalsa`)
 
 Todo el ciclo de sincronización: subida, descarga incremental, cursor,
-paginación, idempotencia, reintentos, conflictos, cascadas remotas, vinculación
-de cuenta conservando el `auth.uid()`, inicio de sesión, dos instalaciones
-compartiendo una cuenta y aislamiento entre cuentas distintas.
+paginación, idempotencia, reintentos, conflictos, cascadas remotas, entrada con
+Google dejando a su nombre lo anotado antes de entrar, teléfono nuevo con cuenta
+existente, dos instalaciones compartiendo una cuenta, aislamiento entre cuentas
+distintas y cambio de cuenta en un teléfono con datos.
 
 ### Qué se verificó contra el servidor real
 
-En emulador Android, contra el proyecto real: creación de las tablas, sesión
-anónima, **subida** de productor, finca y lote con sello de PostgreSQL,
-**borrado suave** viajando como `deleted_at`, y **vinculación de la cuenta** con
-correo y contraseña.
+En emulador Android, contra el servidor real de Apps Script: creación de las
+hojas con `instalar()`, **entrada con Google**, **subida** de productor, finca y
+lote con sello del servidor y **borrado suave** viajando como `deleted_at`.
+
+> ✏️ **Pendiente de confirmar por el equipo:** ajustar esta lista a lo que se
+> probó de verdad tras el cambio a Apps Script. Lo que se verificó en su momento
+> contra Supabase (sesión anónima, vinculación con correo y contraseña) ya no
+> aplica.
 
 **Lo que no se alcanzó a verificar en dispositivos reales** es la recuperación
 completa en un segundo teléfono (inicio de sesión y descarga). Está implementado
@@ -454,14 +470,13 @@ instalación real con datos.
 | Funcionamiento offline-first | ✅ Implementado |
 | Borrado suave y cascadas | ✅ Implementado |
 | Sincronización con la nube | ✅ Implementado |
-| Autenticación anónima | ✅ Implementado |
-| Vinculación de cuenta (correo confirmado) | ✅ Implementado |
+| Ingreso con cuenta de Google | ✅ Implementado |
 | Inicio de sesión | ✅ Implementado |
 | Cerrar sesión | ✅ Implementado |
 | Cambiar de cuenta en un teléfono con datos | ✅ Implementado |
-| Recuperación en varios dispositivos | 🟡 Funciona con un correo real confirmado; falta dejar registro formal de la prueba con dos teléfonos |
+| Recuperación en varios dispositivos | 🟡 Funciona con la misma cuenta de Google; falta dejar registro formal de la prueba con dos teléfonos |
 | Fotos en Google Drive | ⏳ Pendiente (hoy viaja la ruta, no la imagen) |
-| Recuperación de contraseña | ⏳ Pendiente |
+| Recuperación de contraseña | ➖ No aplica (la gestiona Google) |
 | Versión web (mismo código) | 🟡 Compila y arranca en navegador de escritorio; falta probarla a fondo y publicarla |
 | Compilación iOS | ⏳ Pendiente (permisos ya configurados) |
 | Clima, alertas y recordatorios | ⏳ Fase 2 |

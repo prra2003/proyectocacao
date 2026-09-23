@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 
 import '../data/local/database.dart';
@@ -5,19 +8,27 @@ import '../data/repositories/lote_repository.dart';
 import '../data/repositories/perfil_repository.dart';
 import '../data/sync/sync_service.dart';
 import 'bienvenida_screen.dart';
+import '../data/repositories/recordatorios.dart';
+import 'dialogos/dialogo_actividad.dart';
 import 'dialogos/dialogo_lote.dart';
 import 'editar_finca_screen.dart';
 import 'formato.dart';
 import 'lote_detalle_screen.dart';
 import 'tema.dart';
 import 'widgets/comunes.dart';
+import 'widgets/confirmacion_guardado.dart';
 import 'widgets/estado_sync.dart';
 import 'widgets/mazorca.dart';
+import 'widgets/selector_finca.dart';
 
 /// La pantalla de todos los días: cómo va la finca y qué pasó en cada lote.
 ///
 /// Aquí no van los datos de identidad (nombre, teléfono, GPS): se leen una vez
 /// y viven en el perfil. El inicio responde a otra pregunta: *cómo va mi finca*.
+///
+/// Un productor puede tener varias fincas (RF-02), así que la cabecera lleva
+/// un selector siempre tocable: con una sola finca sirve para agregar otra,
+/// con varias sirve también para cambiar cuál se está mirando.
 class InicioScreen extends StatefulWidget {
   const InicioScreen({
     super.key,
@@ -37,10 +48,37 @@ class InicioScreen extends StatefulWidget {
 }
 
 class _InicioScreenState extends State<InicioScreen> {
-  /// Cuál finca se ve en el panel. Arranca en null (se resuelve a la primera
-  /// en cuanto llegan las fincas) y solo cambia cuando el productor elige otra
-  /// en el selector de la cabecera.
-  String? _fincaSeleccionadaId;
+  String? _seleccionId;
+
+  Future<void> _agregarFinca(BuildContext context, String productorId) {
+    return Navigator.of(context).push(
+      RutaCacao<void>(
+        builder: (_) =>
+            EditarFincaScreen(repo: widget.repo, productorId: productorId),
+      ),
+    );
+  }
+
+  Future<void> _editarFinca(BuildContext context, Finca finca) {
+    return Navigator.of(context).push(
+      RutaCacao<void>(
+        builder: (_) => EditarFincaScreen(
+          repo: widget.repo,
+          productorId: finca.productorId,
+          finca: finca,
+        ),
+      ),
+    );
+  }
+
+  /// El selector ya preguntó y confirmó; acá solo queda borrar de verdad.
+  /// Si la finca borrada era la que estaba activa, la próxima construcción
+  /// cae sola en otra (o en la pantalla de "registre su finca" si esa era
+  /// la última).
+  Future<void> _eliminarFinca(BuildContext context, Finca finca) async {
+    await widget.repo.borrarFinca(finca.id);
+    if (context.mounted) avisar(context, 'Finca eliminada');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,8 +96,13 @@ class _InicioScreenState extends State<InicioScreen> {
         }
         return StreamBuilder<List<Finca>>(
           stream: widget.repo.watchFincas(productor.id),
-          builder: (context, snapshot) {
-            final fincas = snapshot.data ?? const <Finca>[];
+          builder: (context, snapshotFincas) {
+            // Mientras la base responde, esperar: mostrar "Registre su finca"
+            // en ese momento invitaba a crear una finca que ya existía.
+            if (!snapshotFincas.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final fincas = snapshotFincas.data!;
             if (fincas.isEmpty) {
               return SingleChildScrollView(
                 child: EstadoVacio(
@@ -68,7 +111,7 @@ class _InicioScreenState extends State<InicioScreen> {
                   mensaje: 'Con la finca creada ya puede agregar sus lotes.',
                   textoAccion: 'Registrar finca',
                   onAccion: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
+                    RutaCacao<void>(
                       builder: (_) => EditarFincaScreen(
                         repo: widget.repo,
                         productorId: productor.id,
@@ -78,10 +121,9 @@ class _InicioScreenState extends State<InicioScreen> {
                 ),
               );
             }
-            // Si la finca elegida ya no existe (se borró), se cae a la
-            // primera en vez de dejar la pantalla en blanco.
-            final fincaActiva = fincas.firstWhere(
-              (f) => f.id == _fincaSeleccionadaId,
+            final seleccionId = _seleccionId ?? fincas.first.id;
+            final finca = fincas.firstWhere(
+              (f) => f.id == seleccionId,
               orElse: () => fincas.first,
             );
             return _Contenido(
@@ -89,9 +131,12 @@ class _InicioScreenState extends State<InicioScreen> {
               lotesRepo: widget.lotesRepo,
               db: widget.db,
               sync: widget.sync,
-              finca: fincaActiva,
+              finca: finca,
               fincas: fincas,
-              onCambiarFinca: (id) => setState(() => _fincaSeleccionadaId = id),
+              onSeleccionarFinca: (id) => setState(() => _seleccionId = id),
+              onAgregarFinca: () => _agregarFinca(context, productor.id),
+              onEliminarFinca: (f) => _eliminarFinca(context, f),
+              onEditarFinca: (f) => _editarFinca(context, f),
             );
           },
         );
@@ -108,7 +153,10 @@ class _Contenido extends StatelessWidget {
     required this.sync,
     required this.finca,
     required this.fincas,
-    required this.onCambiarFinca,
+    required this.onSeleccionarFinca,
+    required this.onAgregarFinca,
+    required this.onEliminarFinca,
+    required this.onEditarFinca,
   });
 
   final PerfilRepository repo;
@@ -116,22 +164,38 @@ class _Contenido extends StatelessWidget {
   final AppDatabase db;
   final SyncService sync;
   final Finca finca;
-
-  /// Todas las fincas del productor, para el selector de la cabecera.
   final List<Finca> fincas;
-  final ValueChanged<String> onCambiarFinca;
+  final ValueChanged<String> onSeleccionarFinca;
+  final VoidCallback onAgregarFinca;
+  final ValueChanged<Finca> onEliminarFinca;
+  final ValueChanged<Finca> onEditarFinca;
 
+  /// El código del lote nuevo se calcula antes de abrir el formulario,
+  /// mirando todos los lotes de todas las fincas del productor (no solo los
+  /// de esta finca): así la numeración es una sola secuencia para todo el
+  /// productor y nunca se repite entre fincas.
   Future<void> _agregarLote(BuildContext context) async {
-    final datos = await pedirDatosLote(context);
+    final lotesDelProductor = await repo
+        .watchLotesDeProductor(finca.productorId)
+        .first;
+    final codigoSugerido = siguienteCodigoLote(
+      lotesDelProductor.map((l) => l.codigo),
+    );
+    if (!context.mounted) return;
+    final datos = await pedirDatosLote(context, codigoSugerido: codigoSugerido);
     if (datos == null) return;
     await repo.guardarLote(
       fincaId: finca.id,
       nombre: datos.nombre,
+      codigo: datos.codigo,
       areaSembradaHa: datos.areaHa,
       variedadCacao: datos.variedad,
       fechaSiembra: datos.fechaSiembra,
+      fotoPath: Value(datos.fotoPath),
     );
-    if (context.mounted) avisar(context, 'Lote agregado');
+    if (context.mounted) {
+      mostrarConfirmacionGuardado(context, mensaje: 'Lote agregado');
+    }
   }
 
   @override
@@ -147,16 +211,25 @@ class _Contenido extends StatelessWidget {
               repo: repo,
               finca: finca,
               fincas: fincas,
-              onCambiarFinca: onCambiarFinca,
               lotes: lotes,
               db: db,
               sync: sync,
+              onSeleccionarFinca: onSeleccionarFinca,
+              onAgregarFinca: onAgregarFinca,
+              onEliminarFinca: onEliminarFinca,
+              onEditarFinca: onEditarFinca,
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _Recordatorios(
+                    repo: repo,
+                    lotesRepo: lotesRepo,
+                    fincaId: finca.id,
+                    lotes: lotes,
+                  ),
                   TituloSeccion(
                     'Mis lotes',
                     accion: TextButton.icon(
@@ -181,11 +254,15 @@ class _Contenido extends StatelessWidget {
                   else
                     for (var i = 0; i < lotes.length; i++)
                       Padding(
+                        key: ValueKey(lotes[i].id),
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: _TarjetaLote(
-                          lote: lotes[i],
-                          lotesRepo: lotesRepo,
-                          color: _coloresLote[i % _coloresLote.length],
+                        child: _EntradaEscalonada(
+                          retraso: Duration(milliseconds: 70 * i),
+                          child: _TarjetaLote(
+                            lote: lotes[i],
+                            lotesRepo: lotesRepo,
+                            color: _coloresLote[i % _coloresLote.length],
+                          ),
                         ),
                       ),
                 ],
@@ -198,28 +275,82 @@ class _Contenido extends StatelessWidget {
   }
 }
 
-/// Los lotes se turnan estos tres colores, como las materias de un horario:
+/// Los lotes se turnan estos cuatro colores, como las materias de un horario:
 /// así se distinguen de un vistazo sin tener que leer el nombre.
-const _coloresLote = [PaletaCacao.cafe, PaletaCacao.verde, PaletaCacao.maduro];
+const _coloresLote = [
+  PaletaCacao.cafe,
+  PaletaCacao.verde,
+  PaletaCacao.maduro,
+  PaletaCacao.dorado,
+];
+
+/// Envuelve a [child] en un desvanecido + subida leve, con un [retraso] antes
+/// de empezar: así las tarjetas de la lista no aparecen todas de golpe sino
+/// en cascada, una detrás de otra.
+class _EntradaEscalonada extends StatefulWidget {
+  const _EntradaEscalonada({
+    required this.retraso,
+    required this.child,
+  });
+
+  final Duration retraso;
+  final Widget child;
+
+  @override
+  State<_EntradaEscalonada> createState() => _EntradaEscalonadaState();
+}
+
+class _EntradaEscalonadaState extends State<_EntradaEscalonada> {
+  var _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(widget.retraso, () {
+      if (mounted) setState(() => _visible = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: _visible ? 1 : 0,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOut,
+      child: AnimatedSlide(
+        offset: _visible ? Offset.zero : const Offset(0, 0.12),
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
 
 class _Cabecera extends StatelessWidget {
   const _Cabecera({
     required this.repo,
     required this.finca,
     required this.fincas,
-    required this.onCambiarFinca,
     required this.lotes,
     required this.db,
     required this.sync,
+    required this.onSeleccionarFinca,
+    required this.onAgregarFinca,
+    required this.onEliminarFinca,
+    required this.onEditarFinca,
   });
 
   final PerfilRepository repo;
   final Finca finca;
   final List<Finca> fincas;
-  final ValueChanged<String> onCambiarFinca;
   final List<Lote> lotes;
   final AppDatabase db;
   final SyncService sync;
+  final ValueChanged<String> onSeleccionarFinca;
+  final VoidCallback onAgregarFinca;
+  final ValueChanged<Finca> onEliminarFinca;
+  final ValueChanged<Finca> onEditarFinca;
 
   @override
   Widget build(BuildContext context) {
@@ -253,91 +384,249 @@ class _Cabecera extends StatelessWidget {
                 colorHoja: PaletaCacao.verdeClaro,
               ),
               const SizedBox(width: 12),
+              // Siempre tocable, tenga el productor una finca o varias: es el
+              // único camino para agregar otra finca desde el Inicio.
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      finca.nombre,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      finca.municipio,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xCCFFFFFF),
-                      ),
-                    ),
-                  ],
+                child: SelectorFinca(
+                  fincas: fincas,
+                  seleccionada: finca,
+                  onSeleccionar: onSeleccionarFinca,
+                  onAgregar: onAgregarFinca,
+                  onEliminar: onEliminarFinca,
+                  onEditar: onEditarFinca,
                 ),
               ),
             ],
           ),
-          // Con una sola finca no hace falta elegir: el selector solo estorba.
-          if (fincas.length > 1) ...[
-            const SizedBox(height: 14),
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: fincas.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, i) {
-                  final opcion = fincas[i];
-                  final activa = opcion.id == finca.id;
-                  return ChoiceChip(
-                    label: Text(opcion.nombre),
-                    selected: activa,
-                    onSelected: (_) => onCambiarFinca(opcion.id),
-                    backgroundColor: Colors.white.withValues(alpha: 0.16),
-                    selectedColor: Colors.white,
-                    labelStyle: TextStyle(
-                      color: activa ? PaletaCacao.cafeOscuro : Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    side: BorderSide.none,
-                  );
-                },
-              ),
-            ),
-          ],
           const SizedBox(height: 16),
           EstadoSync(db: db, sync: sync),
           const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              child: StreamBuilder<double>(
-                stream: repo.watchProduccionAnual(finca.id, anio),
-                builder: (context, produccion) {
-                  return Row(
-                    children: [
-                      Indicador(
+          StreamBuilder<double>(
+            stream: repo.watchProduccionAnual(finca.id, anio),
+            builder: (context, produccion) {
+              return Row(
+                children: [
+                  Expanded(
+                    child: _TarjetaIndicador(
+                      fondo: PaletaCacao.maduroClaro,
+                      child: _IndicadorAnimado(
                         color: PaletaCacao.maduro,
                         icono: Icons.shopping_basket_outlined,
-                        valor: numeroCorto(produccion.data ?? 0),
+                        valor: produccion.data ?? 0,
+                        formatear: numeroCorto,
                         etiqueta: 'kg en $anio',
                       ),
-                      Indicador(
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _TarjetaIndicador(
+                      fondo: PaletaCacao.verdeClaro,
+                      child: _IndicadorAnimado(
                         color: PaletaCacao.verde,
                         icono: Icons.forest_outlined,
-                        valor: '${lotes.length}',
+                        valor: lotes.length.toDouble(),
+                        formatear: (v) => '${v.round()}',
                         etiqueta: lotes.length == 1 ? 'lote' : 'lotes',
                       ),
-                      Indicador(
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _TarjetaIndicador(
+                      fondo: PaletaCacao.cafeClaro,
+                      child: _IndicadorAnimado(
                         color: PaletaCacao.cafe,
                         icono: Icons.landscape_outlined,
-                        valor: numeroCorto(PerfilRepository.areaTotal(lotes)),
+                        valor: PerfilRepository.areaTotal(lotes),
+                        formatear: numeroCorto,
                         etiqueta: 'hectáreas',
                       ),
-                    ],
-                  );
-                },
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          _ComparacionAnioPasado(repo: repo, fincaId: finca.id),
+        ],
+      ),
+    );
+  }
+}
+
+/// Una línea debajo de los tres indicadores: cómo va este año frente al año
+/// pasado **a la misma fecha**. Va aparte y no dentro de los cuadritos para
+/// no apretarlos, y solo sale si hay con qué comparar.
+class _ComparacionAnioPasado extends StatelessWidget {
+  const _ComparacionAnioPasado({required this.repo, required this.fincaId});
+
+  final PerfilRepository repo;
+  final String fincaId;
+
+  @override
+  Widget build(BuildContext context) {
+    final anio = DateTime.now().year;
+    return StreamBuilder<double>(
+      stream: repo.watchProduccionAnual(fincaId, anio),
+      builder: (context, esteAnio) {
+        return StreamBuilder<double>(
+          stream: repo.watchKgAnioPasadoAEstaFecha(fincaId),
+          builder: (context, anioPasado) {
+            final ahora = esteAnio.data ?? 0;
+            final antes = anioPasado.data ?? 0;
+            if (antes <= 0) return const SizedBox.shrink();
+            final cambio = ((ahora - antes) / antes * 100).round();
+            final sube = cambio >= 0;
+            final texto = cambio == 0
+                ? 'Igual que el año pasado a esta fecha '
+                      '(${numeroCorto(antes)} kg)'
+                : '${sube ? '$cambio% más' : '${-cambio}% menos'} que en '
+                      '${anio - 1} a esta fecha (${numeroCorto(antes)} kg)';
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
               ),
+              child: Row(
+                children: [
+                  Icon(
+                    sube ? Icons.trending_up : Icons.trending_down,
+                    color: sube
+                        ? const Color(0xFFA9E0B4)
+                        : const Color(0xFFF3B79B),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      texto,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Avisos de lo que ya toca hacer ("El Alto lleva 95 días sin poda"), con un
+/// botón que abre la anotación con el lote y la labor ya elegidos. Salen de lo
+/// que ya está anotado: cuando se anota la labor, el aviso desaparece solo.
+class _Recordatorios extends StatelessWidget {
+  const _Recordatorios({
+    required this.repo,
+    required this.lotesRepo,
+    required this.fincaId,
+    required this.lotes,
+  });
+
+  final PerfilRepository repo;
+  final LoteRepository lotesRepo;
+  final String fincaId;
+  final List<Lote> lotes;
+
+  Future<void> _anotar(BuildContext context, Recordatorio aviso) async {
+    final datos = await pedirDatosActividad(
+      context,
+      tipoInicial: aviso.tipo,
+      loteNombre: aviso.lote.nombre,
+    );
+    if (datos == null) return;
+    await guardarLabor(lotesRepo, aviso.lote, datos);
+    if (context.mounted) {
+      mostrarConfirmacionGuardado(context, mensaje: 'Labor registrada');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<ActividadAgricola>>(
+      stream: repo.watchActividadesDeFinca(fincaId),
+      builder: (context, snapshot) {
+        final avisos = recordatoriosPara(lotes, snapshot.data ?? const []);
+        if (avisos.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final aviso in avisos)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _TarjetaRecordatorio(
+                    aviso: aviso,
+                    onAnotar: () => _anotar(context, aviso),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TarjetaRecordatorio extends StatelessWidget {
+  const _TarjetaRecordatorio({required this.aviso, required this.onAnotar});
+
+  final Recordatorio aviso;
+  final VoidCallback onAnotar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF6E8),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: PaletaCacao.maduro.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.notifications_active_outlined,
+                color: PaletaCacao.maduro,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  aviso.mensaje,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: PaletaCacao.verde),
+            onPressed: onAnotar,
+            icon: Icon(
+              aviso.tipo == null
+                  ? Icons.edit_note
+                  : iconoActividad(aviso.tipo!),
+            ),
+            label: Text(
+              aviso.tipo == null
+                  ? 'Anotar una labor'
+                  : 'Anotar la ${etiquetaActividad(aviso.tipo!).toLowerCase()}',
             ),
           ),
         ],
@@ -346,8 +635,72 @@ class _Cabecera extends StatelessWidget {
   }
 }
 
+/// Envoltorio de color para un indicador: cada dato del resumen va en su
+/// propia tarjeta pastel en vez de compartir una sola tarjeta blanca, para
+/// que se distingan de un vistazo.
+///
+/// `Indicador` ya viene envuelto en `Expanded` (para repartirse el ancho
+/// dentro de una fila), así que aquí adentro va un `Row` de un solo elemento
+/// para que ese `Expanded` tenga un padre válido.
+class _TarjetaIndicador extends StatelessWidget {
+  const _TarjetaIndicador({required this.fondo, required this.child});
+
+  final Color fondo;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 6),
+      decoration: BoxDecoration(
+        color: fondo,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(children: [child]),
+    );
+  }
+}
+
+/// Un [Indicador] cuyo número sube contando desde cero hasta el valor real
+/// cada vez que se construye: le da vida al resumen en vez de que los
+/// números simplemente aparezcan fijos.
+class _IndicadorAnimado extends StatelessWidget {
+  const _IndicadorAnimado({
+    required this.valor,
+    required this.etiqueta,
+    required this.icono,
+    required this.color,
+    required this.formatear,
+  });
+
+  final double valor;
+  final String etiqueta;
+  final IconData icono;
+  final Color color;
+  final String Function(double) formatear;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: valor),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutCubic,
+      builder: (context, v, _) => Indicador(
+        valor: formatear(v),
+        etiqueta: etiqueta,
+        icono: icono,
+        color: color,
+      ),
+    );
+  }
+}
+
 /// Tarjeta de lote: lo que el productor necesita saber sin entrar.
-class _TarjetaLote extends StatelessWidget {
+///
+/// Se achica al presionarla y rebota un poco al soltar, igual que los
+/// botones de la bienvenida: da la misma sensación de "responde al toque"
+/// en toda la app.
+class _TarjetaLote extends StatefulWidget {
   const _TarjetaLote({
     required this.lote,
     required this.lotesRepo,
@@ -359,54 +712,114 @@ class _TarjetaLote extends StatelessWidget {
   final Color color;
 
   @override
+  State<_TarjetaLote> createState() => _TarjetaLoteState();
+}
+
+class _TarjetaLoteState extends State<_TarjetaLote> {
+  var _presionado = false;
+
+  void _fijar(bool valor) {
+    if (_presionado != valor) setState(() => _presionado = valor);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final edad = PerfilRepository.edadEnAnios(lote.fechaSiembra);
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(26),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => LoteDetalleScreen(repo: lotesRepo, lote: lote),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      lote.nombre,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+    final edad = PerfilRepository.edadEnAnios(widget.lote.fechaSiembra);
+    final foto = widget.lote.fotoPath;
+    return GestureDetector(
+      onTapDown: (_) => _fijar(true),
+      onTapUp: (_) => _fijar(false),
+      onTapCancel: () => _fijar(false),
+      child: AnimatedScale(
+        scale: _presionado ? 0.95 : 1,
+        duration: Duration(milliseconds: _presionado ? 90 : 260),
+        curve: _presionado ? Curves.easeOut : Curves.easeOutBack,
+        child: Material(
+          color: widget.color,
+          borderRadius: BorderRadius.circular(26),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => Navigator.of(context).push(
+              RutaCacao<void>(
+                builder: (_) => LoteDetalleScreen(
+                  repo: widget.lotesRepo,
+                  lote: widget.lote,
+                ),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (foto != null)
+                  Image.file(
+                    File(foto),
+                    height: 120,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              widget.lote.nombre,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          // Marca de agua, no ilustración: acompaña sin robar
+                          // atención al nombre del lote. Con foto sobra.
+                          if (foto == null)
+                            Mazorca(
+                              tamano: 46,
+                              color: Colors.white.withValues(alpha: 0.38),
+                              conHoja: false,
+                            ),
+                        ],
                       ),
-                    ),
+                      // Vacío en los lotes que ya existían antes de este campo
+                      // (todavía no le pusieron código); no ocupa espacio hasta
+                      // que lo tengan.
+                      if (widget.lote.codigo.isNotEmpty)
+                        Text(
+                          widget.lote.codigo,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xCCFFFFFF),
+                          ),
+                        ),
+                      Text(
+                        '${widget.lote.variedadCacao} · '
+                        '${numeroCorto(widget.lote.areaSembradaHa)} ha'
+                        ' · ${edad == 1 ? '1 año' : '$edad años'}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xCCFFFFFF),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _UltimaLabor(
+                        repo: widget.lotesRepo,
+                        loteId: widget.lote.id,
+                      ),
+                      const SizedBox(height: 8),
+                      _ProduccionDelLote(
+                        repo: widget.lotesRepo,
+                        loteId: widget.lote.id,
+                      ),
+                    ],
                   ),
-                  // Marca de agua, no ilustración: acompaña sin robar
-                  // atención al nombre del lote.
-                  Mazorca(
-                    tamano: 46,
-                    color: Colors.white.withValues(alpha: 0.38),
-                    conHoja: false,
-                  ),
-                ],
-              ),
-              Text(
-                '${lote.variedadCacao} · ${numeroCorto(lote.areaSembradaHa)} ha'
-                ' · ${edad == 1 ? '1 año' : '$edad años'}',
-                style: const TextStyle(fontSize: 16, color: Color(0xCCFFFFFF)),
-              ),
-              const SizedBox(height: 18),
-              _UltimaLabor(repo: lotesRepo, loteId: lote.id),
-              const SizedBox(height: 8),
-              _ProduccionDelLote(repo: lotesRepo, loteId: lote.id),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
