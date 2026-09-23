@@ -76,12 +76,16 @@ class LoteRepository {
     required DateTime fecha,
     required double cantidadKg,
     String? observaciones,
+    String? tipoProducto,
+    String? fotoPath,
   }) {
     return _registros.registrarCosecha(
       loteId: loteId,
       fecha: fecha,
       cantidadKg: cantidadKg,
       observaciones: observaciones,
+      tipoProducto: tipoProducto,
+      fotoPath: fotoPath,
     );
   }
 

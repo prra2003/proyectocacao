@@ -142,6 +142,8 @@ class _CascaronScreenState extends State<CascaronScreen> {
         fecha: datos.fecha,
         cantidadKg: datos.cantidadKg,
         observaciones: datos.observaciones,
+        tipoProducto: datos.tipoProducto,
+        fotoPath: datos.fotoPath,
       );
       if (mounted) avisar(context, 'Cosecha registrada');
     } else {
@@ -152,6 +154,19 @@ class _CascaronScreenState extends State<CascaronScreen> {
         tipo: datos.tipo,
         fecha: datos.fecha,
         observaciones: datos.observaciones,
+        responsable: datos.responsable,
+        costo: datos.costo,
+        fotoPath: datos.fotoPath,
+        subtipoLabor: datos.subtipoLabor,
+        producto: datos.producto,
+        cantidadAplicada: datos.cantidadAplicada,
+        incidencia: datos.incidencia,
+        arbolesAfectados: datos.arbolesAfectados,
+        edadCultivoAnios: datos.edadCultivoAnios,
+        arbolesSembrados: datos.arbolesSembrados,
+        edadPlantulaMeses: datos.edadPlantulaMeses,
+        insumos: datos.insumos,
+        resultadoEsperado: datos.resultadoEsperado,
       );
       if (mounted) avisar(context, 'Labor registrada');
     }

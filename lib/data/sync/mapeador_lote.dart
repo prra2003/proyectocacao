@@ -31,7 +31,11 @@ class MapeadorLote {
       id: Value(fila['id']! as String),
       fincaId: Value(fila['finca_id']! as String),
       nombre: Value(fila['nombre']! as String),
-      codigo: Value((fila['codigo'] as String?) ?? ''),
+      // Ausente no es vacío: si el servidor aún no tiene la columna, no se
+      // toca el código que ya tenga el teléfono.
+      codigo: fila.containsKey('codigo')
+          ? Value((fila['codigo'] as String?) ?? '')
+          : const Value.absent(),
       areaSembradaHa: Value((fila['area_sembrada_ha']! as num).toDouble()),
       variedadCacao: Value(fila['variedad_cacao']! as String),
       fechaSiembra: Value(fecha(fila['fecha_siembra'])!),

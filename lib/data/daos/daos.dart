@@ -419,6 +419,8 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
     required DateTime fecha,
     required double cantidadKg,
     String? observaciones,
+    String? tipoProducto,
+    String? fotoPath,
   }) async {
     final id = nuevoId();
     await into(cosechas).insert(
@@ -428,6 +430,8 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
         fecha: fecha,
         cantidadKg: cantidadKg,
         observaciones: Value(observaciones),
+        tipoProducto: Value(tipoProducto),
+        fotoPath: Value(fotoPath),
       ),
     );
     return id;

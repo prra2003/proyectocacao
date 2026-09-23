@@ -9,6 +9,23 @@ DateTime? _fecha(Object? valor) =>
 
 DateTime _selloDe(FilaRemota fila) => _fecha(fila['updated_at'])!;
 
+/// **Ausente no es lo mismo que vacío.**
+///
+/// Si el servidor todavía no tiene esa columna, la clave no viene en la fila y
+/// hay que **dejar el valor local como está**: escribir `null` encima borraría
+/// lo que la persona escribió en el teléfono. Si la columna sí viene y está
+/// vacía, entonces sí es un valor nulo de verdad.
+Value<String?> _textoSiViene(FilaRemota fila, String clave) =>
+    fila.containsKey(clave)
+        ? Value(fila[clave] as String?)
+        : const Value.absent();
+
+Value<double?> _realSiViene(FilaRemota fila, String clave) =>
+    fila.containsKey(clave) ? Value(_numero(fila[clave])) : const Value.absent();
+
+Value<int?> _enteroSiViene(FilaRemota fila, String clave) =>
+    fila.containsKey(clave) ? Value(_entero(fila[clave])) : const Value.absent();
+
 /// La hoja de cálculo guarda texto: un número puede llegar como `12` o como
 /// `'12'`. Las dos formas tienen que entrar igual.
 double? _numero(Object? valor) => switch (valor) {
@@ -69,19 +86,19 @@ class MapeadorActividad {
       ),
       fecha: Value(_fecha(fila['fecha'])!),
       observaciones: Value(fila['observaciones'] as String?),
-      responsable: Value(fila['responsable'] as String?),
-      costo: Value(_numero(fila['costo'])),
-      fotoPath: Value(fila['foto_path'] as String?),
-      subtipoLabor: Value(fila['subtipo_labor'] as String?),
-      producto: Value(fila['producto'] as String?),
-      cantidadAplicada: Value(fila['cantidad_aplicada'] as String?),
-      incidencia: Value(fila['incidencia'] as String?),
-      arbolesAfectados: Value(_entero(fila['arboles_afectados'])),
-      edadCultivoAnios: Value(_entero(fila['edad_cultivo_anios'])),
-      arbolesSembrados: Value(_entero(fila['arboles_sembrados'])),
-      edadPlantulaMeses: Value(_entero(fila['edad_plantula_meses'])),
-      insumos: Value(fila['insumos'] as String?),
-      resultadoEsperado: Value(fila['resultado_esperado'] as String?),
+      responsable: _textoSiViene(fila, 'responsable'),
+      costo: _realSiViene(fila, 'costo'),
+      fotoPath: _textoSiViene(fila, 'foto_path'),
+      subtipoLabor: _textoSiViene(fila, 'subtipo_labor'),
+      producto: _textoSiViene(fila, 'producto'),
+      cantidadAplicada: _textoSiViene(fila, 'cantidad_aplicada'),
+      incidencia: _textoSiViene(fila, 'incidencia'),
+      arbolesAfectados: _enteroSiViene(fila, 'arboles_afectados'),
+      edadCultivoAnios: _enteroSiViene(fila, 'edad_cultivo_anios'),
+      arbolesSembrados: _enteroSiViene(fila, 'arboles_sembrados'),
+      edadPlantulaMeses: _enteroSiViene(fila, 'edad_plantula_meses'),
+      insumos: _textoSiViene(fila, 'insumos'),
+      resultadoEsperado: _textoSiViene(fila, 'resultado_esperado'),
       createdAt: Value(_fecha(fila['created_at'])!),
       updatedAt: Value(sello),
       deletedAt: Value(_fecha(fila['deleted_at']) ?? borradoForzado),
@@ -123,8 +140,8 @@ class MapeadorCosecha {
       fecha: Value(_fecha(fila['fecha'])!),
       cantidadKg: Value(_numero(fila['cantidad_kg'])!),
       observaciones: Value(fila['observaciones'] as String?),
-      tipoProducto: Value(fila['tipo_producto'] as String?),
-      fotoPath: Value(fila['foto_path'] as String?),
+      tipoProducto: _textoSiViene(fila, 'tipo_producto'),
+      fotoPath: _textoSiViene(fila, 'foto_path'),
       createdAt: Value(_fecha(fila['created_at'])!),
       updatedAt: Value(sello),
       deletedAt: Value(_fecha(fila['deleted_at']) ?? borradoForzado),
@@ -165,7 +182,7 @@ class MapeadorDiagnostico {
       fecha: Value(_fecha(fila['fecha'])!),
       // La foto es una ruta del dispositivo: viaja el dato, no el archivo. Subir
       // imágenes es harina de otro costal (Google Drive).
-      fotoPath: Value(fila['foto_path'] as String?),
+      fotoPath: _textoSiViene(fila, 'foto_path'),
       estadoFenologico: Value(
         EstadoFenologico.values.byName(fila['estado_fenologico']! as String),
       ),

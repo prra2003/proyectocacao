@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../tema.dart';
 import '../widgets/comunes.dart';
 import '../widgets/selector_fecha.dart';
 
+/// Los 3 tipos de producto que trae el documento de requerimientos: el
+/// productor elige uno, no escribe a mano.
+const _tiposProducto = ['Cacao en baba', 'Cacao fermentado', 'Cacao seco'];
+
 typedef DatosCosecha = ({
-  DateTime fecha,
-  double cantidadKg,
-  String? observaciones,
+DateTime fecha,
+double cantidadKg,
+String? observaciones,
+String? tipoProducto,
+String? fotoPath,
 });
 
 Future<DatosCosecha?> pedirDatosCosecha(BuildContext context) {
@@ -28,6 +35,9 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
   final _cantidad = TextEditingController();
   final _observaciones = TextEditingController();
   DateTime _fecha = DateTime.now();
+  String? _tipoProducto;
+  String? _fotoPath;
+  var _cargandoFoto = false;
 
   @override
   void dispose() {
@@ -36,12 +46,24 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
     super.dispose();
   }
 
+  Future<void> _elegirFoto() async {
+    setState(() => _cargandoFoto = true);
+    try {
+      final destino = await elegirFoto(context, carpeta: 'fotos_cosechas');
+      if (mounted && destino != null) setState(() => _fotoPath = destino);
+    } finally {
+      if (mounted) setState(() => _cargandoFoto = false);
+    }
+  }
+
   void _aceptar() {
     if (!_formKey.currentState!.validate()) return;
     Navigator.of(context).pop((
-      fecha: _fecha,
-      cantidadKg: aNumero(_cantidad.text)!,
-      observaciones: textoONulo(_observaciones.text),
+    fecha: _fecha,
+    cantidadKg: aNumero(_cantidad.text)!,
+    observaciones: textoONulo(_observaciones.text),
+    tipoProducto: _tipoProducto,
+    fotoPath: _fotoPath,
     ));
   }
 
@@ -66,11 +88,14 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: (v) {
-                  final kg = aNumero(v ?? '');
-                  if (kg == null || kg <= 0) return 'Cantidad inválida';
-                  return null;
-                },
+                validator: (v) => validarRango(
+                  v,
+                  min: 0,
+                  // Una sola entrega de 20 toneladas ya no es creíble para
+                  // un lote de un productor individual.
+                  max: 20000,
+                  etiqueta: 'Cantidad',
+                ),
               ),
               const SizedBox(height: 14),
               SelectorFecha(
@@ -78,13 +103,33 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
                 fecha: _fecha,
                 onCambio: (f) => setState(() => _fecha = f),
               ),
+              const SizedBox(height: 16),
+              // Lo que pide el documento para el registro de cosecha: el
+              // tipo de producto va de desplegable, no de texto libre.
+              SelectorDesplegable(
+                key: const Key('campo_tipo_producto'),
+                etiqueta: 'Tipo de producto',
+                icono: Icons.eco_outlined,
+                color: PaletaCacao.dorado,
+                opciones: _tiposProducto,
+                valor: _tipoProducto,
+                onCambio: (v) => setState(() => _tipoProducto = v),
+              ),
+              const SizedBox(height: 16),
+              CampoFoto(
+                fotoPath: _fotoPath,
+                cargando: _cargandoFoto,
+                onTap: _elegirFoto,
+                onQuitar: () => setState(() => _fotoPath = null),
+                etiqueta: 'Evidencia fotográfica (opcional)',
+              ),
               const SizedBox(height: 14),
               TextFormField(
                 key: const Key('campo_observaciones_cosecha'),
                 controller: _observaciones,
                 decoration: const InputDecoration(
                   labelText: 'Observaciones',
-                  hintText: 'Cacao en baba, seco, calidad...',
+                  hintText: 'Secado al sol, calidad, humedad...',
                 ),
                 maxLines: 2,
                 textCapitalization: TextCapitalization.sentences,

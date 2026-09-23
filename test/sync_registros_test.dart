@@ -3,16 +3,15 @@ import 'package:cacao_app/data/local/enums.dart';
 import 'package:cacao_app/data/repositories/lote_repository.dart';
 import 'package:cacao_app/data/repositories/perfil_repository.dart';
 import 'package:cacao_app/data/sync/api_falsa.dart';
-import 'package:cacao_app/data/sync/mapeadores_registros.dart';
 import 'package:cacao_app/data/sync/api_remota.dart';
+import 'package:cacao_app/data/sync/mapeadores_registros.dart';
 import 'package:cacao_app/data/sync/sync_result.dart';
 import 'package:cacao_app/data/sync/sync_service.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'utiles.dart';
-
 /// Estado de una fila hoja, visto igual para las tres entidades.
 typedef EstadoFila = ({DateTime? borrado, SyncStatus estado, DateTime? sello});
 
@@ -212,6 +211,41 @@ void main() {
     expect(traida.costo.value, 350000);
     expect(traida.arbolesSembrados.value, 200);
     expect(traida.insumos.value, 'Bolsas biodegradables');
+  });
+
+  test('una columna que el servidor no tiene no borra lo del teléfono',
+      () async {
+    // Pasó de verdad: la hoja de cálculo todavía no tenía las columnas
+    // nuevas, la fila volvió sin ellas y la copia remota pisó con vacíos lo
+    // que el productor había escrito. Ausente no es lo mismo que vacío.
+    final id = await registros.registrarActividad(
+      loteId: loteId,
+      tipo: TipoActividad.poda,
+      fecha: DateTime(2026, 4, 1),
+      subtipoLabor: 'Formación',
+      arbolesAfectados: 35,
+    );
+    await sync.sincronizar();
+
+    // El servidor devuelve la fila **sin** esas columnas.
+    final comoLaDevuelveUnServidorViejo = Map<String, Object?>.from(
+      api.filasDe('actividades_agricolas').firstWhere((f) => f['id'] == id),
+    )..removeWhere(
+      (clave, _) => clave == 'subtipo_labor' || clave == 'arboles_afectados',
+    );
+
+    final aplicada = MapeadorActividad.deRemoto(comoLaDevuelveUnServidorViejo);
+    expect(aplicada.subtipoLabor, const Value<String?>.absent());
+    expect(aplicada.arbolesAfectados, const Value<int?>.absent());
+
+    // Y si la columna viene vacía, entonces sí es un nulo de verdad.
+    final conColumnaVacia = Map<String, Object?>.from(
+      comoLaDevuelveUnServidorViejo,
+    )..['subtipo_labor'] = null;
+    expect(
+      MapeadorActividad.deRemoto(conColumnaVacia).subtipoLabor,
+      const Value<String?>(null),
+    );
   });
 
   for (final caso in casos()) {

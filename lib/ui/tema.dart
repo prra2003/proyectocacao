@@ -28,6 +28,13 @@ class PaletaCacao {
 
   /// Naranja de la mazorca madura: la cosecha.
   static const maduro = Color(0xFFC26A1E);
+
+  /// El amarillo del grano seco. Lo trajo el módulo de reportes para separar
+  /// visualmente los campos de la siembra.
+  static const dorado = Color(0xFFD9A03C);
+
+  /// El crema de las tarjetas y los campos de formulario.
+  static const tarjeta = Color(0xFFFBF3E4);
   static const maduroClaro = Color(0xFFFBE3CB);
 
   /// Fondo: crema de la pulpa.
