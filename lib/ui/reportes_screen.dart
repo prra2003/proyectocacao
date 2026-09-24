@@ -712,12 +712,18 @@ class _PestanaHistorialState extends State<_PestanaHistorial> {
           evento.detalle ?? '',
         ),
       };
+      // Lo anotado va junto con las observaciones: si no, la descarga salía
+      // más pobre que la pantalla, y es la que termina en manos del técnico.
+      final completo = [
+        for (final (etiqueta, valor) in evento.anotado) '$etiqueta: $valor',
+        if (detalle.trim().isNotEmpty) detalle.trim(),
+      ].join(' · ');
       filas.add([
         fechaLarga(evento.fecha),
         tipo,
         if (widget.mostrarFinca) evento.fincaNombre ?? '',
         evento.loteNombre,
-        detalle,
+        completo,
         evento.cantidadKg == null ? '' : numeroCorto(evento.cantidadKg!),
       ]);
     }
@@ -1028,21 +1034,42 @@ class _FilaEvento extends StatelessWidget {
         etiquetaEstado(EstadoFenologico.values.byName(evento.subtipo!)),
       ),
     };
-    final subtitulo = [
+    // Dónde y cuándo va en una línea; lo que la persona anotó va debajo, en
+    // otra. Antes iba todo pegado en un solo renglón y el detalle —lo único
+    // que no se puede adivinar— era lo primero que se cortaba.
+    final donde = [
       if (mostrarFinca && evento.fincaNombre != null) evento.fincaNombre!,
       evento.loteNombre,
       fechaLarga(evento.fecha),
-      if (evento.detalle != null) evento.detalle!,
+    ].join(' · ');
+    final anotado = [
+      for (final (etiqueta, valor) in evento.anotado) '$etiqueta: $valor',
+      if (evento.detalle != null && evento.detalle!.trim().isNotEmpty)
+        evento.detalle!.trim(),
     ].join(' · ');
 
     return ListTile(
+      isThreeLine: anotado.isNotEmpty,
       leading: CircleAvatar(
         radius: 28,
         backgroundColor: fondo,
         child: Icon(icono, color: color),
       ),
       title: Text(titulo, style: Theme.of(context).textTheme.titleMedium),
-      subtitle: Text(subtitulo),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(donde),
+          if (anotado.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                anotado,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

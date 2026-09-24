@@ -669,7 +669,16 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
       SELECT a.id AS id, 'actividad' AS evento, a.lote_id AS lote_id,
              l.nombre AS lote_nombre, a.fecha AS fecha,
              a.tipo_actividad AS subtipo, a.observaciones AS detalle,
-             NULL AS cantidad_kg, NULL AS foto_path
+             NULL AS cantidad_kg, NULL AS foto_path,
+             a.responsable AS responsable, a.costo AS costo,
+             a.subtipo_labor AS subtipo_labor, a.producto AS producto,
+             a.cantidad_aplicada AS cantidad_aplicada,
+             a.incidencia AS incidencia,
+             a.arboles_afectados AS arboles_afectados,
+             a.arboles_sembrados AS arboles_sembrados,
+             a.edad_plantula_meses AS edad_plantula_meses,
+             a.insumos AS insumos,
+             a.resultado_esperado AS resultado_esperado
       FROM actividades_agricolas a
       JOIN lotes l ON l.id = a.lote_id
       WHERE a.deleted_at IS NULL AND l.finca_id = ?1
@@ -677,7 +686,9 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
       UNION ALL
 
       SELECT c.id, 'cosecha', c.lote_id, l.nombre, c.fecha,
-             NULL, c.observaciones, c.cantidad_kg, NULL
+             NULL, c.observaciones, c.cantidad_kg, NULL,
+             NULL, NULL, c.tipo_producto, NULL, NULL, NULL, NULL, NULL,
+             NULL, NULL, NULL
       FROM cosechas c
       JOIN lotes l ON l.id = c.lote_id
       WHERE c.deleted_at IS NULL AND l.finca_id = ?1
@@ -685,7 +696,9 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
       UNION ALL
 
       SELECT d.id, 'diagnostico', d.lote_id, l.nombre, d.fecha,
-             d.estado_fenologico, d.notas, NULL, d.foto_path
+             d.estado_fenologico, d.notas, NULL, d.foto_path,
+             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+             NULL
       FROM diagnosticos d
       JOIN lotes l ON l.id = d.lote_id
       WHERE d.deleted_at IS NULL AND l.finca_id = ?1
@@ -709,7 +722,17 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
       SELECT a.id AS id, 'actividad' AS evento, a.lote_id AS lote_id,
              l.nombre AS lote_nombre, f.id AS finca_id, f.nombre AS finca_nombre,
              a.fecha AS fecha, a.tipo_actividad AS subtipo,
-             a.observaciones AS detalle, NULL AS cantidad_kg, NULL AS foto_path
+             a.observaciones AS detalle, NULL AS cantidad_kg,
+             NULL AS foto_path,
+             a.responsable AS responsable, a.costo AS costo,
+             a.subtipo_labor AS subtipo_labor, a.producto AS producto,
+             a.cantidad_aplicada AS cantidad_aplicada,
+             a.incidencia AS incidencia,
+             a.arboles_afectados AS arboles_afectados,
+             a.arboles_sembrados AS arboles_sembrados,
+             a.edad_plantula_meses AS edad_plantula_meses,
+             a.insumos AS insumos,
+             a.resultado_esperado AS resultado_esperado
       FROM actividades_agricolas a
       JOIN lotes l ON l.id = a.lote_id
       JOIN fincas f ON f.id = l.finca_id
@@ -719,7 +742,9 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
       UNION ALL
 
       SELECT c.id, 'cosecha', c.lote_id, l.nombre, f.id, f.nombre,
-             c.fecha, NULL, c.observaciones, c.cantidad_kg, NULL
+             c.fecha, NULL, c.observaciones, c.cantidad_kg, NULL,
+             NULL, NULL, c.tipo_producto, NULL, NULL, NULL, NULL, NULL,
+             NULL, NULL, NULL
       FROM cosechas c
       JOIN lotes l ON l.id = c.lote_id
       JOIN fincas f ON f.id = l.finca_id
@@ -729,7 +754,9 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
       UNION ALL
 
       SELECT d.id, 'diagnostico', d.lote_id, l.nombre, f.id, f.nombre,
-             d.fecha, d.estado_fenologico, d.notas, NULL, d.foto_path
+             d.fecha, d.estado_fenologico, d.notas, NULL, d.foto_path,
+             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+             NULL
       FROM diagnosticos d
       JOIN lotes l ON l.id = d.lote_id
       JOIN fincas f ON f.id = l.finca_id
@@ -938,6 +965,7 @@ class EventoHistorial {
     this.detalle,
     this.cantidadKg,
     this.fotoPath,
+    this.anotado = const [],
   });
 
   final String id;
@@ -965,6 +993,47 @@ class EventoHistorial {
   /// Solo presente en diagnósticos con foto.
   final String? fotoPath;
 
+  /// Lo demás que la persona anotó, en pares (etiqueta, valor) y ya listo
+  /// para mostrar: el tipo de poda, los árboles podados, el producto aplicado,
+  /// el responsable, el costo…
+  ///
+  /// Va como lista y no como campos sueltos porque cada labor llena unos
+  /// pocos y distintos: la pantalla los pinta todos sin saber cuáles son, y
+  /// agregar un campo nuevo al formulario no obliga a tocar el historial.
+  final List<(String, String)> anotado;
+
+  /// Arma esa lista desde la fila cruda, saltándose lo que vino vacío.
+  static List<(String, String)> _anotadoDe(QueryRow fila) {
+    final pares = <(String, String)>[];
+    void texto(String columna, String etiqueta) {
+      final valor = fila.readNullable<String>(columna);
+      if (valor != null && valor.trim().isNotEmpty) {
+        pares.add((etiqueta, valor.trim()));
+      }
+    }
+
+    void entero(String columna, String etiqueta) {
+      final valor = fila.readNullable<int>(columna);
+      if (valor != null) pares.add((etiqueta, '$valor'));
+    }
+
+    texto('subtipo_labor', 'Tipo');
+    entero('arboles_afectados', 'Árboles');
+    entero('arboles_sembrados', 'Árboles sembrados');
+    entero('edad_plantula_meses', 'Edad de la plántula (meses)');
+    texto('producto', 'Producto');
+    texto('cantidad_aplicada', 'Cantidad aplicada');
+    texto('incidencia', 'Incidencia');
+    texto('insumos', 'Insumos');
+    texto('resultado_esperado', 'Resultado esperado');
+    texto('responsable', 'Responsable');
+    final costo = fila.readNullable<double>('costo');
+    if (costo != null && costo > 0) {
+      pares.add(('Costo', costo.toStringAsFixed(0)));
+    }
+    return pares;
+  }
+
   factory EventoHistorial.desdeFila(QueryRow fila) {
     return EventoHistorial(
       id: fila.read<String>('id'),
@@ -980,6 +1049,7 @@ class EventoHistorial {
       detalle: fila.readNullable<String>('detalle'),
       cantidadKg: fila.readNullable<double>('cantidad_kg'),
       fotoPath: fila.readNullable<String>('foto_path'),
+      anotado: _anotadoDe(fila),
     );
   }
 
@@ -1000,6 +1070,7 @@ class EventoHistorial {
       detalle: fila.readNullable<String>('detalle'),
       cantidadKg: fila.readNullable<double>('cantidad_kg'),
       fotoPath: fila.readNullable<String>('foto_path'),
+      anotado: _anotadoDe(fila),
     );
   }
 }
