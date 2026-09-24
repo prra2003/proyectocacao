@@ -58,6 +58,7 @@ Future<void> exportarHistorialProductorAPdf(
   required LoteRepository lotesRepo,
   required Productor productor,
   required List<Finca> fincas,
+  DateTimeRange? rango,
 }) async {
   if (fincas.isEmpty) {
     if (context.mounted) {
@@ -74,7 +75,13 @@ Future<void> exportarHistorialProductorAPdf(
       final actividades = await lotesRepo.watchActividades(lote.id).first;
       final cosechas = await lotesRepo.watchCosechas(lote.id).first;
       datosLotes.add(
-        _DatosLote(lote: lote, actividades: actividades, cosechas: cosechas),
+        _DatosLote(
+          lote: lote,
+          actividades: actividades
+              .where((a) => _dentro(a.fecha, rango))
+              .toList(),
+          cosechas: cosechas.where((c) => _dentro(c.fecha, rango)).toList(),
+        ),
       );
     }
     datosFincas.add(_DatosFinca(finca: finca, lotes: datosLotes));
@@ -105,7 +112,11 @@ Future<void> exportarHistorialProductorAPdf(
             ),
             pw.SizedBox(height: 4),
             pw.Text(
-              'Generado el ${fechaLarga(DateTime.now())}',
+              rango == null
+                  ? 'Generado el ${fechaLarga(DateTime.now())}'
+                  : 'Del ${fechaLarga(rango.start)} al '
+                        '${fechaLarga(rango.end)}   ·   generado el '
+                        '${fechaLarga(DateTime.now())}',
               style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700),
             ),
             pw.SizedBox(height: 16),
@@ -135,6 +146,16 @@ Future<void> exportarHistorialProductorAPdf(
     bytes: bytes,
     filename: '${nombreDeArchivo(nombreArchivo)}.pdf',
   );
+}
+
+/// ¿La fecha cae dentro del rango elegido en la pantalla?
+///
+/// Sin rango entra todo. El día final cuenta completo: quien escoge "hasta el
+/// 30" espera que lo del 30 salga, no que se pierda por la hora.
+bool _dentro(DateTime fecha, DateTimeRange? rango) {
+  if (rango == null) return true;
+  return !fecha.isBefore(rango.start) &&
+      !fecha.isAfter(rango.end.add(const Duration(days: 1)));
 }
 
 // ---------------------------------------------------------------------------

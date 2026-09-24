@@ -268,15 +268,15 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                     ).animate(_tramo(0.4, 0.85, curva: Curves.elasticOut)),
                     child: FadeTransition(
                       opacity: _tramo(0.4, 0.62),
-                      // El emblema de la Red: los brotes pequeños convergen
-                      // hacia él. Va recortado en círculo y con el fondo
-                      // transparente por fuera, para que se lea como un
-                      // sello y no como una calcomanía cuadrada.
-                      child: Image.asset(
-                        'assets/emblema.png',
-                        width: 200,
-                        height: 200,
-                        filterQuality: FilterQuality.medium,
+                      // El brote que dibujó el equipo: los brotes pequeños
+                      // convergen hacia él. Coloreado con la paleta —dorado
+                      // adelante, verde atrás, tallo café— en vez de blanco
+                      // plano, para que combine con el resto de la pantalla.
+                      child: const Brote(
+                        tamano: 250,
+                        color: PaletaCacao.dorado,
+                        colorHoja: PaletaCacao.verde,
+                        colorTallo: PaletaCacao.cafe,
                       ),
                     ),
                   ),

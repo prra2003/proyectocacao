@@ -399,6 +399,57 @@ void main() {
     },
   );
 
+  testWidgets(
+    'con dos fincas y un solo lote, "Anotar" pregunta en vez de escoger solo',
+    (tester) async {
+      // La trampa que encontramos en el campo: una finca sin lotes y otra con
+      // uno. La app daba por hecho que era ese y anotaba ahí callada, en una
+      // finca distinta de la que la persona estaba viendo.
+      final productorId = await conAsync(
+        tester,
+        () => repo.guardarProductor(nombreCompleto: 'Diego Parra'),
+      );
+      final conLote = await conAsync(
+        tester,
+        () => repo.guardarFinca(
+          productorId: productorId,
+          nombre: 'La Esperanza',
+          municipio: 'San Vicente de Chucurí',
+          departamento: 'Santander',
+        ),
+      );
+      await conAsync(
+        tester,
+        () => repo.guardarFinca(
+          productorId: productorId,
+          nombre: 'El Paraíso',
+          municipio: 'Rionegro',
+          departamento: 'Santander',
+        ),
+      );
+      await conAsync(
+        tester,
+        () => repo.guardarLote(
+          fincaId: conLote,
+          nombre: 'Lote 1',
+          areaSembradaHa: 2,
+          variedadCacao: 'CCN-51',
+          fechaSiembra: DateTime(2020, 1, 1),
+        ),
+      );
+      await abrirApp(tester);
+
+      await tester.tap(find.byTooltip('Anotar'));
+      await asentar(tester);
+
+      // Pregunta, y además dice de qué finca es el lote.
+      expect(find.text('¿En cuál lote?'), findsOneWidget);
+      expect(find.text('La Esperanza'), findsWidgets);
+
+      await desmontar(tester);
+    },
+  );
+
   testWidgets('el selector de fincas en Inicio cambia los lotes que se ven', (
     tester,
   ) async {
