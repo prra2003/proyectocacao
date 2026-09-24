@@ -890,106 +890,124 @@ class _BarraFiltros extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String?>(
-                  initialValue: loteId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Lote',
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('Todos')),
-                    for (final lote in lotes)
-                      DropdownMenuItem(
-                        value: lote.id,
-                        child: Text(lote.nombre),
-                      ),
-                  ],
-                  onChanged: onLote,
-                ),
+          // El lote ocupa su propio renglón y los botones van debajo, en un
+          // Wrap que baja de línea si no caben. Antes iban los tres en una
+          // sola fila: en una pantalla angosta el desplegable se encogía
+          // hasta desaparecer y los botones de fecha y de descargar quedaban
+          // fuera de la pantalla, así que parecía que la app no los tuviera.
+          DropdownButtonFormField<String?>(
+            initialValue: loteId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Lote',
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
               ),
-              const SizedBox(width: 10),
-              // Con palabra y no solo el ícono: el calendario suelto entre
-              // el lote y el botón de compartir pasaba desapercibido, y la
-              // gente creía que la app no dejaba filtrar por fechas.
+            ),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('Todos')),
+              for (final lote in lotes)
+                DropdownMenuItem(value: lote.id, child: Text(lote.nombre)),
+            ],
+            onChanged: onLote,
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
               OutlinedButton.icon(
                 onPressed: onRango,
                 icon: const Icon(Icons.date_range_outlined, size: 20),
-                label: Text(rango == null ? 'Fechas' : 'Cambiar'),
-              ),
-              const SizedBox(width: 10),
-              // El único botón de exportar de la app: el historial completo
-              // para mandarle al técnico, o la tabla de lo que se ve con los
-              // filtros (Excel para trabajarla, PDF para mostrarla).
-              Container(
-                decoration: const BoxDecoration(
-                  color: PaletaCacao.verde,
-                  shape: BoxShape.circle,
-                ),
-                child: PopupMenuButton<String>(
-                  tooltip: 'Enviar o descargar el historial',
-                  icon: const Icon(
-                    Icons.ios_share_outlined,
-                    color: Colors.white,
-                  ),
-                  onSelected: (valor) => switch (valor) {
-                    'completo' => onExportarCompleto(),
-                    'excel' => onExportarExcel(),
-                    _ => onExportarPdf(),
-                  },
-                  itemBuilder: (contexto) => [
-                    PopupMenuItem(
-                      value: 'completo',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.summarize_outlined, size: 20),
-                          const SizedBox(width: 10),
-                          // Dice el alcance en vez de dejarlo adivinar: antes
-                          // esta opción ignoraba las fechas elegidas y salía
-                          // todo el historial sin avisar.
-                          Text(
-                            rango == null
-                                ? 'Historial completo (PDF)'
-                                : 'Historial de estas fechas (PDF)',
-                          ),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'excel',
-                      child: Row(
-                        children: [
-                          Icon(Icons.grid_on_outlined, size: 20),
-                          SizedBox(width: 10),
-                          Text('Esta tabla en Excel'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'pdf',
-                      child: Row(
-                        children: [
-                          Icon(Icons.picture_as_pdf_outlined, size: 20),
-                          SizedBox(width: 10),
-                          Text('Esta tabla en PDF'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                label: Text(rango == null ? 'Fechas' : 'Cambiar fechas'),
               ),
               if (rango != null)
-                IconButton(
-                  tooltip: 'Quitar filtro de fecha',
+                TextButton.icon(
                   onPressed: onLimpiarRango,
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, size: 20),
+                  label: const Text('Quitar fechas'),
                 ),
+              // El único botón de exportar de la app: el historial completo
+              // para mandarle al técnico, o la tabla de lo que se ve con los
+              // filtros (Excel para trabajarla, PDF para mostrarla). Con
+              // palabra y no solo el ícono, como el resto de la app.
+              PopupMenuButton<String>(
+                tooltip: 'Enviar o descargar el historial',
+                onSelected: (valor) => switch (valor) {
+                  'completo' => onExportarCompleto(),
+                  'excel' => onExportarExcel(),
+                  _ => onExportarPdf(),
+                },
+                itemBuilder: (contexto) => [
+                  PopupMenuItem(
+                    value: 'completo',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.summarize_outlined, size: 20),
+                        const SizedBox(width: 10),
+                        // Dice el alcance en vez de dejarlo adivinar: antes
+                        // esta opción ignoraba las fechas elegidas y salía
+                        // todo el historial sin avisar.
+                        Text(
+                          rango == null
+                              ? 'Historial completo (PDF)'
+                              : 'Historial de estas fechas (PDF)',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'excel',
+                    child: Row(
+                      children: [
+                        Icon(Icons.grid_on_outlined, size: 20),
+                        SizedBox(width: 10),
+                        Text('Esta tabla en Excel'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'pdf',
+                    child: Row(
+                      children: [
+                        Icon(Icons.picture_as_pdf_outlined, size: 20),
+                        SizedBox(width: 10),
+                        Text('Esta tabla en PDF'),
+                      ],
+                    ),
+                  ),
+                ],
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: PaletaCacao.verde,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.ios_share_outlined,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Descargar',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
           if (rango != null)
