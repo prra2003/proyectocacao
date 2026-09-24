@@ -109,6 +109,31 @@ void main() {
     expect(labor.syncStatus, SyncStatus.pending);
   });
 
+  test('una labor ya completa no se puede volver a cambiar', () async {
+    await lotes.registrarActividad(
+      loteId: loteId,
+      tipo: TipoActividad.poda,
+      fecha: DateTime(2026, 2, 1),
+      subtipoLabor: 'Formación',
+      arbolesAfectados: 35,
+    );
+    final labor = (await lotes.watchActividades(loteId).first).single;
+    expect(faltaLlenarEn(labor), isEmpty);
+
+    final escritas = await lotes.actualizarActividad(
+      id: labor.id,
+      tipo: TipoActividad.poda,
+      fecha: labor.fecha,
+      subtipoLabor: 'Rehabilitación',
+      arbolesAfectados: 900,
+    );
+
+    expect(escritas, 0, reason: 'no debería escribir nada');
+    final despues = (await lotes.watchActividades(loteId).first).single;
+    expect(despues.subtipoLabor, 'Formación');
+    expect(despues.arbolesAfectados, 35);
+  });
+
   test('una labor sin campos extra no inventa nada', () async {
     await lotes.registrarActividad(
       loteId: loteId,

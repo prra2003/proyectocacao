@@ -550,10 +550,17 @@ class _ListaActividades extends StatelessWidget {
                   ],
                 ),
                 isThreeLine: falta.isNotEmpty,
-                // Tocar la labor la abre para corregirla o terminar de
-                // llenarla: sin esto, lo anotado a la carrera se quedaba
-                // incompleto para siempre.
-                onTap: () => _corregir(context, actividad),
+                // Tocar la labor la abre para terminar de llenarla. Cuando
+                // ya quedó completa se cierra: la ventana es para terminar
+                // lo anotado a la carrera, no para reescribir el historial.
+                onTap: falta.isEmpty
+                    ? () => avisar(
+                        context,
+                        'Esta labor ya quedó completa y no se puede '
+                        'cambiar. Si quedó mal, bórrela deslizándola y '
+                        'anótela otra vez.',
+                      )
+                    : () => _corregir(context, actividad),
               ),
             );
           },
