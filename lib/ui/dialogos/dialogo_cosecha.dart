@@ -109,7 +109,7 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
               // tipo de producto va de desplegable, no de texto libre.
               SelectorDesplegable(
                 key: const Key('campo_tipo_producto'),
-                etiqueta: '¿Cómo lo sacó?',
+                etiqueta: 'Tipo de producto',
                 icono: Icons.eco_outlined,
                 color: PaletaCacao.dorado,
                 opciones: _tiposProducto,
@@ -128,7 +128,7 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
               CampoDictado(
                 campoKey: const Key('campo_observaciones_cosecha'),
                 controller: _observaciones,
-                etiqueta: '¿Algo más?',
+                etiqueta: 'Observaciones',
                 hint: 'Secado al sol, calidad... Toque el micrófono y hable',
                 maxLines: 2,
               ),
