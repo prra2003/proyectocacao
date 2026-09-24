@@ -840,14 +840,33 @@ class _UltimaLabor extends StatelessWidget {
       builder: (context, snapshot) {
         final actividades = snapshot.data ?? const <ActividadAgricola>[];
         final ultima = actividades.isEmpty ? null : actividades.first;
-        return _LineaBlanca(
-          icono: ultima == null
-              ? Icons.hourglass_empty_rounded
-              : iconoActividad(ultima.tipoActividad),
-          texto: ultima == null
-              ? 'Sin labores anotadas'
-              : '${etiquetaActividad(ultima.tipoActividad)}, '
-                    '${haceCuanto(ultima.fecha)}',
+        // En el campo se anota a la carrera y se deja a medias. El lote lo
+        // dice aquí mismo, sin tener que entrar a buscarlo labor por labor.
+        final aMedias = actividades
+            .where((a) => faltaLlenarEn(a).isNotEmpty)
+            .length;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _LineaBlanca(
+              icono: ultima == null
+                  ? Icons.hourglass_empty_rounded
+                  : iconoActividad(ultima.tipoActividad),
+              texto: ultima == null
+                  ? 'Sin labores anotadas'
+                  : '${etiquetaActividad(ultima.tipoActividad)}, '
+                        '${haceCuanto(ultima.fecha)}',
+            ),
+            if (aMedias > 0) ...[
+              const SizedBox(height: 8),
+              _LineaBlanca(
+                icono: Icons.edit_note,
+                texto: aMedias == 1
+                    ? 'Falta llenar 1 labor'
+                    : 'Falta llenar $aMedias labores',
+              ),
+            ],
+          ],
         );
       },
     );

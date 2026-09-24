@@ -91,6 +91,47 @@ class LoteRepository {
     );
   }
 
+  /// Corrige una labor ya anotada. Ver [RegistrosDao.actualizarActividad].
+  Future<int> actualizarActividad({
+    required String id,
+    required TipoActividad tipo,
+    required DateTime fecha,
+    String? observaciones,
+    String? responsable,
+    double? costo,
+    String? fotoPath,
+    String? subtipoLabor,
+    String? producto,
+    String? cantidadAplicada,
+    String? incidencia,
+    int? arbolesAfectados,
+    int? edadCultivoAnios,
+    int? arbolesSembrados,
+    int? edadPlantulaMeses,
+    String? insumos,
+    String? resultadoEsperado,
+  }) {
+    return _registros.actualizarActividad(
+      id: id,
+      tipo: tipo,
+      fecha: fecha,
+      observaciones: observaciones,
+      responsable: responsable,
+      costo: costo,
+      fotoPath: fotoPath,
+      subtipoLabor: subtipoLabor,
+      producto: producto,
+      cantidadAplicada: cantidadAplicada,
+      incidencia: incidencia,
+      arbolesAfectados: arbolesAfectados,
+      edadCultivoAnios: edadCultivoAnios,
+      arbolesSembrados: arbolesSembrados,
+      edadPlantulaMeses: edadPlantulaMeses,
+      insumos: insumos,
+      resultadoEsperado: resultadoEsperado,
+    );
+  }
+
   Future<int> borrarActividad(String id) => _registros.borrarActividad(id);
 
   Stream<List<Cosecha>> watchCosechas(String loteId) =>

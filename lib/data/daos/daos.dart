@@ -456,6 +456,59 @@ class RegistrosDao extends DatabaseAccessor<AppDatabase>
     return filas.fold<double>(0, (suma, c) => suma + c.cantidadKg);
   }
 
+  /// Corrige una labor ya anotada.
+  ///
+  /// Se escriben todos los campos, también los que vienen nulos: el
+  /// formulario llega completo, así que dejar en blanco algo que antes tenía
+  /// valor es una corrección deliberada y hay que respetarla.
+  ///
+  /// Queda en `pending` para que la corrección suba: sin eso, el teléfono se
+  /// quedaría con una versión y el servidor con otra.
+  Future<int> actualizarActividad({
+    required String id,
+    required TipoActividad tipo,
+    required DateTime fecha,
+    String? observaciones,
+    String? responsable,
+    double? costo,
+    String? fotoPath,
+    int? arbolesSembrados,
+    int? edadPlantulaMeses,
+    String? insumos,
+    String? resultadoEsperado,
+    String? subtipoLabor,
+    int? arbolesAfectados,
+    int? edadCultivoAnios,
+    String? producto,
+    String? cantidadAplicada,
+    String? incidencia,
+  }) {
+    return (update(actividadesAgricolas)
+          ..where((a) => a.id.equals(id) & a.deletedAt.isNull()))
+        .write(
+          ActividadesAgricolasCompanion(
+            tipoActividad: Value(tipo),
+            fecha: Value(fecha),
+            observaciones: Value(observaciones),
+            responsable: Value(responsable),
+            costo: Value(costo),
+            fotoPath: Value(fotoPath),
+            arbolesSembrados: Value(arbolesSembrados),
+            edadPlantulaMeses: Value(edadPlantulaMeses),
+            insumos: Value(insumos),
+            resultadoEsperado: Value(resultadoEsperado),
+            subtipoLabor: Value(subtipoLabor),
+            arbolesAfectados: Value(arbolesAfectados),
+            edadCultivoAnios: Value(edadCultivoAnios),
+            producto: Value(producto),
+            cantidadAplicada: Value(cantidadAplicada),
+            incidencia: Value(incidencia),
+            updatedAt: Value(_ahora()),
+            syncStatus: const Value(SyncStatus.pending),
+          ),
+        );
+  }
+
   Future<int> borrarActividad(String id) =>
       borrarSuave(attachedDatabase, actividadesAgricolas, id);
 
