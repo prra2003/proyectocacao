@@ -142,7 +142,10 @@ class _ReportesContenidoState extends State<_ReportesContenido>
   /// arriba: si el productor eligió una finca puntual, descarga solo esa
   /// finca; si eligió "Todas mis fincas" (o solo tiene una), descarga todo.
   /// Así, con varias fincas, el productor decide cuál se lleva.
-  Future<void> _exportarHistorial(BuildContext context) async {
+  Future<void> _exportarHistorial(
+    BuildContext context,
+    DateTimeRange? rango,
+  ) async {
     final productor = await widget.repo.watchProductor().first;
     if (productor == null || !context.mounted) return;
     final finca = widget.finca;
@@ -152,6 +155,7 @@ class _ReportesContenidoState extends State<_ReportesContenido>
       lotesRepo: widget.lotesRepo,
       productor: productor,
       fincas: finca == null ? widget.fincas : [finca],
+      rango: rango,
     );
   }
 
@@ -194,7 +198,8 @@ class _ReportesContenidoState extends State<_ReportesContenido>
               streamLotes: streamLotes,
               mostrarFinca: finca == null,
               tituloExportacion: finca?.nombre ?? 'Todas mis fincas',
-              onExportarCompleto: () => _exportarHistorial(context),
+              onExportarCompleto: (rango) =>
+                  _exportarHistorial(context, rango),
             ),
             PestanaLotes(
               repo: widget.repo,
@@ -659,7 +664,7 @@ class _PestanaHistorial extends StatefulWidget {
 
   /// El PDF completo por finca y por lote (el que antes salía desde tres
   /// botones distintos: arriba en Reportes, en Mis lotes y en cada finca).
-  final VoidCallback onExportarCompleto;
+  final ValueChanged<DateTimeRange?> onExportarCompleto;
 
   @override
   State<_PestanaHistorial> createState() => _PestanaHistorialState();
@@ -761,7 +766,8 @@ class _PestanaHistorialState extends State<_PestanaHistorial> {
                   rango: _rango,
                   onRango: () => _elegirRango(context),
                   onLimpiarRango: () => setState(() => _rango = null),
-                  onExportarCompleto: widget.onExportarCompleto,
+                  onExportarCompleto: () =>
+                      widget.onExportarCompleto(_rango),
                   onExportarExcel: () {
                     final (encabezados, filas) = _tabla(filtrados);
                     exportarTablaAExcel(
@@ -903,10 +909,13 @@ class _BarraFiltros extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              IconButton.filledTonal(
-                tooltip: rango == null ? 'Filtrar por fecha' : 'Cambiar fechas',
+              // Con palabra y no solo el ícono: el calendario suelto entre
+              // el lote y el botón de compartir pasaba desapercibido, y la
+              // gente creía que la app no dejaba filtrar por fechas.
+              OutlinedButton.icon(
                 onPressed: onRango,
-                icon: const Icon(Icons.date_range_outlined),
+                icon: const Icon(Icons.date_range_outlined, size: 20),
+                label: Text(rango == null ? 'Fechas' : 'Cambiar'),
               ),
               const SizedBox(width: 10),
               // El único botón de exportar de la app: el historial completo
@@ -928,18 +937,25 @@ class _BarraFiltros extends StatelessWidget {
                     'excel' => onExportarExcel(),
                     _ => onExportarPdf(),
                   },
-                  itemBuilder: (contexto) => const [
+                  itemBuilder: (contexto) => [
                     PopupMenuItem(
                       value: 'completo',
                       child: Row(
                         children: [
-                          Icon(Icons.summarize_outlined, size: 20),
-                          SizedBox(width: 10),
-                          Text('Historial completo (PDF)'),
+                          const Icon(Icons.summarize_outlined, size: 20),
+                          const SizedBox(width: 10),
+                          // Dice el alcance en vez de dejarlo adivinar: antes
+                          // esta opción ignoraba las fechas elegidas y salía
+                          // todo el historial sin avisar.
+                          Text(
+                            rango == null
+                                ? 'Historial completo (PDF)'
+                                : 'Historial de estas fechas (PDF)',
+                          ),
                         ],
                       ),
                     ),
-                    PopupMenuItem(
+                    const PopupMenuItem(
                       value: 'excel',
                       child: Row(
                         children: [
@@ -949,7 +965,7 @@ class _BarraFiltros extends StatelessWidget {
                         ],
                       ),
                     ),
-                    PopupMenuItem(
+                    const PopupMenuItem(
                       value: 'pdf',
                       child: Row(
                         children: [

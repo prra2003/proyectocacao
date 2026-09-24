@@ -119,18 +119,26 @@ class _CascaronScreenState extends State<CascaronScreen> {
   }
 
   Future<void> _anotar() async {
-    final disponibles = await _lotesDisponibles();
+    final (lotes: disponibles, fincas: cuantasFincas) =
+        await _lotesDisponibles();
     if (!mounted) return;
     if (disponibles.isEmpty) {
       avisar(context, 'Primero registre un lote');
       return;
     }
 
-    final lote = disponibles.length == 1
+    // Solo se salta la pregunta cuando no hay nada que escoger: un lote y una
+    // sola finca. Con varias fincas siempre pregunta, aunque el lote sea uno,
+    // porque si no la app anotaba callada en una finca distinta de la que la
+    // persona estaba viendo — y nadie revisa lo que ya dio por anotado.
+    final lote = (disponibles.length == 1 && cuantasFincas == 1)
         ? disponibles.first.lote
         : await showModalBottomSheet<Lote>(
             context: context,
-            builder: (_) => _ElegirLote(disponibles: disponibles),
+            builder: (_) => _ElegirLote(
+              disponibles: disponibles,
+              variasFincas: cuantasFincas > 1,
+            ),
           );
     if (lote == null || !mounted) return;
 
@@ -165,11 +173,14 @@ class _CascaronScreenState extends State<CascaronScreen> {
   }
 
   /// Todos los lotes de todas las fincas del productor, cada uno con el
-  /// nombre de su finca — el botón de anotar no depende de cuál finca esté
-  /// seleccionada en la pantalla de Inicio o Reportes en ese momento.
-  Future<List<LoteConFinca>> _lotesDisponibles() async {
+  /// nombre de su finca, y cuántas fincas tiene en total.
+  ///
+  /// El número de fincas se cuenta aparte a propósito: mirarlo en los lotes
+  /// engaña, porque una finca sin lotes no aparece ahí y la app creería que
+  /// el productor tiene una sola.
+  Future<({List<LoteConFinca> lotes, int fincas})> _lotesDisponibles() async {
     final productor = await widget.repo.watchProductor().first;
-    if (productor == null) return const [];
+    if (productor == null) return (lotes: const <LoteConFinca>[], fincas: 0);
     final fincas = await widget.repo.watchFincas(productor.id).first;
     final disponibles = <LoteConFinca>[];
     for (final finca in fincas) {
@@ -178,7 +189,7 @@ class _CascaronScreenState extends State<CascaronScreen> {
         disponibles.add((lote: lote, fincaNombre: finca.nombre));
       }
     }
-    return disponibles;
+    return (lotes: disponibles, fincas: fincas.length);
   }
 
   @override
@@ -387,15 +398,18 @@ class _BotonBarra extends StatelessWidget {
 }
 
 class _ElegirLote extends StatelessWidget {
-  const _ElegirLote({required this.disponibles});
+  const _ElegirLote({required this.disponibles, required this.variasFincas});
 
   final List<LoteConFinca> disponibles;
 
+  /// Si el productor tiene más de una finca hay que decir de cuál es cada
+  /// lote. Se recibe de afuera y no se deduce de [disponibles]: una finca sin
+  /// lotes no aparece ahí, y entonces el nombre se dejaba de mostrar justo
+  /// cuando más falta hacía.
+  final bool variasFincas;
+
   @override
   Widget build(BuildContext context) {
-    // Con una sola finca no hace falta repetir su nombre en cada fila.
-    final variasFincas =
-        disponibles.map((d) => d.fincaNombre).toSet().length > 1;
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
