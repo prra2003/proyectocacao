@@ -31,6 +31,24 @@ var CLIENTES_AUTORIZADOS = [
   'PEGUE-AQUI-EL-ID-WEB.apps.googleusercontent.com',
 ];
 
+/**
+ * Correos del SENA que entran como administradores al panel de seguimiento.
+ *
+ * Un administrador VE TODO y NO ESCRIBE NADA. Esa asimetría es el punto: el
+ * panel sirve para acompañar, no para corregirle el cuaderno al productor. Lo
+ * que anotó cada quien solo lo cambia quien lo anotó.
+ *
+ * Se comprueba contra el correo de la sesión en cada petición, no contra algo
+ * guardado al entrar: así, sacar a alguien de esta lista le quita el acceso de
+ * una vez, sin esperar a que su sesión venza.
+ *
+ * Escríbalos en minúscula. Dejar esta lista vacía deja el panel sin acceso, que
+ * es el estado seguro.
+ */
+var ADMINISTRADORES = [
+  // 'instructor.cacao@sena.edu.co',
+];
+
 /** Días que dura la sesión antes de pedir otra vez la cuenta de Google. */
 var DIAS_DE_SESION = 90;
 
@@ -159,6 +177,7 @@ function doPost(e) {
       case 'ping':      return responder({ ok: true });
       case 'entrar':    return responder(entrar(p));
       case 'salir':     return responder(salir(p));
+      case 'quiensoy':  return responder(quienSoy(p));
       case 'descargar': return responder(descargar(p));
       case 'subir':     return responder(subir(p));
       default:
@@ -193,7 +212,7 @@ function entrar(p) {
                   expira.toISOString()]);
 
   return { ok: true, token: token, usuarioId: cuenta.usuarioId,
-           correo: cuenta.correo };
+           correo: cuenta.correo, esAdmin: esAdministrador(cuenta.correo) };
 }
 
 /** Le pregunta a Google si el token es de verdad y para quién es. */
@@ -221,6 +240,22 @@ function verificarTokenDeGoogle(idToken) {
   return { ok: true, usuarioId: datos.sub, correo: datos.email || '' };
 }
 
+/**
+ * ¿Ese correo es de un administrador del SENA?
+ *
+ * Compara en minúscula y sin espacios: Google devuelve el correo tal como lo
+ * escribió la persona, y "Instructor@sena.edu.co" es la misma cuenta que
+ * "instructor@sena.edu.co".
+ */
+function esAdministrador(correo) {
+  if (!correo) return false;
+  var limpio = String(correo).trim().toLowerCase();
+  for (var i = 0; i < ADMINISTRADORES.length; i++) {
+    if (String(ADMINISTRADORES[i]).trim().toLowerCase() === limpio) return true;
+  }
+  return false;
+}
+
 /** Devuelve la sesión viva o null. */
 function sesionDe(token) {
   if (!token) return null;
@@ -228,8 +263,9 @@ function sesionDe(token) {
   for (var i = 1; i < filas.length; i++) {
     if (String(filas[i][0]) === String(token)) {
       if (new Date(filas[i][4]).getTime() < Date.now()) return null;
-      return { usuarioId: String(filas[i][1]), correo: String(filas[i][2]),
-               fila: i + 1 };
+      var correo = String(filas[i][2]);
+      return { usuarioId: String(filas[i][1]), correo: correo,
+               esAdmin: esAdministrador(correo), fila: i + 1 };
     }
   }
   return null;
@@ -239,6 +275,20 @@ function salir(p) {
   var sesion = sesionDe(p.token);
   if (sesion) hojaDe(HOJA_SESIONES).deleteRow(sesion.fila);
   return { ok: true };
+}
+
+/**
+ * Quién está conectado y con qué permisos.
+ *
+ * El panel lo llama al arrancar: necesita saber si la cuenta es de las que ven
+ * todo antes de dibujar nada. Sin esto tendría que adivinarlo por el correo, y
+ * quien decide eso es el servidor, no la pantalla.
+ */
+function quienSoy(p) {
+  var sesion = sesionDe(p.token);
+  if (!sesion) return { ok: false, error: 'Sesión vencida', reentrar: true };
+  return { ok: true, usuarioId: sesion.usuarioId, correo: sesion.correo,
+           esAdmin: sesion.esAdmin };
 }
 
 // ------------------------------------------------------------- descarga ----
@@ -271,7 +321,11 @@ function descargar(p) {
   for (var i = 1; i < valores.length; i++) {
     var fila = aObjeto(columnas, valores[i]);
     if (!fila.id) continue;
-    if (!publica && fila.usuario_id !== sesion.usuarioId) continue;
+    // El administrador del SENA ve las filas de todos los productores; el
+    // productor, solo las suyas.
+    if (!publica && !sesion.esAdmin && fila.usuario_id !== sesion.usuarioId) {
+      continue;
+    }
     if (desde) {
       if (fila.updated_at < desde) continue;
       if (fila.updated_at === desde && desdeId && fila.id <= desdeId) continue;
@@ -303,6 +357,14 @@ function subir(p) {
   }
   if (TABLAS_PUBLICAS.indexOf(p.entidad) !== -1) {
     return { ok: false, error: 'Esa tabla es de solo lectura' };
+  }
+  // El panel del SENA es de consulta. Si alguna vez escribiera, el productor
+  // podría encontrar su cuaderno cambiado sin haberlo tocado, y el historial
+  // dejaría de ser prueba de nada.
+  if (sesion.esAdmin) {
+    return { ok: false,
+             error: 'El panel del SENA es de solo lectura: no puede cambiar ' +
+                    'lo que anotó un productor' };
   }
 
   var entrantes = p.filas || [];

@@ -94,7 +94,8 @@ sincronizar.
 | Acción | Manda | Devuelve |
 | --- | --- | --- |
 | `ping` | — | `{ok:true}` |
-| `entrar` | `idToken` de Google | `token`, `usuarioId`, `correo` |
+| `quiensoy` | `token` | `usuarioId`, `correo`, `esAdmin` |
+| `entrar` | `idToken` de Google | `token`, `usuarioId`, `correo`, `esAdmin` |
 | `descargar` | `token`, `entidad`, `desde`, `desdeId`, `limite` | `filas` |
 | `subir` | `token`, `entidad`, `filas` | `filas` como quedaron |
 | `salir` | `token` | `{ok:true}` |
@@ -107,6 +108,29 @@ curl -s -L -X POST "URL_DEL_EXEC" -H "Content-Type: text/plain" -d '{"accion":"p
 
 > `-L` es necesario: Apps Script siempre responde con una redirección antes de
 > entregar el resultado. El cliente en Dart también tiene que seguirla.
+
+## El panel del SENA: administradores
+
+Los correos que estén en `ADMINISTRADORES`, arriba en `Codigo.gs`, entran con
+permisos distintos: **ven las filas de todos los productores y no pueden
+escribir ninguna**.
+
+Esa asimetría es el punto. El panel sirve para acompañar, no para corregirle el
+cuaderno al productor: lo que anotó cada quien solo lo cambia quien lo anotó, y
+así el historial sigue sirviendo como prueba.
+
+Un intento de subir desde una cuenta administradora se rechaza con un mensaje
+claro, no en silencio.
+
+La comprobación se hace **contra el correo de la sesión en cada petición**, no
+contra algo guardado al entrar. Sacar a alguien de la lista le quita el acceso
+de una vez, sin esperar a que su sesión de 90 días venza.
+
+> La lista vacía deja el panel sin acceso. Es el estado seguro: mientras nadie
+> la llene, el panel no ve nada.
+
+Después de tocar la lista hay que **publicar una versión nueva** de la
+aplicación web, como con cualquier otro cambio del código.
 
 ## Los límites que hay que tener presentes
 
@@ -125,6 +149,8 @@ curl -s -L -X POST "URL_DEL_EXEC" -H "Content-Type: text/plain" -d '{"accion":"p
 2. `sesionDe(token)` — toda acción de datos empieza por ahí.
 3. El servidor **sobrescribe** `usuario_id` con el de la sesión y nunca confía
    en el que mande el teléfono.
+4. `ADMINISTRADORES` — quien esté ahí ve los datos de todos los productores.
+   Agregar un correo de más es abrir el cuaderno de todo el mundo.
 
 Si alguien toca una de esas tres, se abre la puerta a que un productor vea los
 datos de otro.
