@@ -19,7 +19,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>La usamos para marcar dónde queda su finca. Solo cuando usted toca "Estoy en la finca".</string>
 	<key>CFBundleDisplayName</key>
-	<string>Red Nacional de Cacao</string>
+	<string>Cacaiva</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

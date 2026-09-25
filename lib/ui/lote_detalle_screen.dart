@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../data/local/database.dart';
 import '../data/repositories/lote_repository.dart';
 import '../data/repositories/perfil_repository.dart';
+import '../data/repositories/recordatorios.dart';
 import 'dialogos/dialogo_actividad.dart';
 
 import 'dart:io';
@@ -406,6 +407,40 @@ class _ListaActividades extends StatelessWidget {
   final LoteRepository repo;
   final String loteId;
 
+  /// Abre la labor en el mismo formulario, ya lleno, y guarda lo corregido.
+  Future<void> _corregir(
+    BuildContext context,
+    ActividadAgricola actividad,
+  ) async {
+    final datos = await pedirDatosActividad(
+      context,
+      inicial: datosDeLabor(actividad),
+    );
+    if (datos == null) return;
+    await repo.actualizarActividad(
+      id: actividad.id,
+      tipo: datos.tipo,
+      fecha: datos.fecha,
+      observaciones: datos.observaciones,
+      responsable: datos.responsable,
+      costo: datos.costo,
+      fotoPath: datos.fotoPath,
+      subtipoLabor: datos.subtipoLabor,
+      producto: datos.producto,
+      cantidadAplicada: datos.cantidadAplicada,
+      incidencia: datos.incidencia,
+      arbolesAfectados: datos.arbolesAfectados,
+      edadCultivoAnios: datos.edadCultivoAnios,
+      arbolesSembrados: datos.arbolesSembrados,
+      edadPlantulaMeses: datos.edadPlantulaMeses,
+      insumos: datos.insumos,
+      resultadoEsperado: datos.resultadoEsperado,
+    );
+    if (context.mounted) {
+      mostrarConfirmacionGuardado(context, mensaje: 'Labor corregida');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ActividadAgricola>>(
@@ -461,6 +496,7 @@ class _ListaActividades extends StatelessWidget {
               if (actividad.resultadoEsperado != null)
                 'Esperado: ${actividad.resultadoEsperado}',
             ];
+            final falta = faltaLlenarEn(actividad);
             return Dismissible(
               key: ValueKey(actividad.id),
               direction: DismissDirection.endToStart,
@@ -502,7 +538,29 @@ class _ListaActividades extends StatelessWidget {
                   etiquetaActividad(actividad.tipoActividad),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                subtitle: Text(detalles.join(' · ')),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(detalles.join(' · ')),
+                    if (falta.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: AvisoFaltaLlenar(falta: falta),
+                      ),
+                  ],
+                ),
+                isThreeLine: falta.isNotEmpty,
+                // Tocar la labor la abre para terminar de llenarla. Cuando
+                // ya quedó completa se cierra: la ventana es para terminar
+                // lo anotado a la carrera, no para reescribir el historial.
+                onTap: falta.isEmpty
+                    ? () => avisar(
+                        context,
+                        'Esta labor ya quedó completa y no se puede '
+                        'cambiar. Si quedó mal, bórrela deslizándola y '
+                        'anótela otra vez.',
+                      )
+                    : () => _corregir(context, actividad),
               ),
             );
           },

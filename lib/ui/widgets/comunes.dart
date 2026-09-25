@@ -627,3 +627,43 @@ class CampoFoto extends StatelessWidget {
     );
   }
 }
+
+/// Marca que a una labor le falta información, y dice cuál.
+///
+/// No es un error: lo anotado ya está guardado y vale. Es un recordatorio de
+/// que en el campo se anota a la carrera, y que esos datos son los que el
+/// técnico y el SENA van a pedir después. Por eso el tono es de invitación y
+/// no de alarma, y siempre nombra los campos: "falta algo" no le sirve a
+/// nadie.
+class AvisoFaltaLlenar extends StatelessWidget {
+  const AvisoFaltaLlenar({super.key, required this.falta});
+
+  final List<String> falta;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: PaletaCacao.dorado.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.edit_note, size: 18, color: PaletaCacao.cafeOscuro),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              'Falta llenar: ${falta.join(', ')}',
+              style: const TextStyle(
+                color: PaletaCacao.cafeOscuro,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

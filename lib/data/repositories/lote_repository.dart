@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' show Value;
 import '../daos/daos.dart';
 import '../local/database.dart';
 import '../local/enums.dart';
+import 'recordatorios.dart';
 
 /// Todo lo que pasa dentro de un lote: labores culturales y cosechas.
 class LoteRepository {
@@ -72,6 +73,59 @@ class LoteRepository {
   }) {
     return _registros.registrarActividad(
       loteId: loteId,
+      tipo: tipo,
+      fecha: fecha,
+      observaciones: observaciones,
+      responsable: responsable,
+      costo: costo,
+      fotoPath: fotoPath,
+      subtipoLabor: subtipoLabor,
+      producto: producto,
+      cantidadAplicada: cantidadAplicada,
+      incidencia: incidencia,
+      arbolesAfectados: arbolesAfectados,
+      edadCultivoAnios: edadCultivoAnios,
+      arbolesSembrados: arbolesSembrados,
+      edadPlantulaMeses: edadPlantulaMeses,
+      insumos: insumos,
+      resultadoEsperado: resultadoEsperado,
+    );
+  }
+
+  /// Corrige una labor **que todavía está incompleta**.
+  ///
+  /// Una vez la labor quedó bien llena deja de poderse cambiar, y este método
+  /// no escribe nada (devuelve 0). La ventana de corrección existe para
+  /// terminar lo que se anotó a la carrera, no para reescribir el historial:
+  /// si el dato ya está completo, cambiarlo después haría que el reporte del
+  /// técnico y el del SENA dejaran de ser confiables.
+  ///
+  /// La comprobación vive aquí y no solo en la pantalla: una regla que
+  /// sostiene la confianza en los datos no puede depender de que la interfaz
+  /// se acuerde de aplicarla.
+  Future<int> actualizarActividad({
+    required String id,
+    required TipoActividad tipo,
+    required DateTime fecha,
+    String? observaciones,
+    String? responsable,
+    double? costo,
+    String? fotoPath,
+    String? subtipoLabor,
+    String? producto,
+    String? cantidadAplicada,
+    String? incidencia,
+    int? arbolesAfectados,
+    int? edadCultivoAnios,
+    int? arbolesSembrados,
+    int? edadPlantulaMeses,
+    String? insumos,
+    String? resultadoEsperado,
+  }) async {
+    final actual = await _registros.actividadPorId(id);
+    if (actual == null || faltaLlenarEn(actual).isEmpty) return 0;
+    return _registros.actualizarActividad(
+      id: id,
       tipo: tipo,
       fecha: fecha,
       observaciones: observaciones,

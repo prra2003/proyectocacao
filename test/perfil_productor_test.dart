@@ -62,7 +62,7 @@ void main() {
     await abrirApp(tester);
 
     // Sin perfil, lo primero es la bienvenida y el registro.
-    expect(find.text('Red Nacional de Cacao'), findsOneWidget);
+    expect(find.text('Cacaiva'), findsOneWidget);
 
     await tester.tap(find.text('Comenzar registro'));
     await asentar(tester);

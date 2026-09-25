@@ -63,17 +63,46 @@ typedef DatosActividad = ({
 /// [tipoInicial] llega desde un recordatorio ("El Alto lleva 90 días sin
 /// poda"): el formulario abre con esa labor ya elegida. [loteNombre] se
 /// muestra debajo del título para que no quede duda de en qué lote se anota.
+/// Abre el formulario de labor.
+///
+/// Con [inicial] abre el mismo formulario ya lleno, para corregir o terminar
+/// de llenar una labor que ya está anotada: es el mismo de siempre, no otro
+/// distinto, para que nadie tenga que aprender dos pantallas.
 Future<DatosActividad?> pedirDatosActividad(
   BuildContext context, {
   TipoActividad? tipoInicial,
   String? loteNombre,
+  DatosActividad? inicial,
 }) {
   return showDialog<DatosActividad>(
     context: context,
-    builder: (_) =>
-        _DialogoActividad(tipoInicial: tipoInicial, loteNombre: loteNombre),
+    builder: (_) => _DialogoActividad(
+      tipoInicial: tipoInicial,
+      loteNombre: loteNombre,
+      inicial: inicial,
+    ),
   );
 }
+
+/// La labor ya guardada, en la forma que entiende el formulario.
+DatosActividad datosDeLabor(ActividadAgricola labor) => (
+  tipo: labor.tipoActividad,
+  fecha: labor.fecha,
+  observaciones: labor.observaciones,
+  responsable: labor.responsable,
+  costo: labor.costo,
+  fotoPath: labor.fotoPath,
+  resultadoEsperado: labor.resultadoEsperado,
+  arbolesSembrados: labor.arbolesSembrados,
+  edadPlantulaMeses: labor.edadPlantulaMeses,
+  insumos: labor.insumos,
+  subtipoLabor: labor.subtipoLabor,
+  arbolesAfectados: labor.arbolesAfectados,
+  edadCultivoAnios: labor.edadCultivoAnios,
+  producto: labor.producto,
+  cantidadAplicada: labor.cantidadAplicada,
+  incidencia: labor.incidencia,
+);
 
 /// Guarda lo que se llenó en el formulario como una labor de [lote].
 ///
@@ -118,10 +147,14 @@ String _nombreDelCampo(TipoActividad tipo) => switch (tipo) {
 };
 
 class _DialogoActividad extends StatefulWidget {
-  const _DialogoActividad({this.tipoInicial, this.loteNombre});
+  const _DialogoActividad({this.tipoInicial, this.loteNombre, this.inicial});
 
   final TipoActividad? tipoInicial;
   final String? loteNombre;
+
+  /// Valores con los que arranca el formulario, si se está corrigiendo una
+  /// labor ya anotada.
+  final DatosActividad? inicial;
 
   @override
   State<_DialogoActividad> createState() => _DialogoActividadState();
@@ -147,8 +180,11 @@ class _DialogoActividadState extends State<_DialogoActividad> {
   final _cantidadAplicada = TextEditingController();
   final _incidencia = TextEditingController();
 
-  late var _tipo = widget.tipoInicial ?? TipoActividad.poda;
-  DateTime _fecha = DateTime.now();
+  late var _tipo =
+      widget.inicial?.tipo ?? widget.tipoInicial ?? TipoActividad.poda;
+  late DateTime _fecha = widget.inicial?.fecha ?? DateTime.now();
+
+  bool get _editando => widget.inicial != null;
 
   /// Lo único obligatorio es qué labor y cuándo. Todo lo demás (tipo de poda,
   /// árboles, responsable, costo, foto, notas) va aquí dentro, cerrado: quien
@@ -162,6 +198,31 @@ class _DialogoActividadState extends State<_DialogoActividad> {
   bool get _esFertilizacion => _tipo == TipoActividad.fertilizacion;
   bool get _esFitosanitario => _tipo == TipoActividad.controlFitosanitario;
   bool get _esRiego => _tipo == TipoActividad.riego;
+
+  @override
+  void initState() {
+    super.initState();
+    final inicial = widget.inicial;
+    if (inicial == null) return;
+    // Abrir el formulario en blanco sobre una labor ya anotada seria pedirle
+    // a la persona que la escriba otra vez.
+    _observaciones.text = inicial.observaciones ?? '';
+    _responsable.text = inicial.responsable ?? '';
+    _costo.text = inicial.costo == null ? '' : inicial.costo!.toStringAsFixed(0);
+    _resultadoEsperado.text = inicial.resultadoEsperado ?? '';
+    _arbolesSembrados.text = inicial.arbolesSembrados?.toString() ?? '';
+    _edadPlantula.text = inicial.edadPlantulaMeses?.toString() ?? '';
+    _insumos.text = inicial.insumos ?? '';
+    _arbolesAfectados.text = inicial.arbolesAfectados?.toString() ?? '';
+    _producto.text = inicial.producto ?? '';
+    _cantidadAplicada.text = inicial.cantidadAplicada ?? '';
+    _incidencia.text = inicial.incidencia ?? '';
+    _subtipo = inicial.subtipoLabor;
+    _fotoPath = inicial.fotoPath;
+    // Los detalles arrancan abiertos: si vino a terminar de llenar, lo que
+    // busca está justamente ahí dentro.
+    _masDetalles = true;
+  }
 
   @override
   void dispose() {
@@ -206,7 +267,7 @@ class _DialogoActividadState extends State<_DialogoActividad> {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Registrar labor'),
+          Text(_editando ? 'Corregir labor' : 'Registrar labor'),
           if (widget.loteNombre != null)
             Text(
               widget.loteNombre!,
@@ -496,7 +557,7 @@ class _DialogoActividadState extends State<_DialogoActividad> {
             cantidadAplicada: textoONulo(_cantidadAplicada.text),
             incidencia: textoONulo(_incidencia.text),
           )),
-          child: const Text('Registrar'),
+          child: Text(_editando ? 'Guardar' : 'Registrar'),
         ),
       ],
     );

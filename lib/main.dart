@@ -124,7 +124,7 @@ class CacaoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Red Nacional de Cacao',
+      title: 'Cacaiva',
       debugShowCheckedModeBanner: false,
       theme: temaCacao(),
       locale: const Locale('es'),

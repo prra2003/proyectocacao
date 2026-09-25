@@ -284,10 +284,13 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                   _Aparece(
                     animacion: _tramo(0.62, 0.82),
                     child: const Text(
-                      'Red Nacional de Cacao',
+                      'Cacaiva',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 36,
+                        // Más grande que el nombre largo anterior: "Cacaiva"
+                        // cabe holgado en una línea y el nombre es lo que la
+                        // pantalla de entrada tiene que dejar grabado.
+                        fontSize: 46,
                         height: 1.15,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,

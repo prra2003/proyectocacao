@@ -201,6 +201,12 @@ Future<void> _sembrarAsociaciones(AppDatabase db) async {
 /// nombre de la cuenta y se recuperan volviendo a entrar. La identidad de la
 /// instalación no se toca —es de este teléfono, no de la cuenta—, así que los
 /// repositorios que ya la tienen en memoria siguen siendo válidos.
+///
+/// El catálogo de asociaciones se vuelve a sembrar al final. No es un dato de
+/// la persona sino una lista fija que la app trae de fábrica, y sin esto la
+/// pantalla de perfil se quedaba sin opciones hasta que alguien cerrara y
+/// volviera a abrir la app —en la web, hasta recargar la página—, que es algo
+/// que nadie tiene por qué adivinar.
 Future<void> borrarDatosLocales(AppDatabase db) {
   return db.transaction(() async {
     // De abajo hacia arriba, para no chocar con las llaves foráneas.
@@ -216,6 +222,7 @@ Future<void> borrarDatosLocales(AppDatabase db) {
     ]) {
       await db.delete(tabla).go();
     }
+    await _sembrarAsociaciones(db);
   });
 }
 
