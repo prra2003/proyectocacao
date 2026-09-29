@@ -201,6 +201,11 @@ class _DialogoLoteState extends State<_DialogoLote> {
   late double? _longitud = widget.inicial?.longitud;
   var _buscandoGps = false;
 
+  /// Por qué se rechazó el último punto. Se muestra dentro del diálogo: un
+  /// SnackBar se dibuja en el Scaffold, que aquí queda debajo del diálogo, y
+  /// el aviso salía sin que nadie lo viera.
+  String? _errorPunto;
+
   /// El centro del perímetro: el punto de la finca. Sin él no hay contra qué
   /// comparar y no se restringe nada.
   LatLng? get _centroFinca {
@@ -266,6 +271,7 @@ class _DialogoLoteState extends State<_DialogoLote> {
       setState(() {
         _latitud = punto.latitude;
         _longitud = punto.longitude;
+        _errorPunto = null;
       });
     } finally {
       if (mounted) setState(() => _buscandoGps = false);
@@ -280,13 +286,13 @@ class _DialogoLoteState extends State<_DialogoLote> {
     if (centro == null) return true;
     final lejos = metrosEntre(centro, punto);
     if (lejos <= _radio) return true;
-    avisar(
-      context,
-      'Ese punto queda a ${distanciaEnPalabras(lejos)} de la finca, y el '
-      'lote solo puede estar a ${distanciaEnPalabras(_radio)}. Si de verdad '
-      'está parado en el lote, lo que está mal es el punto de la finca: '
-      'corríjalo desde el perfil.',
-    );
+    setState(() {
+      _errorPunto =
+          'Ese punto queda a ${distanciaEnPalabras(lejos)} de la finca, y el '
+          'lote solo puede estar a ${distanciaEnPalabras(_radio)}.\n\n'
+          'Si de verdad está parado en el lote, lo que está mal es el punto '
+          'de la finca: corríjalo desde el perfil.';
+    });
     return false;
   }
 
@@ -314,6 +320,7 @@ class _DialogoLoteState extends State<_DialogoLote> {
     setState(() {
       _latitud = elegido.latitude;
       _longitud = elegido.longitude;
+      _errorPunto = null;
     });
   }
 
@@ -450,9 +457,11 @@ class _DialogoLoteState extends State<_DialogoLote> {
                 onMarcar: _marcarPunto,
                 onMapa: _marcarEnMapa,
                 radio: _centroFinca == null ? null : _radio,
+                error: _errorPunto,
                 onQuitar: () => setState(() {
                   _latitud = null;
                   _longitud = null;
+                  _errorPunto = null;
                 }),
               ),
             ],
@@ -762,6 +771,7 @@ class _PuntoDelLote extends StatelessWidget {
     required this.onMapa,
     required this.onQuitar,
     this.radio,
+    this.error,
   });
 
   final double? latitud;
@@ -773,6 +783,9 @@ class _PuntoDelLote extends StatelessWidget {
 
   /// Hasta dónde puede quedar el lote. Nulo cuando la finca no tiene punto.
   final double? radio;
+
+  /// Por qué se rechazó el último intento, si se rechazó.
+  final String? error;
 
   @override
   Widget build(BuildContext context) {
@@ -817,6 +830,39 @@ class _PuntoDelLote extends StatelessWidget {
               fontWeight: hay ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
+          const SizedBox(height: 10),
+          if (error != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: PaletaCacao.maduroClaro,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 20,
+                    color: PaletaCacao.maduro,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      error!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.35,
+                        color: PaletaCacao.cafeOscuro,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           // Dos caminos, como en la finca: el GPS manda en el campo (no pide
           // internet) y el mapa sirve para señalar desde la casa o corregir.

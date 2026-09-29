@@ -106,6 +106,10 @@ class _MapaScreenState extends State<MapaScreen> {
     if (sirve) Navigator.of(context).pop(_punto);
   }
 
+  /// El dibujo del mapa no bajó (sin señal, o el servidor de OpenStreetMap no
+  /// contestó). El punto se puede marcar igual con el GPS.
+  var _sinMapa = false;
+
   /// Fuera del perímetro no se mueve el punto: se explica por qué y cuánto se
   /// pasó, que es lo único que le sirve a quien está mirando el mapa.
   void _tocar(LatLng punto) {
@@ -150,6 +154,14 @@ class _MapaScreenState extends State<MapaScreen> {
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.redcacao.cacao_app',
+                // Si el dibujo del mapa no baja, el lienzo queda en blanco y
+                // uno no sabe si la app se rompió o es que no hay señal. Se
+                // dice, y se recuerda que el GPS no necesita internet.
+                errorTileCallback: (_, _, _) {
+                  if (mounted && !_sinMapa) {
+                    setState(() => _sinMapa = true);
+                  }
+                },
               ),
               if (widget.centroPermitido != null &&
                   widget.radioPermitido != null)
@@ -191,6 +203,33 @@ class _MapaScreenState extends State<MapaScreen> {
               ),
             ],
           ),
+          if (_sinMapa)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: Material(
+                color: PaletaCacao.cafeOscuro,
+                borderRadius: BorderRadius.circular(12),
+                child: const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Icon(Icons.wifi_off, color: Colors.white, size: 20),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'No se pudo cargar el dibujo del mapa: revise la '
+                          'conexión. El punto se puede tomar igual con el GPS, '
+                          'que no necesita internet.',
+                          style: TextStyle(color: Colors.white, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             left: 16,
             right: 16,
