@@ -182,7 +182,11 @@ class _Contenido extends StatelessWidget {
       lotesDelProductor.map((l) => l.codigo),
     );
     if (!context.mounted) return;
-    final datos = await pedirDatosLote(context, codigoSugerido: codigoSugerido);
+    final datos = await pedirDatosLote(
+      context,
+      codigoSugerido: codigoSugerido,
+      finca: finca,
+    );
     if (datos == null) return;
     await repo.guardarLote(
       fincaId: finca.id,
@@ -268,6 +272,7 @@ class _Contenido extends StatelessWidget {
                           retraso: Duration(milliseconds: 70 * i),
                           child: _TarjetaLote(
                             lote: lotes[i],
+                            finca: finca,
                             lotesRepo: lotesRepo,
                             color: _coloresLote[i % _coloresLote.length],
                           ),
@@ -1015,11 +1020,13 @@ class _IndicadorAnimado extends StatelessWidget {
 class _TarjetaLote extends StatefulWidget {
   const _TarjetaLote({
     required this.lote,
+    required this.finca,
     required this.lotesRepo,
     required this.color,
   });
 
   final Lote lote;
+  final Finca finca;
   final LoteRepository lotesRepo;
   final Color color;
 
@@ -1056,6 +1063,7 @@ class _TarjetaLoteState extends State<_TarjetaLote> {
                 builder: (_) => LoteDetalleScreen(
                   repo: widget.lotesRepo,
                   lote: widget.lote,
+                  finca: widget.finca,
                 ),
               ),
             ),

@@ -20,10 +20,19 @@ import 'widgets/mazorca.dart';
 
 /// Vida del lote: las labores culturales y las cosechas que se le registran.
 class LoteDetalleScreen extends StatefulWidget {
-  const LoteDetalleScreen({super.key, required this.repo, required this.lote});
+  const LoteDetalleScreen({
+    super.key,
+    required this.repo,
+    required this.lote,
+    this.finca,
+  });
 
   final LoteRepository repo;
   final Lote lote;
+
+  /// Solo para abrir el mapa cerca cuando se edita el punto del lote. Quien
+  /// no la tenga a la mano puede no pasarla.
+  final Finca? finca;
 
   @override
   State<LoteDetalleScreen> createState() => _LoteDetalleScreenState();
@@ -102,7 +111,11 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
       await _explicarCandado();
       return;
     }
-    final datos = await pedirDatosLote(context, inicial: _lote);
+    final datos = await pedirDatosLote(
+      context,
+      inicial: _lote,
+      finca: widget.finca,
+    );
     if (datos == null) return;
     await widget.repo.guardarLote(
       id: _lote.id,

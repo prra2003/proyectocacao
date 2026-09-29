@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../data/local/database.dart';
 import '../tema.dart';
 import '../widgets/comunes.dart';
+import '../mapa_screen.dart';
 import '../widgets/selector_fecha.dart';
 import '../widgets/ubicacion.dart';
 
@@ -126,19 +128,29 @@ Future<DatosLote?> pedirDatosLote(
   BuildContext context, {
   Lote? inicial,
   String? codigoSugerido,
+  Finca? finca,
 }) {
   return showDialog<DatosLote>(
     context: context,
-    builder: (_) =>
-        _DialogoLote(inicial: inicial, codigoSugerido: codigoSugerido),
+    builder: (_) => _DialogoLote(
+      inicial: inicial,
+      codigoSugerido: codigoSugerido,
+      finca: finca,
+    ),
   );
 }
 
 class _DialogoLote extends StatefulWidget {
-  const _DialogoLote({this.inicial, this.codigoSugerido});
+  const _DialogoLote({this.inicial, this.codigoSugerido, this.finca});
 
   final Lote? inicial;
   final String? codigoSugerido;
+
+  /// La finca a la que pertenece el lote, si quien abre el formulario la
+  /// conoce. Solo sirve para abrir el mapa cerca: un lote queda en la finca o
+  /// muy cerca, así que empezar en el punto de la finca ahorra buscar el país
+  /// entero.
+  final Finca? finca;
 
   @override
   State<_DialogoLote> createState() => _DialogoLoteState();
@@ -231,6 +243,31 @@ class _DialogoLoteState extends State<_DialogoLote> {
     } finally {
       if (mounted) setState(() => _buscandoGps = false);
     }
+  }
+
+  /// El mismo mapa de la finca, para señalar el lote con el dedo.
+  ///
+  /// Arranca donde ya esté el lote; si no tiene punto, en el de la finca, que
+  /// queda a unos metros. Necesita internet para ver el dibujo del mapa — por
+  /// eso el GPS sigue siendo la forma principal en el campo.
+  Future<void> _marcarEnMapa() async {
+    final finca = widget.finca;
+    final lat = _latitud ?? finca?.latitud;
+    final lon = _longitud ?? finca?.longitud;
+    final elegido = await Navigator.of(context).push<LatLng>(
+      RutaCacao(
+        builder: (_) => MapaScreen(
+          inicial: lat != null && lon != null ? LatLng(lat, lon) : null,
+          departamento: finca?.departamento,
+          municipio: finca?.municipio,
+        ),
+      ),
+    );
+    if (elegido == null || !mounted) return;
+    setState(() {
+      _latitud = elegido.latitude;
+      _longitud = elegido.longitude;
+    });
   }
 
   void _aceptar() {
@@ -364,6 +401,7 @@ class _DialogoLoteState extends State<_DialogoLote> {
                 longitud: _longitud,
                 buscando: _buscandoGps,
                 onMarcar: _marcarPunto,
+                onMapa: _marcarEnMapa,
                 onQuitar: () => setState(() {
                   _latitud = null;
                   _longitud = null;
@@ -673,6 +711,7 @@ class _PuntoDelLote extends StatelessWidget {
     required this.longitud,
     required this.buscando,
     required this.onMarcar,
+    required this.onMapa,
     required this.onQuitar,
   });
 
@@ -680,6 +719,7 @@ class _PuntoDelLote extends StatelessWidget {
   final double? longitud;
   final bool buscando;
   final VoidCallback onMarcar;
+  final VoidCallback onMapa;
   final VoidCallback onQuitar;
 
   @override
@@ -723,10 +763,17 @@ class _PuntoDelLote extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Row(
+          // Dos caminos, como en la finca: el GPS manda en el campo (no pide
+          // internet) y el mapa sirve para señalar desde la casa o corregir.
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: PaletaCacao.verde),
+                style: FilledButton.styleFrom(
+                  backgroundColor: PaletaCacao.verde,
+                ),
                 onPressed: buscando ? null : onMarcar,
                 icon: buscando
                     ? const SizedBox(
@@ -740,10 +787,13 @@ class _PuntoDelLote extends StatelessWidget {
                     : const Icon(Icons.my_location, size: 18),
                 label: Text(hay ? 'Tomar otra vez' : 'Tomar el punto aquí'),
               ),
-              if (hay) ...[
-                const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: onMapa,
+                icon: const Icon(Icons.map_outlined, size: 18),
+                label: const Text('Ver en el mapa'),
+              ),
+              if (hay)
                 TextButton(onPressed: onQuitar, child: const Text('Quitar')),
-              ],
             ],
           ),
         ],
