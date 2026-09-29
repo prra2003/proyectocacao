@@ -89,11 +89,28 @@ class _MapaScreenState extends State<MapaScreen> {
     if (!mounted) return;
     setState(() => _buscandoGps = false);
     if (aqui == null) return;
+    // El botón del GPS también respeta el perímetro: antes se lo saltaba, y
+    // era la puerta de atrás para dejar un lote donde no va.
+    if (!_dentroDelPerimetro(aqui)) return;
     setState(() => _punto = aqui);
     _mapa.move(aqui, 16);
   }
 
   Future<void> _usarEstePunto() async {
+    if (!_dentroDelPerimetro(_punto)) return;
+
+    // Marcando un LOTE no se pregunta por el municipio. El límite que manda
+    // aquí es el perímetro de la finca, que es una frontera clara y ya se
+    // comprobó; el municipio del lote es el de su finca, no se decide otra
+    // vez. Solo la FINCA pasa por esa comprobación, porque ahí los límites
+    // municipales sí son borrosos —una vereda puede quedar en otro municipio
+    // sin que el productor lo sepa— y por eso allí sí tiene sentido poder
+    // seguir de todas formas.
+    if (_esLote) {
+      Navigator.of(context).pop(_punto);
+      return;
+    }
+
     setState(() => _verificando = true);
     final sirve = await confirmarUbicacion(
       context,
@@ -106,6 +123,26 @@ class _MapaScreenState extends State<MapaScreen> {
     if (sirve) Navigator.of(context).pop(_punto);
   }
 
+  /// Se está marcando un lote (hay perímetro), no la finca.
+  bool get _esLote =>
+      widget.centroPermitido != null && widget.radioPermitido != null;
+
+  /// Comprueba el perímetro y lo explica si no da. Devuelve `false` cuando el
+  /// punto no sirve.
+  bool _dentroDelPerimetro(LatLng punto) {
+    final centro = widget.centroPermitido;
+    final radio = widget.radioPermitido;
+    if (centro == null || radio == null) return true;
+    final lejos = metrosEntre(centro, punto);
+    if (lejos <= radio) return true;
+    avisar(
+      context,
+      'Ese punto queda a ${distanciaEnPalabras(lejos)} de la finca. El lote '
+      'tiene que estar dentro del círculo (${distanciaEnPalabras(radio)}).',
+    );
+    return false;
+  }
+
   /// El dibujo del mapa no bajó (sin señal, o el servidor de OpenStreetMap no
   /// contestó). El punto se puede marcar igual con el GPS.
   var _sinMapa = false;
@@ -113,20 +150,7 @@ class _MapaScreenState extends State<MapaScreen> {
   /// Fuera del perímetro no se mueve el punto: se explica por qué y cuánto se
   /// pasó, que es lo único que le sirve a quien está mirando el mapa.
   void _tocar(LatLng punto) {
-    final centro = widget.centroPermitido;
-    final radio = widget.radioPermitido;
-    if (centro != null && radio != null) {
-      final lejos = metrosEntre(centro, punto);
-      if (lejos > radio) {
-        avisar(
-          context,
-          'Ese punto queda a ${distanciaEnPalabras(lejos)} de la finca. '
-          'El lote tiene que estar dentro del círculo '
-          '(${distanciaEnPalabras(radio)}).',
-        );
-        return;
-      }
-    }
+    if (!_dentroDelPerimetro(punto)) return;
     setState(() => _punto = punto);
   }
 
@@ -137,7 +161,9 @@ class _MapaScreenState extends State<MapaScreen> {
       if (widget.departamento != null) widget.departamento!,
     ].join(', ');
     return Scaffold(
-      appBar: cabeceraCacao(titulo: const Text('Ubicación de la finca')),
+      appBar: cabeceraCacao(
+        titulo: Text(_esLote ? 'Ubicación del lote' : 'Ubicación de la finca'),
+      ),
       body: Stack(
         children: [
           FlutterMap(
