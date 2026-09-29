@@ -10,6 +10,7 @@ import 'mapa_screen.dart';
 import 'tema.dart';
 import 'widgets/comunes.dart';
 import 'widgets/ubicacion.dart';
+import 'widgets/verificar_ubicacion.dart';
 import 'widgets/confirmacion_guardado.dart';
 
 /// Alta y edición de la finca: ubicación administrativa y coordenadas.
@@ -50,16 +51,16 @@ class _EditarFincaScreenState extends State<EditarFincaScreen> {
   // la lista actual (dato viejo escrito a mano), se deja sin elegir para
   // que el productor lo vuelva a seleccionar.
   late String? _departamento =
-      widget.finca != null &&
-          departamentosYMunicipios.containsKey(widget.finca!.departamento)
+  widget.finca != null &&
+      departamentosYMunicipios.containsKey(widget.finca!.departamento)
       ? widget.finca!.departamento
       : null;
   late String? _municipio =
-      widget.finca != null &&
-          _departamento != null &&
-          departamentosYMunicipios[_departamento]!.contains(
-            widget.finca!.municipio,
-          )
+  widget.finca != null &&
+      _departamento != null &&
+      departamentosYMunicipios[_departamento]!.contains(
+        widget.finca!.municipio,
+      )
       ? widget.finca!.municipio
       : null;
   var _faltaDepartamento = false;
@@ -72,27 +73,54 @@ class _EditarFincaScreenState extends State<EditarFincaScreen> {
     super.dispose();
   }
 
-  /// Abre el mapa con lo que ya haya escrito y trae de vuelta el punto.
+  /// Toma el punto del GPS y revisa que quede en el municipio y el
+  /// departamento elegidos. Si no concuerda, avisa antes de guardarlo.
   Future<void> _usarMiUbicacion() async {
     setState(() => _buscandoGps = true);
     final aqui = await ubicacionActual(context);
     if (!mounted) return;
+    if (aqui == null) {
+      setState(() => _buscandoGps = false);
+      return;
+    }
+    final sirve = await confirmarUbicacion(
+      context,
+      punto: aqui,
+      departamento: _departamento,
+      municipio: _municipio,
+    );
+    if (!mounted) return;
     setState(() {
       _buscandoGps = false;
-      if (aqui != null) {
+      if (sirve) {
         _latitud = aqui.latitude;
         _longitud = aqui.longitude;
       }
     });
   }
 
+  /// Abre el mapa ya sobre el departamento y el municipio elegidos, para que
+  /// el productor no tenga que buscar su tierra en todo el país.
   Future<void> _elegirEnMapa() async {
+    if (_departamento == null || _municipio == null) {
+      setState(() {
+        _faltaDepartamento = _departamento == null;
+        _faltaMunicipio = _municipio == null;
+      });
+      avisar(
+        context,
+        'Elija primero el departamento y el municipio: el mapa lo lleva allá',
+      );
+      return;
+    }
     final lat = _latitud;
     final lon = _longitud;
     final elegido = await Navigator.of(context).push<LatLng>(
       RutaCacao(
         builder: (_) => MapaScreen(
           inicial: lat != null && lon != null ? LatLng(lat, lon) : null,
+          departamento: _departamento,
+          municipio: _municipio,
         ),
       ),
     );
@@ -242,7 +270,7 @@ class _EditarFincaScreenState extends State<EditarFincaScreen> {
               const SizedBox(height: 4),
               Text(
                 'Sirve para el clima y para ubicar la finca en el mapa de la '
-                'Red. El GPS funciona sin señal.',
+                    'Red. El GPS funciona sin señal.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -266,13 +294,13 @@ class _EditarFincaScreenState extends State<EditarFincaScreen> {
                   onPressed: _buscandoGps ? null : _usarMiUbicacion,
                   icon: _buscandoGps
                       ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
                       : const Icon(Icons.my_location, size: 26),
                   label: Text(
                     _buscandoGps
@@ -377,7 +405,7 @@ class _UbicacionGuardada extends StatelessWidget {
                 ),
                 Text(
                   '${latitud.toStringAsFixed(5)}, '
-                  '${longitud.toStringAsFixed(5)}',
+                      '${longitud.toStringAsFixed(5)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],

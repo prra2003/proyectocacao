@@ -18,6 +18,9 @@ class MapeadorLote {
     'area_sembrada_ha': fila.areaSembradaHa,
     'variedad_cacao': fila.variedadCacao,
     'fecha_siembra': fila.fechaSiembra.toUtc().toIso8601String(),
+    // El punto del predio sembrado: es lo que pide el comprador que exporta.
+    'latitud': fila.latitud,
+    'longitud': fila.longitud,
     'created_at': fila.createdAt.toUtc().toIso8601String(),
     'deleted_at': fila.deletedAt?.toUtc().toIso8601String(),
   };
@@ -39,6 +42,8 @@ class MapeadorLote {
       areaSembradaHa: Value((fila['area_sembrada_ha']! as num).toDouble()),
       variedadCacao: Value(fila['variedad_cacao']! as String),
       fechaSiembra: Value(fecha(fila['fecha_siembra'])!),
+      latitud: _realSiViene(fila, 'latitud'),
+      longitud: _realSiViene(fila, 'longitud'),
       createdAt: Value(fecha(fila['created_at'])!),
       updatedAt: Value(sello),
       deletedAt: Value(fecha(fila['deleted_at']) ?? borradoForzado),
@@ -46,6 +51,19 @@ class MapeadorLote {
       syncStatus: const Value(SyncStatus.synced),
       syncError: const Value(null),
     );
+  }
+
+  /// Ausente no es vacío: si el servidor todavía no tiene la columna, no se
+  /// borra la coordenada que ya tenga el teléfono.
+  static Value<double?> _realSiViene(FilaRemota fila, String clave) {
+    if (!fila.containsKey(clave)) return const Value.absent();
+    final valor = fila[clave];
+    return Value(switch (valor) {
+      null => null,
+      final num n => n.toDouble(),
+      final String s => double.tryParse(s),
+      _ => null,
+    });
   }
 
   static DateTime selloDe(FilaRemota fila) => fecha(fila['updated_at'])!;

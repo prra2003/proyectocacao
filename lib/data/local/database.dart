@@ -40,11 +40,50 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
+
+
+  /// Revisa cada tabla contra la definición actual y agrega lo que falte.
+  ///
+  /// Hace falta porque la copia del equipo numeró sus versiones distinto (ver
+  /// el comentario de la v8 a la v12 en `onUpgrade`): un teléfono que tenía
+  /// instalada esa copia llega con un número de versión alto y se salta, por
+  /// ejemplo, la rama `desde < 6`, quedándose sin `tipo_documento` ni
+  /// `numero_documento`. Con esto, la base se arregla sola al abrir, sin borrar
+  /// ningún dato. Si todo está completo, no hace nada.
+  Future<void> _repararColumnasFaltantes() async {
+    final migrador = createMigrator();
+    for (final tabla in allTables) {
+      final filas = await customSelect(
+        'PRAGMA table_info("${tabla.actualTableName}")',
+      ).get();
+      if (filas.isEmpty) {
+        await migrador.createTable(tabla);
+        continue;
+      }
+      final existentes = {for (final fila in filas) fila.read<String>('name')};
+      for (final columna in tabla.$columns) {
+        if (existentes.contains(columna.name)) continue;
+        try {
+          await migrador.addColumn(tabla, columna);
+        } on Exception {
+          // Una columna obligatoria sin valor por defecto no se puede agregar a
+          // una tabla con filas. Ninguna de las nuestras es así, pero si pasara,
+          // mejor que la app abra.
+        }
+      }
+    }
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, desde, hasta) async {
+      if (desde < 14) {
+        // Para la trazabilidad de exportación: el comprador pide el punto del
+        // predio sembrado, no el de la casa de la finca.
+        await m.addColumn(lotes, lotes.latitud);
+        await m.addColumn(lotes, lotes.longitud);
+      }
       if (desde < 13) {
         await m.addColumn(lotes, lotes.fotoPath);
         await m.addColumn(sesion, sesion.nombreCuenta);
@@ -166,6 +205,9 @@ class AppDatabase extends _$AppDatabase {
       }
     },
     beforeOpen: (details) async {
+      // Antes que nada: si el teléfono trae una base de una versión vieja de
+      // la app (numerada distinto), se le agregan las columnas que le falten.
+      await _repararColumnasFaltantes();
       // SQLite no aplica las llaves foráneas si no se activan por conexión.
       await customStatement('PRAGMA foreign_keys = ON');
       await _sembrarAsociaciones(this);
@@ -182,16 +224,16 @@ Future<void> _sembrarAsociaciones(AppDatabase db) async {
     await db
         .into(db.asociaciones)
         .insert(
-          AsociacionesCompanion.insert(
-            id: Value(semilla.id),
-            nombre: semilla.nombre,
-            municipio: '',
-            departamento: '',
-            updatedAt: Value(momento),
-            syncStatus: const Value(SyncStatus.synced),
-          ),
-          mode: InsertMode.insertOrIgnore,
-        );
+      AsociacionesCompanion.insert(
+        id: Value(semilla.id),
+        nombre: semilla.nombre,
+        municipio: '',
+        departamento: '',
+        updatedAt: Value(momento),
+        syncStatus: const Value(SyncStatus.synced),
+      ),
+      mode: InsertMode.insertOrIgnore,
+    );
   }
 }
 
@@ -229,14 +271,14 @@ Future<void> borrarDatosLocales(AppDatabase db) {
 /// Marca un registro como borrado sin sacarlo de la base: la fila queda con
 /// `deleted_at` y vuelve a estado pendiente para que el borrado se sincronice.
 Future<int> borrarSuave(
-  AppDatabase db,
-  TableInfo<Table, dynamic> tabla,
-  String id,
-) {
+    AppDatabase db,
+    TableInfo<Table, dynamic> tabla,
+    String id,
+    ) {
   return db.customUpdate(
     'UPDATE ${tabla.actualTableName} '
-    'SET deleted_at = ?, updated_at = ?, sync_status = ? '
-    'WHERE id = ? AND deleted_at IS NULL',
+        'SET deleted_at = ?, updated_at = ?, sync_status = ? '
+        'WHERE id = ? AND deleted_at IS NULL',
     variables: [..._marcasBorrado(), Variable(id)],
     updates: {tabla},
   );
@@ -254,7 +296,7 @@ Future<void> borrarLoteEnCascada(AppDatabase db, String loteId) {
     for (final hija in ['actividades_agricolas', 'cosechas', 'diagnosticos']) {
       await db.customUpdate(
         'UPDATE $hija SET deleted_at = ?, updated_at = ?, sync_status = ? '
-        'WHERE lote_id = ? AND deleted_at IS NULL',
+            'WHERE lote_id = ? AND deleted_at IS NULL',
         variables: [..._marcasBorrado(), Variable(loteId)],
         updates: {db.actividadesAgricolas, db.cosechas, db.diagnosticos},
       );
@@ -268,15 +310,15 @@ Future<void> borrarFincaEnCascada(AppDatabase db, String fincaId) {
     for (final hija in ['actividades_agricolas', 'cosechas', 'diagnosticos']) {
       await db.customUpdate(
         'UPDATE $hija SET deleted_at = ?, updated_at = ?, sync_status = ? '
-        'WHERE deleted_at IS NULL AND lote_id IN '
-        '(SELECT id FROM lotes WHERE finca_id = ?)',
+            'WHERE deleted_at IS NULL AND lote_id IN '
+            '(SELECT id FROM lotes WHERE finca_id = ?)',
         variables: [..._marcasBorrado(), Variable(fincaId)],
         updates: {db.actividadesAgricolas, db.cosechas, db.diagnosticos},
       );
     }
     await db.customUpdate(
       'UPDATE lotes SET deleted_at = ?, updated_at = ?, sync_status = ? '
-      'WHERE finca_id = ? AND deleted_at IS NULL',
+          'WHERE finca_id = ? AND deleted_at IS NULL',
       variables: [..._marcasBorrado(), Variable(fincaId)],
       updates: {db.lotes},
     );
@@ -295,24 +337,24 @@ Future<void> borrarFincaEnCascada(AppDatabase db, String fincaId) {
 /// cambios se pierden porque su padre ya no existe, y quien llama lo anota como
 /// conflicto en vez de tragárselo en silencio.
 Future<List<String>> aplicarBorradoRemotoDeFinca(
-  AppDatabase db,
-  String fincaId,
-  DateTime borradoEn,
-) {
+    AppDatabase db,
+    String fincaId,
+    DateTime borradoEn,
+    ) {
   return db.transaction(() async {
     final pendientesPisados = await _hijosPendientesDeFinca(db, fincaId);
     for (final hija in ['actividades_agricolas', 'cosechas', 'diagnosticos']) {
       await db.customUpdate(
         'UPDATE $hija SET deleted_at = ?, updated_at = ?, sync_status = ? '
-        'WHERE deleted_at IS NULL AND lote_id IN '
-        '(SELECT id FROM lotes WHERE finca_id = ?)',
+            'WHERE deleted_at IS NULL AND lote_id IN '
+            '(SELECT id FROM lotes WHERE finca_id = ?)',
         variables: [..._marcasRecibidas(borradoEn), Variable(fincaId)],
         updates: {db.actividadesAgricolas, db.cosechas, db.diagnosticos},
       );
     }
     await db.customUpdate(
       'UPDATE lotes SET deleted_at = ?, updated_at = ?, sync_status = ? '
-      'WHERE finca_id = ? AND deleted_at IS NULL',
+          'WHERE finca_id = ? AND deleted_at IS NULL',
       variables: [..._marcasRecibidas(borradoEn), Variable(fincaId)],
       updates: {db.lotes},
     );
@@ -327,16 +369,16 @@ Future<List<String>> aplicarBorradoRemotoDeFinca(
 /// Devuelve los ids de hijos que tenían cambios locales sin subir, para que
 /// quien llama los anote como conflicto.
 Future<List<String>> aplicarBorradoRemotoDeLote(
-  AppDatabase db,
-  String loteId,
-  DateTime borradoEn,
-) {
+    AppDatabase db,
+    String loteId,
+    DateTime borradoEn,
+    ) {
   return db.transaction(() async {
     final pendientesPisados = await _hijosPendientesDeLote(db, loteId);
     for (final hija in ['actividades_agricolas', 'cosechas', 'diagnosticos']) {
       await db.customUpdate(
         'UPDATE $hija SET deleted_at = ?, updated_at = ?, sync_status = ? '
-        'WHERE lote_id = ? AND deleted_at IS NULL',
+            'WHERE lote_id = ? AND deleted_at IS NULL',
         variables: [..._marcasRecibidas(borradoEn), Variable(loteId)],
         updates: {db.actividadesAgricolas, db.cosechas, db.diagnosticos},
       );
@@ -346,30 +388,30 @@ Future<List<String>> aplicarBorradoRemotoDeLote(
 }
 
 Future<List<String>> _hijosPendientesDeLote(
-  AppDatabase db,
-  String loteId,
-) async {
+    AppDatabase db,
+    String loteId,
+    ) async {
   final filas = await db
       .customSelect(
-        'SELECT id FROM actividades_agricolas '
+    'SELECT id FROM actividades_agricolas '
         'WHERE lote_id = ?1 AND deleted_at IS NULL AND sync_status = ?2 '
         'UNION ALL SELECT id FROM cosechas '
         'WHERE lote_id = ?1 AND deleted_at IS NULL AND sync_status = ?2 '
         'UNION ALL SELECT id FROM diagnosticos '
         'WHERE lote_id = ?1 AND deleted_at IS NULL AND sync_status = ?2',
-        variables: [Variable(loteId), Variable(SyncStatus.pending.name)],
-      )
+    variables: [Variable(loteId), Variable(SyncStatus.pending.name)],
+  )
       .get();
   return [for (final fila in filas) fila.read<String>('id')];
 }
 
 Future<List<String>> _hijosPendientesDeFinca(
-  AppDatabase db,
-  String fincaId,
-) async {
+    AppDatabase db,
+    String fincaId,
+    ) async {
   final filas = await db
       .customSelect(
-        'SELECT id FROM lotes '
+    'SELECT id FROM lotes '
         'WHERE finca_id = ?1 AND deleted_at IS NULL AND sync_status = ?2 '
         'UNION ALL SELECT id FROM actividades_agricolas '
         'WHERE deleted_at IS NULL AND sync_status = ?2 AND lote_id IN '
@@ -380,8 +422,8 @@ Future<List<String>> _hijosPendientesDeFinca(
         'UNION ALL SELECT id FROM diagnosticos '
         'WHERE deleted_at IS NULL AND sync_status = ?2 AND lote_id IN '
         '(SELECT id FROM lotes WHERE finca_id = ?1)',
-        variables: [Variable(fincaId), Variable(SyncStatus.pending.name)],
-      )
+    variables: [Variable(fincaId), Variable(SyncStatus.pending.name)],
+  )
       .get();
   return [for (final fila in filas) fila.read<String>('id')];
 }

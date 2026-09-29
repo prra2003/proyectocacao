@@ -39,6 +39,70 @@ List<String> faltaLlenarEn(ActividadAgricola labor) {
   return falta;
 }
 
+// ---------------------------------------------------------------------------
+// Plazo de una semana para editar (lote y labor)
+// ---------------------------------------------------------------------------
+
+/// Días que tiene el productor para editar un lote o una labor, contados desde
+/// el día en que lo creó. Es la misma semana para los dos. Pasado el plazo
+/// queda cerrado y solo el administrador podrá volver a habilitarlo.
+///
+/// Para cambiar el plazo basta con cambiar este número.
+const diasParaEditar = 7;
+
+DateTime _soloFecha(DateTime momento) {
+  final local = momento.toLocal();
+  // En UTC para que la resta dé días exactos, sin líos de horario.
+  return DateTime.utc(local.year, local.month, local.day);
+}
+
+/// Días que le quedan para editar algo creado en [creado]. 0 = ya se cerró.
+///
+/// Ej. creado hace 2 días: le quedan 5.
+int diasQuedanParaEditar(DateTime creado, {DateTime? hoy}) {
+  final pasados = _soloFecha(
+    hoy ?? DateTime.now(),
+  ).difference(_soloFecha(creado)).inDays;
+  final quedan = diasParaEditar - pasados;
+  return quedan < 0 ? 0 : quedan;
+}
+
+/// Días que le quedan a la labor para poder editarse. 0 = ya se cerró.
+int diasQuedanLabor(ActividadAgricola labor, {DateTime? hoy}) =>
+    diasQuedanParaEditar(labor.createdAt, hoy: hoy);
+
+/// ¿Ya pasó la semana y la labor quedó cerrada?
+bool plazoVencido(ActividadAgricola labor, {DateTime? hoy}) =>
+    diasQuedanLabor(labor, hoy: hoy) == 0;
+
+/// Le falta algo y todavía está dentro de la semana para llenarlo.
+bool sePuedeCompletar(ActividadAgricola labor, {DateTime? hoy}) =>
+    faltaLlenarEn(labor).isNotEmpty && !plazoVencido(labor, hoy: hoy);
+
+/// Le falta algo y ya se cerró: hay que pedirle al administrador que la
+/// vuelva a habilitar.
+bool quedoIncompleta(ActividadAgricola labor, {DateTime? hoy}) =>
+    faltaLlenarEn(labor).isNotEmpty && plazoVencido(labor, hoy: hoy);
+
+/// "Faltan 5 días para que llene la labor", en palabras del campo.
+String textoPlazo(ActividadAgricola labor, {DateTime? hoy}) {
+  if (plazoVencido(labor, hoy: hoy)) {
+    return 'Pasó la semana: ya no se puede editar. El administrador puede '
+        'volver a habilitarla.';
+  }
+  final quedan = diasQuedanLabor(labor, hoy: hoy);
+  final completa = faltaLlenarEn(labor).isEmpty;
+  if (quedan == 1) {
+    return completa
+        ? 'Hoy es el último día para editarla.'
+        : 'Hoy es el último día para llenar la labor.';
+  }
+  return completa
+      ? 'Puede editarla durante $quedan días más.'
+      : 'Faltan $quedan días para que llene la labor; de lo contrario no '
+      'podrá editarla.';
+}
+
 /// Un aviso del Inicio: "El Alto lleva 95 días sin poda".
 class Recordatorio {
   const Recordatorio({
@@ -70,11 +134,11 @@ const diasSinLabores = 45;
 /// anota la poda, el aviso desaparece solo. A un lote recién creado no se le
 /// recuerda nada: todavía no ha tenido tiempo.
 List<Recordatorio> recordatoriosPara(
-  List<Lote> lotes,
-  List<ActividadAgricola> actividades, {
-  DateTime? hoy,
-  int maximo = 2,
-}) {
+    List<Lote> lotes,
+    List<ActividadAgricola> actividades, {
+      DateTime? hoy,
+      int maximo = 2,
+    }) {
   final ahora = hoy ?? DateTime.now();
   int diasDesde(DateTime fecha) => ahora.difference(fecha).inDays;
 

@@ -520,9 +520,48 @@ Ordenado por lo que más valor da:
 4. **Panel web para técnicos** — el navegador es el sitio natural para ver muchos
    productores. Ojo: exige otro modelo de permisos, porque hoy el servidor aísla a
    cada productor.
+5. **El lindero del lote caminado con GPS** — ver 11.2.
 
 Y lo que **no** haría sin hablar antes con el SENA: agregar módulos nuevos. Que
 la priorización de la Fase 2 salga de ellos.
+
+### 11.2 El lindero del lote, caminado
+
+Hoy el lote guarda **un punto** —una coordenada— y la app comprueba que caiga
+dentro de un círculo alrededor de la finca, cuyo radio sale de las hectáreas
+registradas (ver `lib/ui/widgets/perimetro.dart`).
+
+Esa regla tiene un límite conocido: **una finca larga y angosta** —una faja
+siguiendo una cañada— puede tener el lote del extremo más lejos que la diagonal
+de un cuadrado de la misma área, y la app lo rechaza aunque sea correcto.
+Estirar el radio no lo arregla: lo volvería inútil para todos los demás.
+
+La salida de fondo es dejar de adivinar la forma: **que el productor camine el
+lindero del lote con el celular** y la app guarde el polígono real. Un botón
+que dice "empezar a caminar", una lectura del GPS cada pocos segundos, y al
+cerrar la vuelta queda el terreno dibujado.
+
+Eso resuelve tres cosas de un golpe:
+
+- **El perímetro deja de ser una estimación.** Ya no hace falta un círculo: el
+  punto del lote está dentro del polígono o no está.
+- **El área se calcula sola**, en vez de que el productor la digite a ojo — que
+  es de donde salen la mitad de los datos raros.
+- **Es lo que pide el comprador europeo.** La norma de deforestación de la
+  Unión Europea exige geolocalización del predio, y para predios de más de
+  cuatro hectáreas pide el polígono, no un punto. Verifique el estado y las
+  fechas de esa norma antes de prometer nada: se han aplazado varias veces.
+
+Lo que hay que tener en cuenta antes de hacerlo:
+
+- **Caminar el lindero toma tiempo** y no todo el mundo puede darle la vuelta a
+  su lote. El punto suelto tiene que seguir funcionando para quien no pueda.
+- **El GPS de un celular común se equivoca entre 3 y 10 metros.** Para un lote
+  de media hectárea eso es mucho: conviene suavizar el trazo y avisar cuando la
+  señal esté mala.
+- **Un polígono ocupa más que un punto** y hay que decidir cómo viaja al
+  servidor: una columna de texto con las coordenadas basta, pero conviene
+  fijarlo antes y no después.
 
 ### 11.1 Fotos: por dónde NO hacerlo, y por dónde sí
 

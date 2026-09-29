@@ -101,6 +101,17 @@ class Lotes extends Table with SyncColumns {
   /// Foto del lote, para reconocerlo sin leer el nombre. Vive solo en este
   /// teléfono: no viaja al servidor (la ruta no le sirve a otro equipo).
   TextColumn get fotoPath => text().nullable()();
+
+  /// Dónde queda el lote, no la finca.
+  ///
+  /// La finca ya tiene su punto, pero quien compra cacao para exportar pide
+  /// **el predio sembrado**, y una finca puede tener lotes a media hora de
+  /// distancia. Se captura con el GPS del teléfono, que funciona sin señal.
+  ///
+  /// Nulo en los lotes creados antes de que existiera el campo: el dato se
+  /// pide, no se inventa.
+  RealColumn get latitud => real().nullable()();
+  RealColumn get longitud => real().nullable()();
 }
 
 @DataClassName('ActividadAgricola')

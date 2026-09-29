@@ -181,15 +181,29 @@ void main() {
         find.byKey(const Key('campo_nombre_productor')),
         'Diego 2',
       );
+      // El teléfono ya no deja ni escribir letras: el filtro las rechaza al
+      // teclear, así que el productor no llega siquiera a ver el error.
       await tester.enterText(
         find.byKey(const Key('campo_telefono')),
         '300abc4567',
       );
+      await asentar(tester);
+      expect(
+        tester
+            .widget<TextFormField>(find.byKey(const Key('campo_telefono')))
+            .controller
+            ?.text,
+        '',
+        reason: 'el filtro rechaza el texto con letras, no lo escribe a medias',
+      );
+
+      await tester.enterText(find.byKey(const Key('campo_telefono')), '3004567');
       await tester.tap(find.text('Crear perfil'));
       await asentar(tester);
 
+      // El nombre sí muestra el error: ahí las letras son válidas y lo que
+      // sobra es el número.
       expect(find.text('Solo letras, sin números'), findsOneWidget);
-      expect(find.text('Solo números'), findsOneWidget);
       expect(find.text('Paso 1 de 2'), findsOneWidget);
 
       await desmontar(tester);

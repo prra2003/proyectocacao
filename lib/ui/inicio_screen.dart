@@ -123,7 +123,7 @@ class _InicioScreenState extends State<InicioScreen> {
             }
             final seleccionId = _seleccionId ?? fincas.first.id;
             final finca = fincas.firstWhere(
-              (f) => f.id == seleccionId,
+                  (f) => f.id == seleccionId,
               orElse: () => fincas.first,
             );
             return _Contenido(
@@ -182,7 +182,19 @@ class _Contenido extends StatelessWidget {
       lotesDelProductor.map((l) => l.codigo),
     );
     if (!context.mounted) return;
-    final datos = await pedirDatosLote(context, codigoSugerido: codigoSugerido);
+    // Las hectáreas ya registradas marcan hasta dónde puede quedar el lote.
+    final deLaFinca = await repo.watchLotes(finca.id).first;
+    final hectareas = deLaFinca.fold<double>(
+      0,
+      (suma, l) => suma + l.areaSembradaHa,
+    );
+    if (!context.mounted) return;
+    final datos = await pedirDatosLote(
+      context,
+      codigoSugerido: codigoSugerido,
+      finca: finca,
+      hectareasDeLaFinca: hectareas,
+    );
     if (datos == null) return;
     await repo.guardarLote(
       fincaId: finca.id,
@@ -192,6 +204,8 @@ class _Contenido extends StatelessWidget {
       variedadCacao: datos.variedad,
       fechaSiembra: datos.fechaSiembra,
       fotoPath: Value(datos.fotoPath),
+      latitud: Value(datos.latitud),
+      longitud: Value(datos.longitud),
     );
     if (context.mounted) {
       mostrarConfirmacionGuardado(context, mensaje: 'Lote agregado');
@@ -224,6 +238,12 @@ class _Contenido extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _LaboresPorCompletar(
+                    repo: repo,
+                    lotesRepo: lotesRepo,
+                    fincaId: finca.id,
+                    lotes: lotes,
+                  ),
                   _Recordatorios(
                     repo: repo,
                     lotesRepo: lotesRepo,
@@ -245,7 +265,7 @@ class _Contenido extends StatelessWidget {
                         compacto: true,
                         titulo: 'Sin lotes todavía',
                         mensaje:
-                            'Agregue su primer lote para anotar labores '
+                        'Agregue su primer lote para anotar labores '
                             'y cosechas.',
                         textoAccion: 'Agregar lote',
                         onAccion: () => _agregarLote(context),
@@ -260,6 +280,7 @@ class _Contenido extends StatelessWidget {
                           retraso: Duration(milliseconds: 70 * i),
                           child: _TarjetaLote(
                             lote: lotes[i],
+                            finca: finca,
                             lotesRepo: lotesRepo,
                             color: _coloresLote[i % _coloresLote.length],
                           ),
@@ -481,9 +502,9 @@ class _ComparacionAnioPasado extends StatelessWidget {
             final sube = cambio >= 0;
             final texto = cambio == 0
                 ? 'Igual que el año pasado a esta fecha '
-                      '(${numeroCorto(antes)} kg)'
+                '(${numeroCorto(antes)} kg)'
                 : '${sube ? '$cambio% más' : '${-cambio}% menos'} que en '
-                      '${anio - 1} a esta fecha (${numeroCorto(antes)} kg)';
+                '${anio - 1} a esta fecha (${numeroCorto(antes)} kg)';
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
@@ -572,6 +593,310 @@ class _Recordatorios extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Aviso del Inicio: las labores anotadas a la carrera que todavía se pueden
+/// terminar de llenar, con cuántos días les quedan de la semana. Pasada la
+/// semana se cierran y solo el administrador podrá volver a habilitarlas.
+class _LaboresPorCompletar extends StatelessWidget {
+  const _LaboresPorCompletar({
+    required this.repo,
+    required this.lotesRepo,
+    required this.fincaId,
+    required this.lotes,
+  });
+
+  final PerfilRepository repo;
+  final LoteRepository lotesRepo;
+  final String fincaId;
+  final List<Lote> lotes;
+
+  /// Cuántas se muestran en el Inicio; las demás se ven dentro de cada lote.
+  static const _maximo = 3;
+
+  Future<void> _completar(
+      BuildContext context,
+      ActividadAgricola labor,
+      Lote? lote,
+      ) async {
+    if (!sePuedeCompletar(labor)) {
+      avisar(
+        context,
+        'Pasó la semana: esta labor ya no se puede editar. El administrador '
+            'podrá volver a habilitarla.',
+      );
+      return;
+    }
+    final datos = await pedirDatosActividad(
+      context,
+      loteNombre: lote?.nombre,
+      inicial: datosDeLabor(labor),
+    );
+    if (datos == null) return;
+    final cambiadas = await lotesRepo.actualizarActividad(
+      id: labor.id,
+      tipo: datos.tipo,
+      fecha: datos.fecha,
+      observaciones: datos.observaciones,
+      responsable: datos.responsable,
+      costo: datos.costo,
+      fotoPath: datos.fotoPath,
+      subtipoLabor: datos.subtipoLabor,
+      producto: datos.producto,
+      cantidadAplicada: datos.cantidadAplicada,
+      incidencia: datos.incidencia,
+      arbolesAfectados: datos.arbolesAfectados,
+      edadCultivoAnios: datos.edadCultivoAnios,
+      arbolesSembrados: datos.arbolesSembrados,
+      edadPlantulaMeses: datos.edadPlantulaMeses,
+      insumos: datos.insumos,
+      resultadoEsperado: datos.resultadoEsperado,
+    );
+    if (!context.mounted) return;
+    if (cambiadas == 0) {
+      avisar(
+        context,
+        'Pasó la semana: esta labor ya no se puede editar. El administrador '
+            'podrá volver a habilitarla.',
+      );
+      return;
+    }
+    mostrarConfirmacionGuardado(context, mensaje: 'Labor completada');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<ActividadAgricola>>(
+      stream: repo.watchActividadesDeFinca(fincaId),
+      builder: (context, snapshot) {
+        final actividades = snapshot.data ?? const <ActividadAgricola>[];
+        final pendientes =
+        actividades.where((a) => sePuedeCompletar(a)).toList()
+        // Primero las que se cierran antes.
+          ..sort(
+                (a, b) => diasQuedanLabor(a).compareTo(diasQuedanLabor(b)),
+          );
+        // Las que pasaron la semana sin completarse: quedan a la espera de
+        // que el administrador las habilite.
+        final cerradas = actividades.where((a) => quedoIncompleta(a)).length;
+        if (pendientes.isEmpty && cerradas == 0) {
+          return const SizedBox.shrink();
+        }
+
+        final lotePorId = {for (final l in lotes) l.id: l};
+        final visibles = pendientes.take(_maximo).toList();
+        final restantes = pendientes.length - visibles.length;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF6E8),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: PaletaCacao.dorado.withValues(alpha: 0.55),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.edit_notifications_outlined,
+                      color: PaletaCacao.dorado,
+                      size: 30,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pendientes.isEmpty
+                                ? 'Labores sin completar'
+                                : pendientes.length == 1
+                                ? 'Tiene 1 labor por terminar de llenar'
+                                : 'Tiene ${pendientes.length} labores por '
+                                'terminar de llenar',
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Tiene $diasParaEditar días desde que anota la '
+                                'labor para llenarla. Si no la completa a tiempo, '
+                                'se cierra y ya no podrá editarla.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: PaletaCacao.cremaVerdosa,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                for (final labor in visibles)
+                  _FilaLaborPendiente(
+                    labor: labor,
+                    lote: lotePorId[labor.loteId],
+                    onCompletar: () =>
+                        _completar(context, labor, lotePorId[labor.loteId]),
+                  ),
+                if (cerradas > 0)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.errorContainer.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.lock_outline,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            cerradas == 1
+                                ? '1 labor pasó la semana sin completarse y '
+                                'quedó cerrada. El administrador podrá '
+                                'volver a habilitarla.'
+                                : '$cerradas labores pasaron la semana sin '
+                                'completarse y quedaron cerradas. El '
+                                'administrador podrá volver a '
+                                'habilitarlas.',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (restantes > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, bottom: 8),
+                    child: Text(
+                      restantes == 1
+                          ? 'Y 1 más: la encuentra dentro de su lote.'
+                          : 'Y $restantes más: las encuentra dentro de cada '
+                          'lote.',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: PaletaCacao.cremaVerdosa,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FilaLaborPendiente extends StatelessWidget {
+  const _FilaLaborPendiente({
+    required this.labor,
+    required this.lote,
+    required this.onCompletar,
+  });
+
+  final ActividadAgricola labor;
+  final Lote? lote;
+  final VoidCallback onCompletar;
+
+  @override
+  Widget build(BuildContext context) {
+    final quedan = diasQuedanLabor(labor);
+    final urgente = quedan <= 1;
+    final colorPlazo = urgente
+        ? Theme.of(context).colorScheme.error
+        : PaletaCacao.cafe;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: PaletaCacao.verdeClaro,
+            child: Icon(
+              iconoActividad(labor.tipoActividad),
+              color: PaletaCacao.verde,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  lote == null
+                      ? etiquetaActividad(labor.tipoActividad)
+                      : '${etiquetaActividad(labor.tipoActividad)} · '
+                      '${lote!.nombre}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'Falta: ${faltaLlenarEn(labor).join(', ')}',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(Icons.schedule_outlined, size: 15, color: colorPlazo),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        textoPlazo(labor),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: colorPlazo,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: PaletaCacao.verde,
+              minimumSize: const Size(0, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+            ),
+            onPressed: onCompletar,
+            child: const Text('Completar'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -703,11 +1028,13 @@ class _IndicadorAnimado extends StatelessWidget {
 class _TarjetaLote extends StatefulWidget {
   const _TarjetaLote({
     required this.lote,
+    required this.finca,
     required this.lotesRepo,
     required this.color,
   });
 
   final Lote lote;
+  final Finca finca;
   final LoteRepository lotesRepo;
   final Color color;
 
@@ -744,6 +1071,7 @@ class _TarjetaLoteState extends State<_TarjetaLote> {
                 builder: (_) => LoteDetalleScreen(
                   repo: widget.lotesRepo,
                   lote: widget.lote,
+                  finca: widget.finca,
                 ),
               ),
             ),
@@ -798,8 +1126,8 @@ class _TarjetaLoteState extends State<_TarjetaLote> {
                         ),
                       Text(
                         '${widget.lote.variedadCacao} · '
-                        '${numeroCorto(widget.lote.areaSembradaHa)} ha'
-                        ' · ${edad == 1 ? '1 año' : '$edad años'}',
+                            '${numeroCorto(widget.lote.areaSembradaHa)} ha'
+                            ' · ${edad == 1 ? '1 año' : '$edad años'}',
                         style: const TextStyle(
                           fontSize: 16,
                           color: Color(0xCCFFFFFF),
@@ -842,9 +1170,8 @@ class _UltimaLabor extends StatelessWidget {
         final ultima = actividades.isEmpty ? null : actividades.first;
         // En el campo se anota a la carrera y se deja a medias. El lote lo
         // dice aquí mismo, sin tener que entrar a buscarlo labor por labor.
-        final aMedias = actividades
-            .where((a) => faltaLlenarEn(a).isNotEmpty)
-            .length;
+        // Solo cuentan las que todavía están a tiempo de completarse.
+        final aMedias = actividades.where((a) => sePuedeCompletar(a)).length;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -855,7 +1182,7 @@ class _UltimaLabor extends StatelessWidget {
               texto: ultima == null
                   ? 'Sin labores anotadas'
                   : '${etiquetaActividad(ultima.tipoActividad)}, '
-                        '${haceCuanto(ultima.fecha)}',
+                  '${haceCuanto(ultima.fecha)}',
             ),
             if (aMedias > 0) ...[
               const SizedBox(height: 8),

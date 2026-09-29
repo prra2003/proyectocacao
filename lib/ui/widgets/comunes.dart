@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -224,6 +225,56 @@ String? soloNumerosOpcional(String? valor) {
   return null;
 }
 
+/// Solo dígitos, y obligatorio: para el número de cédula.
+final _soloDigitosPatron = RegExp(r'^[0-9]+$');
+
+String? numeroRequerido(String? valor) {
+  final texto = (valor ?? '').trim();
+  if (texto.isEmpty) return 'Campo obligatorio';
+  if (!_soloDigitosPatron.hasMatch(texto)) return 'Solo números';
+  return null;
+}
+
+/// Un correo bien escrito: arroba, algo antes y un dominio con punto después
+/// (nombre@gmail.com).
+final _correoPatron = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+/// Correo **opcional**, pero bien escrito si lo ponen.
+///
+/// No se exige a propósito: muchos productores no tienen correo, y la app se
+/// diseñó para que se pueda registrar en la finca sin cuenta y sin señal.
+/// Obligarlo dejaría por fuera justo a quien más falta le hace la app.
+String? correoValido(String? valor) {
+  final texto = (valor ?? '').trim();
+  if (texto.isEmpty) return null;
+  if (!texto.contains('@')) return 'El correo debe tener una arroba (@)';
+  if (!_correoPatron.hasMatch(texto)) {
+    return 'Escriba un correo válido, por ejemplo: nombre@gmail.com';
+  }
+  return null;
+}
+
+/// No deja escribir nada que no sea un dígito. Si la persona intenta meter una
+/// letra o un símbolo, el campo se queda como estaba y se llama [alRechazar]
+/// (para mostrar el aviso "Solo se permiten números").
+class FiltroSoloNumeros extends TextInputFormatter {
+  FiltroSoloNumeros({this.alRechazar});
+
+  final VoidCallback? alRechazar;
+
+  static final _digitos = RegExp(r'^[0-9]*$');
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
+    if (_digitos.hasMatch(newValue.text)) return newValue;
+    alRechazar?.call();
+    return oldValue;
+  }
+}
+
 String? textoONulo(String texto) => texto.trim().isEmpty ? null : texto.trim();
 
 /// Convierte lo que se escribe en campo ("2,5") a número.
@@ -253,6 +304,7 @@ class CampoTarjeta extends StatelessWidget {
     this.suffixText,
     this.readOnly = false,
     this.campoKey,
+    this.inputFormatters,
   });
 
   final String etiqueta;
@@ -274,6 +326,9 @@ class CampoTarjeta extends StatelessWidget {
   /// Para un valor que la app llena sola (ej. un código automático): se ve
   /// igual, pero no se puede escribir en él y lleva un candado de aviso.
   final bool readOnly;
+
+  /// Filtros de lo que se deja escribir (ej. solo números).
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -326,6 +381,7 @@ class CampoTarjeta extends StatelessWidget {
                 controller: controller,
                 validator: validator,
                 keyboardType: keyboardType,
+                inputFormatters: inputFormatters,
                 textCapitalization: textCapitalization,
                 readOnly: readOnly,
                 decoration: InputDecoration(
@@ -364,11 +420,11 @@ class CampoTarjeta extends StatelessWidget {
 }
 
 String? validarRango(
-  String? texto, {
-  required double min,
-  required double max,
-  required String etiqueta,
-}) {
+    String? texto, {
+      required double min,
+      required double max,
+      required String etiqueta,
+    }) {
   final valor = aNumero(texto ?? '');
   if (valor == null) return '$etiqueta inválido';
   if (valor <= min) return '$etiqueta debe ser mayor a ${numeroCorto(min)}';
@@ -501,9 +557,9 @@ class SelectorDesplegable extends StatelessWidget {
 /// sistema borra sin avisar — la foto desaparecería del historial sin que
 /// el productor lo note. Devuelve `null` si cancela en cualquier paso.
 Future<String?> elegirFoto(
-  BuildContext context, {
-  required String carpeta,
-}) async {
+    BuildContext context, {
+      required String carpeta,
+    }) async {
   final origen = await showModalBottomSheet<ImageSource>(
     context: context,
     builder: (contexto) => SafeArea(
@@ -597,13 +653,13 @@ class CampoFoto extends StatelessWidget {
                 ),
                 child: cargando
                     ? const Padding(
-                        padding: EdgeInsets.all(14),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                  padding: EdgeInsets.all(14),
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
                     : const Icon(
-                        Icons.add_a_photo_outlined,
-                        color: PaletaCacao.verde,
-                      ),
+                  Icons.add_a_photo_outlined,
+                  color: PaletaCacao.verde,
+                ),
               ),
             const SizedBox(width: 14),
             Expanded(
