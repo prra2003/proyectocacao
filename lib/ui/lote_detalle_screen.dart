@@ -111,10 +111,18 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
       await _explicarCandado();
       return;
     }
+    // Las hectáreas de los otros lotes: el área de este entra por el
+    // formulario, que es donde se puede estar cambiando ahora mismo.
+    final otros = await widget.repo.watchLotesDe(_lote.fincaId).first;
+    final hectareas = otros
+        .where((l) => l.id != _lote.id)
+        .fold<double>(0, (suma, l) => suma + l.areaSembradaHa);
+    if (!mounted) return;
     final datos = await pedirDatosLote(
       context,
       inicial: _lote,
       finca: widget.finca,
+      hectareasDeLaFinca: hectareas,
     );
     if (datos == null) return;
     await widget.repo.guardarLote(

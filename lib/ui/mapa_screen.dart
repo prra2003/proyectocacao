@@ -3,6 +3,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'tema.dart';
+import 'widgets/comunes.dart';
+import 'widgets/perimetro.dart';
 import 'widgets/ubicacion.dart';
 import 'widgets/verificar_ubicacion.dart';
 
@@ -23,6 +25,8 @@ class MapaScreen extends StatefulWidget {
     this.inicial,
     this.departamento,
     this.municipio,
+    this.centroPermitido,
+    this.radioPermitido,
   });
 
   /// Punto de partida: lo que ya tenía la finca, si tenía algo.
@@ -31,6 +35,12 @@ class MapaScreen extends StatefulWidget {
   /// Lo que eligió el productor en el formulario de la finca.
   final String? departamento;
   final String? municipio;
+
+  /// Cuando se marca un **lote**, el punto tiene que caer dentro de la finca.
+  /// Se dibuja el círculo y no se deja tocar por fuera. Nulos cuando se marca
+  /// la finca misma, que no tiene contra qué compararse.
+  final LatLng? centroPermitido;
+  final double? radioPermitido;
 
   @override
   State<MapaScreen> createState() => _MapaScreenState();
@@ -96,6 +106,26 @@ class _MapaScreenState extends State<MapaScreen> {
     if (sirve) Navigator.of(context).pop(_punto);
   }
 
+  /// Fuera del perímetro no se mueve el punto: se explica por qué y cuánto se
+  /// pasó, que es lo único que le sirve a quien está mirando el mapa.
+  void _tocar(LatLng punto) {
+    final centro = widget.centroPermitido;
+    final radio = widget.radioPermitido;
+    if (centro != null && radio != null) {
+      final lejos = metrosEntre(centro, punto);
+      if (lejos > radio) {
+        avisar(
+          context,
+          'Ese punto queda a ${distanciaEnPalabras(lejos)} de la finca. '
+          'El lote tiene que estar dentro del círculo '
+          '(${distanciaEnPalabras(radio)}).',
+        );
+        return;
+      }
+    }
+    setState(() => _punto = punto);
+  }
+
   @override
   Widget build(BuildContext context) {
     final lugar = [
@@ -114,13 +144,27 @@ class _MapaScreenState extends State<MapaScreen> {
                   ? 16
                   : (_departamento?.zoom ?? 6),
               onMapReady: _alAbrirMapa,
-              onTap: (_, punto) => setState(() => _punto = punto),
+              onTap: (_, punto) => _tocar(punto),
             ),
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.redcacao.cacao_app',
               ),
+              if (widget.centroPermitido != null &&
+                  widget.radioPermitido != null)
+                CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: widget.centroPermitido!,
+                      radius: widget.radioPermitido!,
+                      useRadiusInMeter: true,
+                      color: PaletaCacao.verde.withValues(alpha: 0.12),
+                      borderColor: PaletaCacao.verde,
+                      borderStrokeWidth: 2,
+                    ),
+                  ],
+                ),
               MarkerLayer(
                 markers: [
                   Marker(

@@ -14,6 +14,11 @@ class LoteRepository {
   final RegistrosDao _registros;
   final LotesDao _lotes;
 
+  /// Todos los lotes de una finca. Se usa para sumar sus hectáreas, que son
+  /// las que deciden el perímetro en el que puede caer un lote.
+  Stream<List<Lote>> watchLotesDe(String fincaId) =>
+      _lotes.watchLotesDe(fincaId);
+
   Stream<Lote?> watchLote(String fincaId, String loteId) {
     return _lotes.watchLotesDe(fincaId).map((lotes) {
       for (final lote in lotes) {

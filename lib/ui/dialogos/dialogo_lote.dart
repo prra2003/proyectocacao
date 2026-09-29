@@ -5,6 +5,7 @@ import '../../data/local/database.dart';
 import '../tema.dart';
 import '../widgets/comunes.dart';
 import '../mapa_screen.dart';
+import '../widgets/perimetro.dart';
 import '../widgets/selector_fecha.dart';
 import '../widgets/ubicacion.dart';
 
@@ -129,6 +130,7 @@ Future<DatosLote?> pedirDatosLote(
   Lote? inicial,
   String? codigoSugerido,
   Finca? finca,
+  double hectareasDeLaFinca = 0,
 }) {
   return showDialog<DatosLote>(
     context: context,
@@ -136,12 +138,18 @@ Future<DatosLote?> pedirDatosLote(
       inicial: inicial,
       codigoSugerido: codigoSugerido,
       finca: finca,
+      hectareasDeLaFinca: hectareasDeLaFinca,
     ),
   );
 }
 
 class _DialogoLote extends StatefulWidget {
-  const _DialogoLote({this.inicial, this.codigoSugerido, this.finca});
+  const _DialogoLote({
+    this.inicial,
+    this.codigoSugerido,
+    this.finca,
+    this.hectareasDeLaFinca = 0,
+  });
 
   final Lote? inicial;
   final String? codigoSugerido;
@@ -151,6 +159,10 @@ class _DialogoLote extends StatefulWidget {
   /// muy cerca, así que empezar en el punto de la finca ahorra buscar el país
   /// entero.
   final Finca? finca;
+
+  /// Hectáreas ya registradas en la finca, **sin contar este lote**. De ahí
+  /// sale el radio en el que puede caer el punto.
+  final double hectareasDeLaFinca;
 
   @override
   State<_DialogoLote> createState() => _DialogoLoteState();
@@ -188,6 +200,21 @@ class _DialogoLoteState extends State<_DialogoLote> {
   late double? _latitud = widget.inicial?.latitud;
   late double? _longitud = widget.inicial?.longitud;
   var _buscandoGps = false;
+
+  /// El centro del perímetro: el punto de la finca. Sin él no hay contra qué
+  /// comparar y no se restringe nada.
+  LatLng? get _centroFinca {
+    final f = widget.finca;
+    if (f?.latitud == null || f?.longitud == null) return null;
+    return LatLng(f!.latitud!, f.longitud!);
+  }
+
+  /// El área de este lote cuenta: si alguien registra uno de 30 ha, el
+  /// perímetro tiene que darle espacio.
+  double get _hectareas =>
+      widget.hectareasDeLaFinca + (aNumero(_area.text) ?? 0);
+
+  double get _radio => radioPermitidoMetros(_hectareas);
   var _cargandoFoto = false;
 
   Future<void> _elegirFoto() async {
@@ -234,15 +261,33 @@ class _DialogoLoteState extends State<_DialogoLote> {
     setState(() => _buscandoGps = true);
     try {
       final punto = await ubicacionActual(context);
-      if (mounted && punto != null) {
-        setState(() {
-          _latitud = punto.latitude;
-          _longitud = punto.longitude;
-        });
-      }
+      if (!mounted || punto == null) return;
+      if (!_cabeEnLaFinca(punto)) return;
+      setState(() {
+        _latitud = punto.latitude;
+        _longitud = punto.longitude;
+      });
     } finally {
       if (mounted) setState(() => _buscandoGps = false);
     }
+  }
+
+  /// El lote tiene que caer dentro de la finca. Si no, casi siempre es que el
+  /// punto de la finca está mal puesto —no el del lote—, así que el aviso lo
+  /// dice con todas las letras en vez de dejar al productor atascado.
+  bool _cabeEnLaFinca(LatLng punto) {
+    final centro = _centroFinca;
+    if (centro == null) return true;
+    final lejos = metrosEntre(centro, punto);
+    if (lejos <= _radio) return true;
+    avisar(
+      context,
+      'Ese punto queda a ${distanciaEnPalabras(lejos)} de la finca, y el '
+      'lote solo puede estar a ${distanciaEnPalabras(_radio)}. Si de verdad '
+      'está parado en el lote, lo que está mal es el punto de la finca: '
+      'corríjalo desde el perfil.',
+    );
+    return false;
   }
 
   /// El mismo mapa de la finca, para señalar el lote con el dedo.
@@ -260,6 +305,8 @@ class _DialogoLoteState extends State<_DialogoLote> {
           inicial: lat != null && lon != null ? LatLng(lat, lon) : null,
           departamento: finca?.departamento,
           municipio: finca?.municipio,
+          centroPermitido: _centroFinca,
+          radioPermitido: _centroFinca == null ? null : _radio,
         ),
       ),
     );
@@ -402,6 +449,7 @@ class _DialogoLoteState extends State<_DialogoLote> {
                 buscando: _buscandoGps,
                 onMarcar: _marcarPunto,
                 onMapa: _marcarEnMapa,
+                radio: _centroFinca == null ? null : _radio,
                 onQuitar: () => setState(() {
                   _latitud = null;
                   _longitud = null;
@@ -713,6 +761,7 @@ class _PuntoDelLote extends StatelessWidget {
     required this.onMarcar,
     required this.onMapa,
     required this.onQuitar,
+    this.radio,
   });
 
   final double? latitud;
@@ -721,6 +770,9 @@ class _PuntoDelLote extends StatelessWidget {
   final VoidCallback onMarcar;
   final VoidCallback onMapa;
   final VoidCallback onQuitar;
+
+  /// Hasta dónde puede quedar el lote. Nulo cuando la finca no tiene punto.
+  final double? radio;
 
   @override
   Widget build(BuildContext context) {
@@ -754,8 +806,11 @@ class _PuntoDelLote extends StatelessWidget {
             hay
                 ? '${latitud!.toStringAsFixed(5)}, '
                       '${longitud!.toStringAsFixed(5)}'
-                : 'Párese en el lote y tome el punto. El GPS funciona sin '
-                      'señal, y es el dato que piden para exportar.',
+                : radio == null
+                ? 'Párese en el lote y tome el punto. El GPS funciona sin '
+                      'señal, y es el dato que piden para exportar.'
+                : 'Párese en el lote y tome el punto. Tiene que quedar a '
+                      'menos de ${distanciaEnPalabras(radio!)} de la finca.',
             style: TextStyle(
               fontSize: 13,
               color: hay ? PaletaCacao.cafeOscuro : PaletaCacao.cremaVerdosa,

@@ -182,10 +182,18 @@ class _Contenido extends StatelessWidget {
       lotesDelProductor.map((l) => l.codigo),
     );
     if (!context.mounted) return;
+    // Las hectáreas ya registradas marcan hasta dónde puede quedar el lote.
+    final deLaFinca = await repo.watchLotes(finca.id).first;
+    final hectareas = deLaFinca.fold<double>(
+      0,
+      (suma, l) => suma + l.areaSembradaHa,
+    );
+    if (!context.mounted) return;
     final datos = await pedirDatosLote(
       context,
       codigoSugerido: codigoSugerido,
       finca: finca,
+      hectareasDeLaFinca: hectareas,
     );
     if (datos == null) return;
     await repo.guardarLote(
