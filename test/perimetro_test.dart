@@ -17,12 +17,13 @@ void main() {
       expect(radioPermitidoMetros(0), 300);
     });
 
-    test('crece con el tamaño de la finca', () {
-      // 10 ha caben en un círculo de 178 m; con la holgura, unos 535.
-      final diez = radioPermitidoMetros(10);
-      expect(diez, greaterThan(500));
-      expect(diez, lessThan(600));
-      expect(radioPermitidoMetros(40), greaterThan(diez));
+    test('es la diagonal del cuadrado más un 20%', () {
+      // 20 ha son un cuadrado de 447 m de lado; su diagonal —la esquina más
+      // lejana si la casa está en una punta— mide 632 m. Con el margen, 757.
+      expect(radioPermitidoMetros(20), closeTo(757, 2));
+      // 10 ha: lado 316, diagonal 447, con margen 536.
+      expect(radioPermitidoMetros(10), closeTo(536, 2));
+      expect(radioPermitidoMetros(40), greaterThan(radioPermitidoMetros(10)));
     });
 
     test('no se dispara por grande que sea', () {
