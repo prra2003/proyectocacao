@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -33,6 +34,7 @@ class ApiAppsScript implements ApiRemota {
     http.Client? cliente,
     String? token,
     String? usuarioId,
+    this.espera = const Duration(seconds: 30),
   }) : _cliente = cliente ?? http.Client(),
        _idTokenDeGoogle = pedirIdTokenAGoogle {
     _salirDeGoogle = salirDeGoogle;
@@ -42,6 +44,14 @@ class ApiAppsScript implements ApiRemota {
 
   final Uri url;
   final http.Client _cliente;
+
+  /// Cuánto se espera a cada petición antes de darla por perdida.
+  ///
+  /// Sin esto, una conexión que se queda a medias —lo normal con señal mala,
+  /// o detrás de un portal de wifi que no deja salir— dejaba la app girando
+  /// para siempre, sin error y sin poder reintentar. Treinta segundos es
+  /// holgado para Apps Script, que suele contestar en menos de uno.
+  final Duration espera;
 
   /// Quién le pide la cuenta a Google. Se inyecta para que las pruebas puedan
   /// correr sin abrir ninguna pantalla.
@@ -222,6 +232,11 @@ class ApiAppsScript implements ApiRemota {
     final http.Response respuesta;
     try {
       respuesta = await _enviar(cuerpo);
+    } on TimeoutException {
+      throw const ErrorRemoto(
+        'El servidor no contestó a tiempo. Lo anotado está guardado en el '
+        'teléfono; vuelva a intentarlo cuando tenga mejor señal.',
+      );
     } on Exception catch (error) {
       throw ErrorRemoto('No se pudo hablar con el servidor: $error');
     }
@@ -262,14 +277,17 @@ class ApiAppsScript implements ApiRemota {
     // rompe la petición entera con un "Failed to fetch".
     if (!kIsWeb) peticion.followRedirects = false;
 
+    // Cada salto lleva su propio reloj: el POST y, si hay redirección, el GET
+    // que la sigue. Leer el cuerpo también cuenta, porque una conexión puede
+    // aceptar y después quedarse callada a mitad de la respuesta.
     final primera = await http.Response.fromStream(
-      await _cliente.send(peticion),
-    );
+      await _cliente.send(peticion).timeout(espera),
+    ).timeout(espera);
     final aDonde = primera.headers['location'];
     if (primera.statusCode >= 300 &&
         primera.statusCode < 400 &&
         aDonde != null) {
-      return _cliente.get(Uri.parse(aDonde));
+      return _cliente.get(Uri.parse(aDonde)).timeout(espera);
     }
     return primera;
   }

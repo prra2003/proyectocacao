@@ -1,7 +1,43 @@
+import 'dart:async';
+
 import 'package:cacao_app/data/sync/api_apps_script.dart';
+import 'package:cacao_app/data/sync/api_remota.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+
+/// Un servidor que acepta la conexión y no contesta nunca. Es lo que pasa de
+/// verdad con señal mala o detrás del portal de un wifi que no deja salir.
+class _ClienteQueNuncaContesta extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      Completer<http.StreamedResponse>().future;
+}
 
 void main() {
+  group('cuando el servidor no contesta', () {
+    test('la petición se da por perdida en vez de esperar para siempre', () async {
+      // Sin tiempo de espera, la app se quedaba girando sin error y sin poder
+      // reintentar: el productor solo veía "Sincronizando…" indefinidamente.
+      final api = ApiAppsScript(
+        url: Uri.parse('https://ejemplo.invalido/exec'),
+        pedirIdTokenAGoogle: () async => 'token-falso',
+        cliente: _ClienteQueNuncaContesta(),
+        espera: const Duration(milliseconds: 80),
+      );
+
+      await expectLater(
+        api.descargar(entidad: 'lotes'),
+        throwsA(
+          isA<ErrorRemoto>().having(
+            (e) => e.mensaje,
+            'mensaje',
+            contains('no contestó a tiempo'),
+          ),
+        ),
+      );
+    });
+  });
+
   group('lo que llega de la hoja de cálculo', () {
     test('una celda vacía es un valor ausente, no una cadena vacía', () {
       // Sin esto, un `deleted_at` vacío rompe DateTime.parse y tumba la
