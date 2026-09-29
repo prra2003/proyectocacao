@@ -4,6 +4,7 @@ import '../../data/local/database.dart';
 import '../tema.dart';
 import '../widgets/comunes.dart';
 import '../widgets/selector_fecha.dart';
+import '../widgets/ubicacion.dart';
 
 typedef DatosLote = ({
   String nombre,
@@ -12,6 +13,8 @@ typedef DatosLote = ({
   String variedad,
   DateTime fechaSiembra,
   String? fotoPath,
+  double? latitud,
+  double? longitud,
 });
 
 /// Las 13 variedades de cacao reconocidas en Colombia (requerimiento del
@@ -170,6 +173,9 @@ class _DialogoLoteState extends State<_DialogoLote> {
 
   /// Una foto del lote hace que su tarjeta se reconozca sin leer el nombre.
   late String? _fotoPath = widget.inicial?.fotoPath;
+  late double? _latitud = widget.inicial?.latitud;
+  late double? _longitud = widget.inicial?.longitud;
+  var _buscandoGps = false;
   var _cargandoFoto = false;
 
   Future<void> _elegirFoto() async {
@@ -210,6 +216,23 @@ class _DialogoLoteState extends State<_DialogoLote> {
     }
   }
 
+  /// El punto se toma con el GPS, parado en el lote. No pide internet: por eso
+  /// se puede capturar en la finca, que es donde hay que capturarlo.
+  Future<void> _marcarPunto() async {
+    setState(() => _buscandoGps = true);
+    try {
+      final punto = await ubicacionActual(context);
+      if (mounted && punto != null) {
+        setState(() {
+          _latitud = punto.latitude;
+          _longitud = punto.longitude;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _buscandoGps = false);
+    }
+  }
+
   void _aceptar() {
     final fechaOk = _fechaSiembra != null;
     final variedadOk = _variedad != null;
@@ -225,6 +248,8 @@ class _DialogoLoteState extends State<_DialogoLote> {
       variedad: _variedad!,
       fechaSiembra: _fechaSiembra!,
       fotoPath: _fotoPath,
+      latitud: _latitud,
+      longitud: _longitud,
     ));
   }
 
@@ -332,6 +357,17 @@ class _DialogoLoteState extends State<_DialogoLote> {
                 onTap: _elegirFoto,
                 onQuitar: () => setState(() => _fotoPath = null),
                 etiqueta: 'Foto del lote (si quiere)',
+              ),
+              const SizedBox(height: 14),
+              _PuntoDelLote(
+                latitud: _latitud,
+                longitud: _longitud,
+                buscando: _buscandoGps,
+                onMarcar: _marcarPunto,
+                onQuitar: () => setState(() {
+                  _latitud = null;
+                  _longitud = null;
+                }),
               ),
             ],
           ),
@@ -622,6 +658,96 @@ class _HojaVariedades extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Muestra el punto del lote y deja tomarlo con el GPS.
+///
+/// Va aparte del punto de la finca a propósito: una finca puede tener lotes a
+/// media hora de camino, y lo que pide el comprador que exporta es el predio
+/// sembrado, no la casa.
+class _PuntoDelLote extends StatelessWidget {
+  const _PuntoDelLote({
+    required this.latitud,
+    required this.longitud,
+    required this.buscando,
+    required this.onMarcar,
+    required this.onQuitar,
+  });
+
+  final double? latitud;
+  final double? longitud;
+  final bool buscando;
+  final VoidCallback onMarcar;
+  final VoidCallback onQuitar;
+
+  @override
+  Widget build(BuildContext context) {
+    final hay = latitud != null && longitud != null;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: PaletaCacao.tarjeta,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: PaletaCacao.profundoOscuro),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.place_outlined, color: PaletaCacao.verde),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Punto del lote (si quiere)',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: PaletaCacao.cafeOscuro,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hay
+                ? '${latitud!.toStringAsFixed(5)}, '
+                      '${longitud!.toStringAsFixed(5)}'
+                : 'Párese en el lote y tome el punto. El GPS funciona sin '
+                      'señal, y es el dato que piden para exportar.',
+            style: TextStyle(
+              fontSize: 13,
+              color: hay ? PaletaCacao.cafeOscuro : PaletaCacao.cremaVerdosa,
+              fontWeight: hay ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: PaletaCacao.verde),
+                onPressed: buscando ? null : onMarcar,
+                icon: buscando
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.my_location, size: 18),
+                label: Text(hay ? 'Tomar otra vez' : 'Tomar el punto aquí'),
+              ),
+              if (hay) ...[
+                const SizedBox(width: 8),
+                TextButton(onPressed: onQuitar, child: const Text('Quitar')),
+              ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

@@ -70,6 +70,20 @@ La huella SHA-1 se saca así, desde la carpeta `android` del proyecto:
 > *Administrar implementaciones → editar → Versión: Nueva*). Si no, la URL
 > sigue sirviendo el código viejo y parece que el cambio no hubiera servido.
 
+## El punto del lote (trazabilidad de exportación)
+
+La hoja `lotes` tiene ahora `latitud` y `longitud`. No es lo mismo que el punto
+de la finca: quien compra cacao para exportar pide **el predio sembrado**, y
+una finca puede tener lotes a media hora de camino.
+
+El dato se toma con el GPS del teléfono, que **funciona sin señal**. La
+comprobación contra OpenStreetMap —que el punto caiga en el municipio que se
+dijo— necesita internet y se hace después, cuando la haya.
+
+Si su hoja es anterior a este cambio, vuelva a ejecutar `instalar()` y publique
+una versión nueva. Mientras tanto no se pierde nada: el punto se guarda en el
+teléfono y sube cuando la columna exista.
+
 ## Cuando la app gana campos nuevos
 
 Agregue la columna en `TABLAS`, dentro de `Codigo.gs`, y **vuelva a ejecutar

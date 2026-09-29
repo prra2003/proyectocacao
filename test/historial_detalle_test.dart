@@ -3,7 +3,7 @@ import 'package:cacao_app/data/local/enums.dart';
 import 'package:cacao_app/data/repositories/lote_repository.dart';
 import 'package:cacao_app/data/repositories/perfil_repository.dart';
 import 'package:cacao_app/data/repositories/recordatorios.dart';
-import 'package:drift/drift.dart' show Variable;
+import 'package:drift/drift.dart' show Value, Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -109,7 +109,35 @@ void main() {
     expect(labor.syncStatus, SyncStatus.pending);
   });
 
-  test('una labor ya completa no se puede volver a cambiar', () async {
+  test('dentro de la semana la labor todavía se corrige', () async {
+    // La regla ya no es "completa = cerrada" sino "una semana desde que se
+    // anotó". Un error de dedo tiene arreglo; el historial viejo, no.
+    await lotes.registrarActividad(
+      loteId: loteId,
+      tipo: TipoActividad.poda,
+      fecha: DateTime(2026, 2, 1),
+      subtipoLabor: 'Formación',
+      arbolesAfectados: 480, // se equivocó: eran 48
+    );
+    final labor = (await lotes.watchActividades(loteId).first).single;
+    expect(faltaLlenarEn(labor), isEmpty, reason: 'está completa');
+    expect(plazoVencido(labor), isFalse, reason: 'se acaba de anotar');
+
+    final escritas = await lotes.actualizarActividad(
+      id: labor.id,
+      tipo: TipoActividad.poda,
+      fecha: labor.fecha,
+      subtipoLabor: 'Formación',
+      arbolesAfectados: 48,
+    );
+
+    expect(escritas, 1);
+    final despues = (await lotes.watchActividades(loteId).first).single;
+    expect(despues.arbolesAfectados, 48);
+    expect(despues.syncStatus, SyncStatus.pending);
+  });
+
+  test('pasada la semana la labor queda cerrada', () async {
     await lotes.registrarActividad(
       loteId: loteId,
       tipo: TipoActividad.poda,
@@ -117,8 +145,22 @@ void main() {
       subtipoLabor: 'Formación',
       arbolesAfectados: 35,
     );
-    final labor = (await lotes.watchActividades(loteId).first).single;
-    expect(faltaLlenarEn(labor), isEmpty);
+    var labor = (await lotes.watchActividades(loteId).first).single;
+    // Se envejece la fila: ocho días desde que se creó. Se usa el update de
+    // Drift y no SQL a pelo para que la fecha se guarde en el mismo formato
+    // que usa la app.
+    await (db.update(db.actividadesAgricolas)
+          ..where((a) => a.id.equals(labor.id)))
+        .write(
+          ActividadesAgricolasCompanion(
+            createdAt: Value(
+              DateTime.now().subtract(const Duration(days: 8)),
+            ),
+          ),
+        );
+    labor = (await lotes.watchActividades(loteId).first).single;
+    expect(plazoVencido(labor), isTrue);
+    expect(diasQuedanLabor(labor), 0);
 
     final escritas = await lotes.actualizarActividad(
       id: labor.id,
@@ -128,10 +170,18 @@ void main() {
       arbolesAfectados: 900,
     );
 
-    expect(escritas, 0, reason: 'no debería escribir nada');
+    expect(escritas, 0, reason: 'pasada la semana no debería escribir nada');
     final despues = (await lotes.watchActividades(loteId).first).single;
     expect(despues.subtipoLabor, 'Formación');
     expect(despues.arbolesAfectados, 35);
+  });
+
+  test('el plazo se cuenta por días completos, no por horas', () async {
+    final creado = DateTime(2026, 3, 1, 23, 50);
+    expect(diasQuedanParaEditar(creado, hoy: DateTime(2026, 3, 1, 0, 5)), 7);
+    expect(diasQuedanParaEditar(creado, hoy: DateTime(2026, 3, 2, 0, 5)), 6);
+    expect(diasQuedanParaEditar(creado, hoy: DateTime(2026, 3, 8, 0, 5)), 0);
+    expect(diasQuedanParaEditar(creado, hoy: DateTime(2026, 4, 1)), 0);
   });
 
   test('una labor sin campos extra no inventa nada', () async {

@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'tema.dart';
 import 'widgets/ubicacion.dart';
+import 'widgets/verificar_ubicacion.dart';
 
 /// Elegir la ubicación de la finca sobre el mapa.
 ///
@@ -11,11 +12,25 @@ import 'widgets/ubicacion.dart';
 /// el **GPS** funciona sin datos (es lo normal en la finca) y el **mapa**
 /// necesita internet para descargar las imágenes, pero permite ajustar el punto
 /// con precisión desde casa.
+///
+/// Si ya se eligió el departamento y el municipio, el mapa abre directamente
+/// sobre ellos (primero el departamento, que no necesita internet, y luego el
+/// municipio en cuanto lo encuentra). Al tocar "Usar este punto" se revisa que
+/// el punto sí quede en ese municipio y departamento.
 class MapaScreen extends StatefulWidget {
-  const MapaScreen({super.key, this.inicial});
+  const MapaScreen({
+    super.key,
+    this.inicial,
+    this.departamento,
+    this.municipio,
+  });
 
   /// Punto de partida: lo que ya tenía la finca, si tenía algo.
   final LatLng? inicial;
+
+  /// Lo que eligió el productor en el formulario de la finca.
+  final String? departamento;
+  final String? municipio;
 
   @override
   State<MapaScreen> createState() => _MapaScreenState();
@@ -26,8 +41,37 @@ class _MapaScreenState extends State<MapaScreen> {
   static const _colombia = LatLng(4.6, -74.08);
 
   final _mapa = MapController();
-  late LatLng _punto = widget.inicial ?? _colombia;
+  late final _departamento = centroDepartamento(widget.departamento);
+  late LatLng _punto = widget.inicial ?? _departamento?.centro ?? _colombia;
   var _buscandoGps = false;
+  var _buscandoMunicipio = false;
+  var _verificando = false;
+
+  /// Si ya hay punto, se abre ahí. Si no, se busca el municipio y se hace
+  /// zoom sobre él.
+  Future<void> _alAbrirMapa() async {
+    final departamento = widget.departamento;
+    final municipio = widget.municipio;
+    if (widget.inicial != null || departamento == null || municipio == null) {
+      return;
+    }
+    setState(() => _buscandoMunicipio = true);
+    final zona = await buscarMunicipio(
+      departamento: departamento,
+      municipio: municipio,
+    );
+    if (!mounted) return;
+    setState(() => _buscandoMunicipio = false);
+    if (zona == null) return; // Sin internet: se queda en el departamento.
+    setState(() => _punto = zona.centro);
+    _mapa.fitCamera(
+      CameraFit.bounds(
+        bounds: LatLngBounds(zona.sur, zona.norte),
+        padding: const EdgeInsets.fromLTRB(30, 140, 30, 170),
+        maxZoom: 15,
+      ),
+    );
+  }
 
   Future<void> _usarMiUbicacion() async {
     setState(() => _buscandoGps = true);
@@ -39,8 +83,25 @@ class _MapaScreenState extends State<MapaScreen> {
     _mapa.move(aqui, 16);
   }
 
+  Future<void> _usarEstePunto() async {
+    setState(() => _verificando = true);
+    final sirve = await confirmarUbicacion(
+      context,
+      punto: _punto,
+      departamento: widget.departamento,
+      municipio: widget.municipio,
+    );
+    if (!mounted) return;
+    setState(() => _verificando = false);
+    if (sirve) Navigator.of(context).pop(_punto);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final lugar = [
+      if (widget.municipio != null) widget.municipio!,
+      if (widget.departamento != null) widget.departamento!,
+    ].join(', ');
     return Scaffold(
       appBar: cabeceraCacao(titulo: const Text('Ubicación de la finca')),
       body: Stack(
@@ -49,7 +110,10 @@ class _MapaScreenState extends State<MapaScreen> {
             mapController: _mapa,
             options: MapOptions(
               initialCenter: _punto,
-              initialZoom: widget.inicial == null ? 6 : 16,
+              initialZoom: widget.inicial != null
+                  ? 16
+                  : (_departamento?.zoom ?? 6),
+              onMapReady: _alAbrirMapa,
               onTap: (_, punto) => setState(() => _punto = punto),
             ),
             children: [
@@ -72,6 +136,15 @@ class _MapaScreenState extends State<MapaScreen> {
                   ),
                 ],
               ),
+              // La licencia de OpenStreetMap exige dar el crédito donde se
+              // muestren sus mapas. No es un adorno: es la condición de uso.
+              const RichAttributionWidget(
+                alignment: AttributionAlignment.bottomLeft,
+                showFlutterMapAttribution: false,
+                attributions: [
+                  TextSourceAttribution('OpenStreetMap contributors'),
+                ],
+              ),
             ],
           ),
           Positioned(
@@ -81,11 +154,43 @@ class _MapaScreenState extends State<MapaScreen> {
             child: Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Toque el mapa para marcar la finca.\n'
-                  '${_punto.latitude.toStringAsFixed(5)}, '
-                  '${_punto.longitude.toStringAsFixed(5)}',
-                  style: Theme.of(context).textTheme.bodyLarge,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (lugar.isNotEmpty)
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_city_outlined,
+                            color: PaletaCacao.cafe,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              lugar,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          if (_buscandoMunicipio)
+                            const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                        ],
+                      ),
+                    Text(
+                      'Toque el mapa para marcar la finca.\n'
+                          '${_punto.latitude.toStringAsFixed(5)}, '
+                          '${_punto.longitude.toStringAsFixed(5)}',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -103,21 +208,32 @@ class _MapaScreenState extends State<MapaScreen> {
                   onPressed: _buscandoGps ? null : _usarMiUbicacion,
                   icon: _buscandoGps
                       ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 3,
-                            color: Colors.white,
-                          ),
-                        )
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: Colors.white,
+                    ),
+                  )
                       : const Icon(Icons.my_location, size: 28),
                   label: Text(_buscandoGps ? 'Buscando…' : 'Estoy en la finca'),
                 ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
-                  onPressed: () => Navigator.of(context).pop(_punto),
-                  icon: const Icon(Icons.check, size: 28),
-                  label: const Text('Usar este punto'),
+                  onPressed: _verificando ? null : _usarEstePunto,
+                  icon: _verificando
+                      ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: Colors.white,
+                    ),
+                  )
+                      : const Icon(Icons.check, size: 28),
+                  label: Text(
+                    _verificando ? 'Revisando el punto…' : 'Usar este punto',
+                  ),
                 ),
               ],
             ),

@@ -269,6 +269,8 @@ class LotesDao extends DatabaseAccessor<AppDatabase> with _$LotesDaoMixin {
     required String variedadCacao,
     required DateTime fechaSiembra,
     Value<String?> fotoPath = const Value.absent(),
+    Value<double?> latitud = const Value.absent(),
+    Value<double?> longitud = const Value.absent(),
   }) async {
     final idFinal = id ?? nuevoId();
     await into(lotes).insertOnConflictUpdate(
@@ -280,6 +282,8 @@ class LotesDao extends DatabaseAccessor<AppDatabase> with _$LotesDaoMixin {
         // sitio que no conoce el código no debe borrarlo.
         codigo: codigo == null ? const Value.absent() : Value(codigo),
         fotoPath: fotoPath,
+        latitud: latitud,
+        longitud: longitud,
         areaSembradaHa: areaSembradaHa,
         variedadCacao: variedadCacao,
         fechaSiembra: fechaSiembra,

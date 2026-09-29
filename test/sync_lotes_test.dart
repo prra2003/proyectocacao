@@ -6,6 +6,7 @@ import 'package:cacao_app/data/sync/api_falsa.dart';
 import 'package:cacao_app/data/sync/api_remota.dart';
 import 'package:cacao_app/data/sync/sync_result.dart';
 import 'package:cacao_app/data/sync/sync_service.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -102,6 +103,64 @@ void main() {
     );
     return loteId;
   }
+
+  group('el punto del lote', () {
+    test('la coordenada viaja al servidor y vuelve igual', () async {
+      // Es el dato que pide el comprador que exporta: el predio sembrado, no
+      // la casa de la finca.
+      await perfil.guardarLote(
+        fincaId: fincaId,
+        nombre: 'Lote 1',
+        areaSembradaHa: 2.5,
+        variedadCacao: 'CCN-51',
+        fechaSiembra: DateTime(2020, 3, 15),
+        latitud: const Value(6.88123),
+        longitud: const Value(-73.41456),
+      );
+
+      await sync.sincronizar();
+
+      final remoto = api.filasDe('lotes').single;
+      expect(remoto['latitud'], 6.88123);
+      expect(remoto['longitud'], -73.41456);
+
+      final local = await loteEnBase();
+      expect(local.latitud, 6.88123);
+      expect(local.longitud, -73.41456);
+    });
+
+    test('un servidor sin esas columnas no borra el punto del teléfono', () async {
+      // El mismo cuidado que con los campos nuevos de la labor: ausente no es
+      // vacío. Si la hoja todavía no tiene la columna, lo del teléfono se
+      // queda quieto.
+      final loteId = await perfil.guardarLote(
+        fincaId: fincaId,
+        nombre: 'Lote 1',
+        areaSembradaHa: 2.5,
+        variedadCacao: 'CCN-51',
+        fechaSiembra: DateTime(2020, 3, 15),
+        latitud: const Value(6.88123),
+        longitud: const Value(-73.41456),
+      );
+      await sync.sincronizar();
+
+      final sinColumnas = Map<String, Object?>.from(
+        api.filasDe('lotes').single,
+      )
+        ..remove('latitud')
+        ..remove('longitud');
+      sinColumnas['nombre'] = 'Lote 1 corregido';
+      api.sembrar('lotes', sinColumnas);
+
+      await sync.sincronizar();
+
+      final local = await db.select(db.lotes).getSingle();
+      expect(local.id, loteId);
+      expect(local.nombre, 'Lote 1 corregido', reason: 'sí aplica lo que vino');
+      expect(local.latitud, 6.88123, reason: 'no borra lo que no vino');
+      expect(local.longitud, -73.41456);
+    });
+  });
 
   group('ciclo completo', () {
     test(

@@ -8,8 +8,8 @@ import 'recordatorios.dart';
 /// Todo lo que pasa dentro de un lote: labores culturales y cosechas.
 class LoteRepository {
   LoteRepository(AppDatabase db)
-    : _registros = db.registrosDao,
-      _lotes = db.lotesDao;
+      : _registros = db.registrosDao,
+        _lotes = db.lotesDao;
 
   final RegistrosDao _registros;
   final LotesDao _lotes;
@@ -36,6 +36,8 @@ class LoteRepository {
     required String variedadCacao,
     required DateTime fechaSiembra,
     Value<String?> fotoPath = const Value.absent(),
+    Value<double?> latitud = const Value.absent(),
+    Value<double?> longitud = const Value.absent(),
   }) {
     return _lotes.guardar(
       id: id,
@@ -46,6 +48,8 @@ class LoteRepository {
       variedadCacao: variedadCacao,
       fechaSiembra: fechaSiembra,
       fotoPath: fotoPath,
+      latitud: latitud,
+      longitud: longitud,
     );
   }
 
@@ -92,13 +96,13 @@ class LoteRepository {
     );
   }
 
-  /// Corrige una labor **que todavía está incompleta**.
+  /// Corrige una labor **dentro de la semana** siguiente a que se anotó.
   ///
-  /// Una vez la labor quedó bien llena deja de poderse cambiar, y este método
-  /// no escribe nada (devuelve 0). La ventana de corrección existe para
-  /// terminar lo que se anotó a la carrera, no para reescribir el historial:
-  /// si el dato ya está completo, cambiarlo después haría que el reporte del
-  /// técnico y el del SENA dejaran de ser confiables.
+  /// Es la misma regla del lote: durante 7 días se puede editar (terminar lo
+  /// que se anotó a la carrera o corregirlo). Pasada la semana, este método no
+  /// escribe nada (devuelve 0) y solo el administrador podrá habilitarla otra
+  /// vez, para que el reporte del técnico y el del SENA sigan siendo
+  /// confiables.
   ///
   /// La comprobación vive aquí y no solo en la pantalla: una regla que
   /// sostiene la confianza en los datos no puede depender de que la interfaz
@@ -123,7 +127,9 @@ class LoteRepository {
     String? resultadoEsperado,
   }) async {
     final actual = await _registros.actividadPorId(id);
-    if (actual == null || faltaLlenarEn(actual).isEmpty) return 0;
+    // Pasada la semana desde que se anotó, la labor queda cerrada: solo el
+    // administrador podrá volver a habilitarla.
+    if (actual == null || plazoVencido(actual)) return 0;
     return _registros.actualizarActividad(
       id: id,
       tipo: tipo,

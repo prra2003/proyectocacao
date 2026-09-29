@@ -2437,6 +2437,28 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _latitudMeta = const VerificationMeta(
+    'latitud',
+  );
+  @override
+  late final GeneratedColumn<double> latitud = GeneratedColumn<double>(
+    'latitud',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _longitudMeta = const VerificationMeta(
+    'longitud',
+  );
+  @override
+  late final GeneratedColumn<double> longitud = GeneratedColumn<double>(
+    'longitud',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2453,6 +2475,8 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
     variedadCacao,
     fechaSiembra,
     fotoPath,
+    latitud,
+    longitud,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2563,6 +2587,18 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
         fotoPath.isAcceptableOrUnknown(data['foto_path']!, _fotoPathMeta),
       );
     }
+    if (data.containsKey('latitud')) {
+      context.handle(
+        _latitudMeta,
+        latitud.isAcceptableOrUnknown(data['latitud']!, _latitudMeta),
+      );
+    }
+    if (data.containsKey('longitud')) {
+      context.handle(
+        _longitudMeta,
+        longitud.isAcceptableOrUnknown(data['longitud']!, _longitudMeta),
+      );
+    }
     return context;
   }
 
@@ -2630,6 +2666,14 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
         DriftSqlType.string,
         data['${effectivePrefix}foto_path'],
       ),
+      latitud: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}latitud'],
+      ),
+      longitud: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}longitud'],
+      ),
     );
   }
 
@@ -2672,6 +2716,17 @@ class Lote extends DataClass implements Insertable<Lote> {
   /// Foto del lote, para reconocerlo sin leer el nombre. Vive solo en este
   /// teléfono: no viaja al servidor (la ruta no le sirve a otro equipo).
   final String? fotoPath;
+
+  /// Dónde queda el lote, no la finca.
+  ///
+  /// La finca ya tiene su punto, pero quien compra cacao para exportar pide
+  /// **el predio sembrado**, y una finca puede tener lotes a media hora de
+  /// distancia. Se captura con el GPS del teléfono, que funciona sin señal.
+  ///
+  /// Nulo en los lotes creados antes de que existiera el campo: el dato se
+  /// pide, no se inventa.
+  final double? latitud;
+  final double? longitud;
   const Lote({
     required this.id,
     required this.createdAt,
@@ -2687,6 +2742,8 @@ class Lote extends DataClass implements Insertable<Lote> {
     required this.variedadCacao,
     required this.fechaSiembra,
     this.fotoPath,
+    this.latitud,
+    this.longitud,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2717,6 +2774,12 @@ class Lote extends DataClass implements Insertable<Lote> {
     if (!nullToAbsent || fotoPath != null) {
       map['foto_path'] = Variable<String>(fotoPath);
     }
+    if (!nullToAbsent || latitud != null) {
+      map['latitud'] = Variable<double>(latitud);
+    }
+    if (!nullToAbsent || longitud != null) {
+      map['longitud'] = Variable<double>(longitud);
+    }
     return map;
   }
 
@@ -2744,6 +2807,12 @@ class Lote extends DataClass implements Insertable<Lote> {
       fotoPath: fotoPath == null && nullToAbsent
           ? const Value.absent()
           : Value(fotoPath),
+      latitud: latitud == null && nullToAbsent
+          ? const Value.absent()
+          : Value(latitud),
+      longitud: longitud == null && nullToAbsent
+          ? const Value.absent()
+          : Value(longitud),
     );
   }
 
@@ -2769,6 +2838,8 @@ class Lote extends DataClass implements Insertable<Lote> {
       variedadCacao: serializer.fromJson<String>(json['variedadCacao']),
       fechaSiembra: serializer.fromJson<DateTime>(json['fechaSiembra']),
       fotoPath: serializer.fromJson<String?>(json['fotoPath']),
+      latitud: serializer.fromJson<double?>(json['latitud']),
+      longitud: serializer.fromJson<double?>(json['longitud']),
     );
   }
   @override
@@ -2791,6 +2862,8 @@ class Lote extends DataClass implements Insertable<Lote> {
       'variedadCacao': serializer.toJson<String>(variedadCacao),
       'fechaSiembra': serializer.toJson<DateTime>(fechaSiembra),
       'fotoPath': serializer.toJson<String?>(fotoPath),
+      'latitud': serializer.toJson<double?>(latitud),
+      'longitud': serializer.toJson<double?>(longitud),
     };
   }
 
@@ -2809,6 +2882,8 @@ class Lote extends DataClass implements Insertable<Lote> {
     String? variedadCacao,
     DateTime? fechaSiembra,
     Value<String?> fotoPath = const Value.absent(),
+    Value<double?> latitud = const Value.absent(),
+    Value<double?> longitud = const Value.absent(),
   }) => Lote(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -2826,6 +2901,8 @@ class Lote extends DataClass implements Insertable<Lote> {
     variedadCacao: variedadCacao ?? this.variedadCacao,
     fechaSiembra: fechaSiembra ?? this.fechaSiembra,
     fotoPath: fotoPath.present ? fotoPath.value : this.fotoPath,
+    latitud: latitud.present ? latitud.value : this.latitud,
+    longitud: longitud.present ? longitud.value : this.longitud,
   );
   Lote copyWithCompanion(LotesCompanion data) {
     return Lote(
@@ -2853,6 +2930,8 @@ class Lote extends DataClass implements Insertable<Lote> {
           ? data.fechaSiembra.value
           : this.fechaSiembra,
       fotoPath: data.fotoPath.present ? data.fotoPath.value : this.fotoPath,
+      latitud: data.latitud.present ? data.latitud.value : this.latitud,
+      longitud: data.longitud.present ? data.longitud.value : this.longitud,
     );
   }
 
@@ -2872,7 +2951,9 @@ class Lote extends DataClass implements Insertable<Lote> {
           ..write('codigo: $codigo, ')
           ..write('variedadCacao: $variedadCacao, ')
           ..write('fechaSiembra: $fechaSiembra, ')
-          ..write('fotoPath: $fotoPath')
+          ..write('fotoPath: $fotoPath, ')
+          ..write('latitud: $latitud, ')
+          ..write('longitud: $longitud')
           ..write(')'))
         .toString();
   }
@@ -2893,6 +2974,8 @@ class Lote extends DataClass implements Insertable<Lote> {
     variedadCacao,
     fechaSiembra,
     fotoPath,
+    latitud,
+    longitud,
   );
   @override
   bool operator ==(Object other) =>
@@ -2911,7 +2994,9 @@ class Lote extends DataClass implements Insertable<Lote> {
           other.codigo == this.codigo &&
           other.variedadCacao == this.variedadCacao &&
           other.fechaSiembra == this.fechaSiembra &&
-          other.fotoPath == this.fotoPath);
+          other.fotoPath == this.fotoPath &&
+          other.latitud == this.latitud &&
+          other.longitud == this.longitud);
 }
 
 class LotesCompanion extends UpdateCompanion<Lote> {
@@ -2929,6 +3014,8 @@ class LotesCompanion extends UpdateCompanion<Lote> {
   final Value<String> variedadCacao;
   final Value<DateTime> fechaSiembra;
   final Value<String?> fotoPath;
+  final Value<double?> latitud;
+  final Value<double?> longitud;
   final Value<int> rowid;
   const LotesCompanion({
     this.id = const Value.absent(),
@@ -2945,6 +3032,8 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     this.variedadCacao = const Value.absent(),
     this.fechaSiembra = const Value.absent(),
     this.fotoPath = const Value.absent(),
+    this.latitud = const Value.absent(),
+    this.longitud = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LotesCompanion.insert({
@@ -2962,6 +3051,8 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     required String variedadCacao,
     required DateTime fechaSiembra,
     this.fotoPath = const Value.absent(),
+    this.latitud = const Value.absent(),
+    this.longitud = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : fincaId = Value(fincaId),
        nombre = Value(nombre),
@@ -2983,6 +3074,8 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     Expression<String>? variedadCacao,
     Expression<DateTime>? fechaSiembra,
     Expression<String>? fotoPath,
+    Expression<double>? latitud,
+    Expression<double>? longitud,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3000,6 +3093,8 @@ class LotesCompanion extends UpdateCompanion<Lote> {
       if (variedadCacao != null) 'variedad_cacao': variedadCacao,
       if (fechaSiembra != null) 'fecha_siembra': fechaSiembra,
       if (fotoPath != null) 'foto_path': fotoPath,
+      if (latitud != null) 'latitud': latitud,
+      if (longitud != null) 'longitud': longitud,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3019,6 +3114,8 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     Value<String>? variedadCacao,
     Value<DateTime>? fechaSiembra,
     Value<String?>? fotoPath,
+    Value<double?>? latitud,
+    Value<double?>? longitud,
     Value<int>? rowid,
   }) {
     return LotesCompanion(
@@ -3036,6 +3133,8 @@ class LotesCompanion extends UpdateCompanion<Lote> {
       variedadCacao: variedadCacao ?? this.variedadCacao,
       fechaSiembra: fechaSiembra ?? this.fechaSiembra,
       fotoPath: fotoPath ?? this.fotoPath,
+      latitud: latitud ?? this.latitud,
+      longitud: longitud ?? this.longitud,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3087,6 +3186,12 @@ class LotesCompanion extends UpdateCompanion<Lote> {
     if (fotoPath.present) {
       map['foto_path'] = Variable<String>(fotoPath.value);
     }
+    if (latitud.present) {
+      map['latitud'] = Variable<double>(latitud.value);
+    }
+    if (longitud.present) {
+      map['longitud'] = Variable<double>(longitud.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3110,6 +3215,8 @@ class LotesCompanion extends UpdateCompanion<Lote> {
           ..write('variedadCacao: $variedadCacao, ')
           ..write('fechaSiembra: $fechaSiembra, ')
           ..write('fotoPath: $fotoPath, ')
+          ..write('latitud: $latitud, ')
+          ..write('longitud: $longitud, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8465,6 +8572,8 @@ typedef $$LotesTableCreateCompanionBuilder = LotesCompanion Function({
   required String variedadCacao,
   required DateTime fechaSiembra,
   Value<String?> fotoPath,
+  Value<double?> latitud,
+  Value<double?> longitud,
   Value<int> rowid,
 });
 typedef $$LotesTableUpdateCompanionBuilder = LotesCompanion Function({
@@ -8482,6 +8591,8 @@ typedef $$LotesTableUpdateCompanionBuilder = LotesCompanion Function({
   Value<String> variedadCacao,
   Value<DateTime> fechaSiembra,
   Value<String?> fotoPath,
+  Value<double?> latitud,
+  Value<double?> longitud,
   Value<int> rowid,
 });
 
@@ -8640,6 +8751,16 @@ class $$LotesTableFilterComposer extends Composer<_$AppDatabase, $LotesTable> {
 
   ColumnFilters<String> get fotoPath => $composableBuilder(
     column: $table.fotoPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get latitud => $composableBuilder(
+    column: $table.latitud,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get longitud => $composableBuilder(
+    column: $table.longitud,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8816,6 +8937,16 @@ class $$LotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get latitud => $composableBuilder(
+    column: $table.latitud,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get longitud => $composableBuilder(
+    column: $table.longitud,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$FincasTableOrderingComposer get fincaId {
     final $$FincasTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -8898,6 +9029,12 @@ class $$LotesTableAnnotationComposer
 
   GeneratedColumn<String> get fotoPath =>
       $composableBuilder(column: $table.fotoPath, builder: (column) => column);
+
+  GeneratedColumn<double> get latitud =>
+      $composableBuilder(column: $table.latitud, builder: (column) => column);
+
+  GeneratedColumn<double> get longitud =>
+      $composableBuilder(column: $table.longitud, builder: (column) => column);
 
   $$FincasTableAnnotationComposer get fincaId {
     final $$FincasTableAnnotationComposer composer = $composerBuilder(
@@ -9046,6 +9183,8 @@ class $$LotesTableTableManager
                 Value<String> variedadCacao = const Value.absent(),
                 Value<DateTime> fechaSiembra = const Value.absent(),
                 Value<String?> fotoPath = const Value.absent(),
+                Value<double?> latitud = const Value.absent(),
+                Value<double?> longitud = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LotesCompanion(
                 id: id,
@@ -9062,6 +9201,8 @@ class $$LotesTableTableManager
                 variedadCacao: variedadCacao,
                 fechaSiembra: fechaSiembra,
                 fotoPath: fotoPath,
+                latitud: latitud,
+                longitud: longitud,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9080,6 +9221,8 @@ class $$LotesTableTableManager
                 required String variedadCacao,
                 required DateTime fechaSiembra,
                 Value<String?> fotoPath = const Value.absent(),
+                Value<double?> latitud = const Value.absent(),
+                Value<double?> longitud = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LotesCompanion.insert(
                 id: id,
@@ -9096,6 +9239,8 @@ class $$LotesTableTableManager
                 variedadCacao: variedadCacao,
                 fechaSiembra: fechaSiembra,
                 fotoPath: fotoPath,
+                latitud: latitud,
+                longitud: longitud,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -102,6 +102,8 @@ class PerfilRepository {
     required String variedadCacao,
     required DateTime fechaSiembra,
     Value<String?> fotoPath = const Value.absent(),
+    Value<double?> latitud = const Value.absent(),
+    Value<double?> longitud = const Value.absent(),
   }) {
     return _lotes.guardar(
       id: id,
@@ -112,6 +114,8 @@ class PerfilRepository {
       variedadCacao: variedadCacao,
       fechaSiembra: fechaSiembra,
       fotoPath: fotoPath,
+      latitud: latitud,
+      longitud: longitud,
     );
   }
 

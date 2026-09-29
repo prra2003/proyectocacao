@@ -42,16 +42,12 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
   /// El lote solo se puede editar durante la semana siguiente a que se creó.
   /// Pasado ese plazo queda fijo: lo que ya se sembró y registró no debería
   /// cambiarse después (las fincas, en cambio, se pueden editar siempre).
-  static const _plazoEdicion = Duration(days: 7);
-
-  bool get _yaNoSePuedeEditar =>
-      DateTime.now().difference(_lote.createdAt) > _plazoEdicion;
+  /// Es la misma semana que tienen las labores (ver `diasParaEditar` en
+  /// recordatorios.dart), contada igual para los dos.
+  bool get _yaNoSePuedeEditar => _diasParaEditar == 0;
 
   /// Días que le quedan al lote para poder corregirse (0 si ya no).
-  int get _diasParaEditar {
-    final quedan = _plazoEdicion - DateTime.now().difference(_lote.createdAt);
-    return quedan.isNegative ? 0 : quedan.inDays + 1;
-  }
+  int get _diasParaEditar => diasQuedanParaEditar(_lote.createdAt);
 
   /// Antes el lápiz solo salía gris y, al tocarlo, un aviso decía que "se
   /// terminó el tiempo límite", sin decir por qué ni qué hacer. Ahora se
@@ -64,10 +60,13 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
         title: const Text('¿Por qué solo una semana?'),
         content: const Text(
           'Los datos del lote (nombre, área, variedad y fecha de siembra) se '
-          'pueden corregir solo durante la primera semana. Así el historial '
-          'que revisa el técnico no cambia después.\n\n'
-          'Si algo quedó mal, pídale al técnico de la Red que lo corrija. '
-          'Las labores y cosechas se siguen anotando normal.',
+              'pueden corregir solo durante la primera semana. Así el historial '
+              'que revisa el técnico no cambia después.\n\n'
+              'Las labores tienen la misma regla: una semana desde que se '
+              'anotan para llenarlas o corregirlas.\n\n'
+              'Si algo quedó mal, el administrador de la Red podrá volver a '
+              'habilitarlo. Las labores y cosechas nuevas se siguen anotando '
+              'normal.',
         ),
         actions: [
           FilledButton(
@@ -114,6 +113,8 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
       variedadCacao: datos.variedad,
       fechaSiembra: datos.fechaSiembra,
       fotoPath: Value(datos.fotoPath),
+      latitud: Value(datos.latitud),
+      longitud: Value(datos.longitud),
     );
     if (!mounted) return;
     setState(() {
@@ -124,6 +125,8 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
         variedadCacao: datos.variedad,
         fechaSiembra: datos.fechaSiembra,
         fotoPath: Value(datos.fotoPath),
+        latitud: Value(datos.latitud),
+        longitud: Value(datos.longitud),
       );
     });
     mostrarConfirmacionGuardado(context, mensaje: 'Cambios guardados');
@@ -138,7 +141,7 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
         title: Text('¿Borrar ${_lote.nombre}?'),
         content: const Text(
           'Se borran también sus labores, cosechas y diagnósticos. '
-          'Esto no se puede deshacer.',
+              'Esto no se puede deshacer.',
         ),
         actions: [
           TextButton(
@@ -407,17 +410,43 @@ class _ListaActividades extends StatelessWidget {
   final LoteRepository repo;
   final String loteId;
 
+  /// Pasada la semana la labor queda cerrada. Se explica por qué y qué hacer.
+  Future<void> _explicarLaborCerrada(BuildContext context, bool incompleta) {
+    return showDialog<void>(
+      context: context,
+      builder: (contexto) => AlertDialog(
+        icon: const Icon(Icons.lock_outline, size: 36),
+        title: const Text('Esta labor ya no se puede editar'),
+        content: Text(
+          'Las labores se pueden llenar o corregir solo durante los '
+              '$diasParaEditar días siguientes a que se anotan, igual que los '
+              'datos del lote.\n\n'
+              '${incompleta ? 'Esta labor quedó sin completar. ' : ''}'
+              'El administrador de la Red podrá volver a habilitarla para que la '
+              'termine.',
+        ),
+        actions: [
+          FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
+            onPressed: () => Navigator.of(contexto).pop(),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Abre la labor en el mismo formulario, ya lleno, y guarda lo corregido.
   Future<void> _corregir(
-    BuildContext context,
-    ActividadAgricola actividad,
-  ) async {
+      BuildContext context,
+      ActividadAgricola actividad,
+      ) async {
     final datos = await pedirDatosActividad(
       context,
       inicial: datosDeLabor(actividad),
     );
     if (datos == null) return;
-    await repo.actualizarActividad(
+    final cambiadas = await repo.actualizarActividad(
       id: actividad.id,
       tipo: datos.tipo,
       fecha: datos.fecha,
@@ -436,9 +465,12 @@ class _ListaActividades extends StatelessWidget {
       insumos: datos.insumos,
       resultadoEsperado: datos.resultadoEsperado,
     );
-    if (context.mounted) {
-      mostrarConfirmacionGuardado(context, mensaje: 'Labor corregida');
+    if (!context.mounted) return;
+    if (cambiadas == 0) {
+      await _explicarLaborCerrada(context, faltaLlenarEn(actividad).isNotEmpty);
+      return;
     }
+    mostrarConfirmacionGuardado(context, mensaje: 'Labor guardada');
   }
 
   @override
@@ -456,7 +488,7 @@ class _ListaActividades extends StatelessWidget {
               icono: Icons.agriculture_outlined,
               titulo: 'Sin labores registradas',
               mensaje:
-                  'Anote aquí las podas, abonadas, riegos y controles '
+              'Anote aquí las podas, abonadas, riegos y controles '
                   'del lote.',
             ),
           );
@@ -497,6 +529,7 @@ class _ListaActividades extends StatelessWidget {
                 'Esperado: ${actividad.resultadoEsperado}',
             ];
             final falta = faltaLlenarEn(actividad);
+            final vencida = plazoVencido(actividad);
             return Dismissible(
               key: ValueKey(actividad.id),
               direction: DismissDirection.endToStart,
@@ -508,32 +541,32 @@ class _ListaActividades extends StatelessWidget {
               child: ListTile(
                 leading: foto == null
                     ? CircleAvatar(
-                        radius: 30,
-                        backgroundColor: PaletaCacao.verdeClaro,
-                        child: Icon(
-                          iconoActividad(actividad.tipoActividad),
-                          size: 30,
-                          color: PaletaCacao.verde,
-                        ),
-                      )
+                  radius: 30,
+                  backgroundColor: PaletaCacao.verdeClaro,
+                  child: Icon(
+                    iconoActividad(actividad.tipoActividad),
+                    size: 30,
+                    color: PaletaCacao.verde,
+                  ),
+                )
                     : ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Image.file(
-                          File(foto),
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => CircleAvatar(
-                            radius: 30,
-                            backgroundColor: PaletaCacao.verdeClaro,
-                            child: Icon(
-                              iconoActividad(actividad.tipoActividad),
-                              size: 30,
-                              color: PaletaCacao.verde,
-                            ),
-                          ),
-                        ),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.file(
+                    File(foto),
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => CircleAvatar(
+                      radius: 30,
+                      backgroundColor: PaletaCacao.verdeClaro,
+                      child: Icon(
+                        iconoActividad(actividad.tipoActividad),
+                        size: 30,
+                        color: PaletaCacao.verde,
                       ),
+                    ),
+                  ),
+                ),
                 title: Text(
                   etiquetaActividad(actividad.tipoActividad),
                   style: Theme.of(context).textTheme.titleMedium,
@@ -547,19 +580,43 @@ class _ListaActividades extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 6),
                         child: AvisoFaltaLlenar(falta: falta),
                       ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            vencida
+                                ? Icons.lock_outline
+                                : Icons.schedule_outlined,
+                            size: 16,
+                            color: vencida
+                                ? Theme.of(context).colorScheme.error
+                                : PaletaCacao.cafe,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              textoPlazo(actividad),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: vencida
+                                    ? Theme.of(context).colorScheme.error
+                                    : PaletaCacao.cafe,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-                isThreeLine: falta.isNotEmpty,
-                // Tocar la labor la abre para terminar de llenarla. Cuando
-                // ya quedó completa se cierra: la ventana es para terminar
-                // lo anotado a la carrera, no para reescribir el historial.
-                onTap: falta.isEmpty
-                    ? () => avisar(
-                        context,
-                        'Esta labor ya quedó completa y no se puede '
-                        'cambiar. Si quedó mal, bórrela deslizándola y '
-                        'anótela otra vez.',
-                      )
+                isThreeLine: true,
+                // Tocar la labor la abre para llenarla o corregirla, durante
+                // la semana siguiente a que se anotó. Pasada la semana se
+                // cierra: solo el administrador podrá habilitarla otra vez.
+                onTap: vencida
+                    ? () => _explicarLaborCerrada(context, falta.isNotEmpty)
                     : () => _corregir(context, actividad),
               ),
             );
@@ -590,7 +647,7 @@ class _ListaCosechas extends StatelessWidget {
             child: EstadoVacio(
               titulo: 'Sin cosechas registradas',
               mensaje:
-                  'Cada entrega que saque del lote suma a la '
+              'Cada entrega que saque del lote suma a la '
                   'producción del año.',
             ),
           );
@@ -612,32 +669,32 @@ class _ListaCosechas extends StatelessWidget {
               child: ListTile(
                 leading: cosecha.fotoPath == null
                     ? CircleAvatar(
-                        radius: 30,
-                        backgroundColor: PaletaCacao.maduroClaro,
-                        child: const Icon(
-                          Icons.shopping_basket_outlined,
-                          size: 30,
-                          color: PaletaCacao.maduro,
-                        ),
-                      )
+                  radius: 30,
+                  backgroundColor: PaletaCacao.maduroClaro,
+                  child: const Icon(
+                    Icons.shopping_basket_outlined,
+                    size: 30,
+                    color: PaletaCacao.maduro,
+                  ),
+                )
                     : ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Image.file(
-                          File(cosecha.fotoPath!),
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => CircleAvatar(
-                            radius: 30,
-                            backgroundColor: PaletaCacao.maduroClaro,
-                            child: const Icon(
-                              Icons.shopping_basket_outlined,
-                              size: 30,
-                              color: PaletaCacao.maduro,
-                            ),
-                          ),
-                        ),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.file(
+                    File(cosecha.fotoPath!),
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => CircleAvatar(
+                      radius: 30,
+                      backgroundColor: PaletaCacao.maduroClaro,
+                      child: const Icon(
+                        Icons.shopping_basket_outlined,
+                        size: 30,
+                        color: PaletaCacao.maduro,
                       ),
+                    ),
+                  ),
+                ),
                 title: Text(
                   '${numeroCorto(cosecha.cantidadKg)} kg',
                   style: Theme.of(context).textTheme.titleMedium,
@@ -679,7 +736,7 @@ class _ListaDiagnosticos extends StatelessWidget {
               icono: Icons.photo_camera_outlined,
               titulo: 'Sin diagnósticos',
               mensaje:
-                  'Tome una foto y anote cómo está el cultivo: '
+              'Tome una foto y anote cómo está el cultivo: '
                   'floración, cuajado, monilla, escoba de bruja...',
             ),
           );
@@ -702,28 +759,28 @@ class _ListaDiagnosticos extends StatelessWidget {
               child: ListTile(
                 leading: foto == null
                     ? const CircleAvatar(
-                        radius: 30,
-                        backgroundColor: PaletaCacao.cafeClaro,
-                        child: Icon(
-                          Icons.eco_outlined,
-                          size: 30,
-                          color: PaletaCacao.cafe,
-                        ),
-                      )
+                  radius: 30,
+                  backgroundColor: PaletaCacao.cafeClaro,
+                  child: Icon(
+                    Icons.eco_outlined,
+                    size: 30,
+                    color: PaletaCacao.cafe,
+                  ),
+                )
                     : ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Image.file(
-                          File(foto),
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => const CircleAvatar(
-                            radius: 30,
-                            backgroundColor: PaletaCacao.cafeClaro,
-                            child: Icon(Icons.broken_image_outlined),
-                          ),
-                        ),
-                      ),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.file(
+                    File(foto),
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const CircleAvatar(
+                      radius: 30,
+                      backgroundColor: PaletaCacao.cafeClaro,
+                      child: Icon(Icons.broken_image_outlined),
+                    ),
+                  ),
+                ),
                 title: Text(
                   etiquetaEstado(diagnostico.estadoFenologico),
                   style: Theme.of(context).textTheme.titleMedium,
@@ -732,7 +789,7 @@ class _ListaDiagnosticos extends StatelessWidget {
                   diagnostico.notas == null
                       ? fechaLarga(diagnostico.fecha)
                       : '${fechaLarga(diagnostico.fecha)} · '
-                            '${diagnostico.notas}',
+                      '${diagnostico.notas}',
                 ),
               ),
             );

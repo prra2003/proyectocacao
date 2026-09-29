@@ -75,7 +75,10 @@ var TABLAS = {
   fincas: ['id', 'productor_id', 'nombre', 'latitud', 'longitud', 'municipio',
            'departamento'].concat(COMUNES),
   lotes: ['id', 'finca_id', 'nombre', 'codigo', 'area_sembrada_ha',
-          'variedad_cacao', 'fecha_siembra'].concat(COMUNES),
+          'variedad_cacao', 'fecha_siembra',
+          // El punto del predio sembrado, no el de la finca: es lo que pide
+          // el comprador que exporta.
+          'latitud', 'longitud'].concat(COMUNES),
   actividades_agricolas: ['id', 'lote_id', 'tipo_actividad', 'fecha',
                           'observaciones', 'responsable', 'costo', 'foto_path',
                           'subtipo_labor', 'producto', 'cantidad_aplicada',

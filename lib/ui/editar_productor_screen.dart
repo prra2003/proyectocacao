@@ -92,26 +92,79 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
     super.dispose();
   }
 
+  /// La cédula, la tarjeta de identidad y el NIT son solo números. El
+  /// pasaporte y "Otro" pueden llevar letras, así que a esos no se les filtra.
+  bool get _documentoSoloNumeros =>
+      _tipoDocumento != TipoDocumento.pasaporte &&
+          _tipoDocumento != TipoDocumento.otro;
+
+  void _avisarSoloNumeros() => avisar(context, 'Solo se permiten números');
+
+  /// Revisa todos los campos a mano y devuelve el primero que está mal,
+  /// con su nombre. Así, aunque el campo con el error haya quedado arriba,
+  /// fuera de la pantalla, el productor sabe qué tiene que corregir.
+  String? _primerError() {
+    final revisar = <(String, String?)>[
+      ('Nombre completo', soloLetras(_nombre.text)),
+      if (_mostrarTiposDocumento)
+        (
+        'Tipo de documento',
+        _tipoDocumento == null ? 'Campo obligatorio' : null,
+        ),
+      (
+      _mostrarTiposDocumento ? 'Número de documento' : 'Número de cédula',
+      _documentoSoloNumeros
+          ? numeroRequerido(_numeroDocumento.text)
+          : campoRequerido(_numeroDocumento.text),
+      ),
+      ('Teléfono', soloNumerosOpcional(_telefono.text)),
+      if (_correoCuenta == null) ('Correo', correoValido(_email.text)),
+      if (_asociacionId == _valorOtraAsociacion)
+        ('Nombre de la asociación', campoRequerido(_nombreAsociacion.text)),
+    ];
+    for (final (campo, error) in revisar) {
+      if (error != null) return '$campo: $error';
+    }
+    return null;
+  }
+
   Future<void> _guardar() async {
-    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    final formularioBien = _formKey.currentState!.validate();
+    final error = _primerError();
+    if (!formularioBien || error != null) {
+      avisar(context, error ?? 'Revise los campos marcados en rojo');
+      return;
+    }
+
     setState(() => _guardando = true);
     final esNuevo = widget.productor == null;
 
-    // "Otro" no es un id real: primero hay que crear la asociación para
-    // conseguir uno antes de guardar el productor.
-    final asociacionIdFinal = _asociacionId == _valorOtraAsociacion
-        ? await widget.repo.crearAsociacion(_nombreAsociacion.text.trim())
-        : _asociacionId;
+    try {
+      // "Otro" no es un id real: primero hay que crear la asociación para
+      // conseguir uno antes de guardar el productor.
+      final asociacionIdFinal = _asociacionId == _valorOtraAsociacion
+          ? await widget.repo.crearAsociacion(_nombreAsociacion.text.trim())
+          : _asociacionId;
 
-    await widget.repo.guardarProductor(
-      id: widget.productor?.id,
-      nombreCompleto: _nombre.text.trim(),
-      tipoDocumento: _tipoDocumento,
-      numeroDocumento: textoONulo(_numeroDocumento.text),
-      telefono: textoONulo(_telefono.text),
-      email: textoONulo(_email.text),
-      asociacionId: asociacionIdFinal,
-    );
+      await widget.repo.guardarProductor(
+        id: widget.productor?.id,
+        nombreCompleto: _nombre.text.trim(),
+        tipoDocumento: _tipoDocumento,
+        numeroDocumento: textoONulo(_numeroDocumento.text),
+        telefono: textoONulo(_telefono.text),
+        email: textoONulo(_email.text),
+        asociacionId: asociacionIdFinal,
+      );
+    } catch (e) {
+      // Antes, si algo fallaba aquí, el botón se quedaba apagado para
+      // siempre y la pantalla no decía nada.
+      if (!mounted) return;
+      setState(() => _guardando = false);
+      avisar(context, 'No se pudo guardar: $e');
+      return;
+    }
+
     if (!mounted) return;
     await mostrarConfirmacionGuardado(
       context,
@@ -146,6 +199,7 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
       body: FondoCacao(
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
@@ -183,12 +237,12 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
                       ? null
                       : etiquetaTipoDocumento(_tipoDocumento!),
                   onCambio: (etiqueta) => setState(
-                    () => _tipoDocumento = TipoDocumento.values
+                        () => _tipoDocumento = TipoDocumento.values
                         .where((t) => etiquetaTipoDocumento(t) == etiqueta)
                         .firstOrNull,
                   ),
                   validator: (valor) =>
-                      valor == null ? 'Campo obligatorio' : null,
+                  valor == null ? 'Campo obligatorio' : null,
                 ),
               const SizedBox(height: 16),
               CampoTarjeta(
@@ -200,7 +254,15 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
                 controller: _numeroDocumento,
                 campoKey: const Key('campo_numero_documento'),
                 hint: 'Número de documento',
-                validator: campoRequerido,
+                keyboardType: _documentoSoloNumeros
+                    ? TextInputType.number
+                    : TextInputType.text,
+                inputFormatters: _documentoSoloNumeros
+                    ? [FiltroSoloNumeros(alRechazar: _avisarSoloNumeros)]
+                    : null,
+                validator: _documentoSoloNumeros
+                    ? numeroRequerido
+                    : campoRequerido,
               ),
               const SizedBox(height: 16),
               CampoTarjeta(
@@ -210,7 +272,10 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
                 controller: _telefono,
                 campoKey: const Key('campo_telefono'),
                 hint: 'Teléfono',
-                keyboardType: TextInputType.phone,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FiltroSoloNumeros(alRechazar: _avisarSoloNumeros),
+                ],
                 validator: soloNumerosOpcional,
               ),
               if (_correoCuenta == null) ...[
@@ -221,8 +286,9 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
                   color: PaletaCacao.dorado,
                   controller: _email,
                   campoKey: const Key('campo_email'),
-                  hint: 'Correo',
+                  hint: 'nombre@gmail.com',
                   keyboardType: TextInputType.emailAddress,
+                  validator: correoValido,
                 ),
               ],
               const SizedBox(height: 22),
@@ -247,9 +313,9 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
                   // igual se muestra para no perder la selección al abrir el
                   // formulario.
                   final valorActual =
-                      _asociacionId == null ||
-                          _asociacionId == _valorOtraAsociacion ||
-                          asociaciones.any((a) => a.id == _asociacionId)
+                  _asociacionId == null ||
+                      _asociacionId == _valorOtraAsociacion ||
+                      asociaciones.any((a) => a.id == _asociacionId)
                       ? _asociacionId
                       : null;
                   return DropdownButtonFormField<String?>(
