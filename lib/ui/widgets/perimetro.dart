@@ -15,7 +15,7 @@ import 'package:latlong2/latlong.dart';
 ///     Ese es el caso peor: la casa —el punto que marcó el productor— en una
 ///     punta y el lote en la contraria.
 ///  3. Se le suma un [_margen] del 20%, porque una finca real no es un
-///     cuadrado perfecto. Quedan 757 m.
+///     cuadrado perfecto. Quedan 759 m.
 ///
 /// Se usa un círculo y no un cuadrado por una razón concreta: **un cuadrado
 /// habría que orientarlo**, y nadie sabe si la finca va norte-sur o siguiendo

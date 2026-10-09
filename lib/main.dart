@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/local/database.dart';
+import 'data/local/recuperacion.dart';
 import 'data/repositories/lote_repository.dart';
 import 'data/repositories/perfil_repository.dart';
 
@@ -21,15 +24,27 @@ Future<void> main() async {
   // Sin esto, un error de dibujo deja la pantalla **en blanco** y nadie sabe
   // qué pasó: en el navegador no hay consola a la vista ni forma de contarlo.
   // Mostrar el motivo es la diferencia entre un reporte útil y un "no sirve".
-  ErrorWidget.builder = (detalles) => _PantallaDeError(
-    mensaje: detalles.exceptionAsString(),
-  );
+  ErrorWidget.builder = (detalles) =>
+      _PantallaDeError(mensaje: detalles.exceptionAsString());
   final db = AppDatabase();
 
   // La identidad se resuelve sin red: la app tiene que poder crear el perfil
   // aunque nunca haya visto internet.
-  final usuarioId = await db.syncDao.identidadLocal();
-  final sesion = await db.syncDao.sesionActual();
+  //
+  // Es también el primer momento en que se abre la base de verdad, así que es
+  // aquí donde se nota si una actualización de esquema falló. En el navegador
+  // eso dejaba la página en blanco: sin base no hay nada que dibujar. Se
+  // rehace el espejo local —los datos están en el servidor— y se recarga.
+  final String usuarioId;
+  final SesionLocal? sesion;
+  try {
+    usuarioId = await db.syncDao.identidadLocal();
+    sesion = await db.syncDao.sesionActual();
+  } on Object catch (error, pila) {
+    debugPrint('La base local no abrió: $error\n$pila');
+    if (await rehacerBaseLocal()) return; // la página se recarga sola
+    rethrow;
+  }
 
   // Con servidor configurado se habla con Apps Script; sin él, con el doble en
   // memoria. La app funciona igual en los dos casos: lo que cambia es a dónde
@@ -42,7 +57,16 @@ Future<void> main() async {
     final google = AutenticadorGoogle();
     // En la web hay que tener listo el paquete antes de dibujar el botón de
     // Google; en Android da igual, pero cuesta nada y deja un solo camino.
-    await google.preparar();
+    //
+    // Si falla o se demora, la app arranca igual. Esto corre ANTES de dibujar
+    // nada: dejar que una llamada al SDK de Google decida si la app se ve o no
+    // contradice lo único que esta app promete —que funciona sin señal—, y en
+    // la web se veía como una pantalla en blanco, sin explicación.
+    try {
+      await google.preparar().timeout(const Duration(seconds: 8));
+    } on Object {
+      // Se vuelve a intentar solo cuando la persona toque "entrar".
+    }
     api = ApiAppsScript(
       url: Uri.parse(urlNube),
       pedirIdTokenAGoogle: google.idToken,
