@@ -1,6 +1,4 @@
 {
-  "buildCommand": "flutter build web --release",
-  "outputDirectory": "build/web",
   "headers": [
     {
       "source": "/(.*)",
@@ -12,5 +10,8 @@
       ]
     }
   ],
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "framework": null,
   "cleanUrls": true
 }
