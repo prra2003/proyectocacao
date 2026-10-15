@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../tema.dart';
 import '../widgets/campo_dictado.dart';
+import '../widgets/nota_bpa.dart';
 import '../widgets/comunes.dart';
 import '../widgets/selector_fecha.dart';
 
@@ -85,6 +86,21 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
                 ),
               ),
               const SizedBox(height: 14),
+              const NotaBpa(
+                titulo: '¿Para qué sirve anotar la cosecha?',
+                puntos: [
+                  'Las BPA piden poder seguirle el rastro al producto: de qué '
+                      'lote salió, en qué fecha se cosechó y cuánto. Eso es la '
+                      'trazabilidad, y es lo primero que revisa el ICA.',
+                  'Si más adelante aparece un problema con un bulto, con esto '
+                      'se puede decir de cuál lote salió en vez de poner en '
+                      'duda toda la finca.',
+                  'Y con los kilos y el área del lote sale el rendimiento por '
+                      'hectárea, que le sirve a usted aunque nunca venga el '
+                      'ICA.',
+                ],
+              ),
+              const SizedBox(height: 16),
               SelectorFecha(
                 etiqueta: 'Fecha de la cosecha',
                 fecha: _fecha,

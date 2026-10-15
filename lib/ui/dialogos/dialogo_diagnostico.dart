@@ -4,6 +4,7 @@ import '../../data/local/enums.dart';
 import '../formato.dart';
 import '../tema.dart';
 import '../widgets/campo_dictado.dart';
+import '../widgets/nota_bpa.dart';
 import '../widgets/comunes.dart';
 import '../widgets/selector_fecha.dart';
 
@@ -57,6 +58,19 @@ class _DialogoDiagnosticoState extends State<_DialogoDiagnostico> {
                     selected: _estado == estado,
                     onSelected: (_) => setState(() => _estado = estado),
                   ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const NotaBpa(
+              titulo: '¿Para qué sirve anotar cómo ve el lote?',
+              puntos: [
+                'Las BPA parten de mirar el cultivo antes de aplicarle algo. '
+                    'Dejar anotado qué vio y cuándo es lo que sustenta por qué '
+                    'después fumigó o abonó.',
+                'Si va apareciendo monilia o escoba de bruja, el registro '
+                    'muestra desde cuándo y qué tan rápido avanzó.',
+                'Al técnico que lo visite le sirve más esto que un recuerdo: '
+                    'puede ver la historia del lote en orden.',
               ],
             ),
             const SizedBox(height: 16),

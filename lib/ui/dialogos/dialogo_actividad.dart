@@ -7,6 +7,7 @@ import '../../data/repositories/perfil_repository.dart';
 import '../formato.dart';
 import '../tema.dart';
 import '../widgets/campo_dictado.dart';
+import '../widgets/nota_bpa.dart';
 import '../widgets/comunes.dart';
 import '../widgets/selector_fecha.dart';
 
@@ -267,6 +268,24 @@ class _DialogoActividadState extends State<_DialogoActividad> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _SelectorTipo(tipo: _tipo, onCambio: _cambiarTipo),
+            const SizedBox(height: 14),
+            const NotaBpa(
+              titulo: '¿Para qué sirve anotar esta labor?',
+              puntos: [
+                'En una visita, el ICA pide ver el registro de lo que se le '
+                    'aplicó al cultivo: qué producto, cuánto, cuándo y quién '
+                    'lo aplicó. Anotarlo aquí es tenerlo listo.',
+                'Los registros hay que poder mostrarlos durante al menos dos '
+                    'años. En la libreta de papel eso casi nunca se logra.',
+                'Saber qué se le hizo a cada lote es lo que después permite '
+                    'explicar por qué ese lote rindió o no rindió.',
+              ],
+              ojo: 'Si fumigó, el ICA además pide el número de registro ICA '
+                  'del producto, el ingrediente activo y el periodo de '
+                  'carencia —los días de espera antes de cosechar—. La '
+                  'aplicación todavía no tiene casilla para eso: escríbalo '
+                  'en Observaciones.',
+            ),
             const SizedBox(height: 16),
             SelectorFecha(
               etiqueta: 'Fecha de la labor',

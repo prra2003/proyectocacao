@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import '../../data/local/database.dart';
 import '../tema.dart';
 import '../widgets/comunes.dart';
+import '../widgets/nota_bpa.dart';
 import '../mapa_screen.dart';
 import '../widgets/perimetro.dart';
 import '../widgets/selector_fecha.dart';
@@ -341,6 +342,20 @@ class _DialogoLoteState extends State<_DialogoLote> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const NotaBpa(
+                titulo: '¿Para qué sirve registrar el lote aparte?',
+                puntos: [
+                  'La trazabilidad arranca por aquí: si los lotes no están '
+                      'identificados uno por uno, no hay forma de decir de '
+                      'cuál salió cada cosecha.',
+                  'El código es el que amarra todo —labores, cosechas y '
+                      'estados— a ese pedazo de tierra y no a otro.',
+                  'Y si marca el punto en el mapa, queda además dicho dónde '
+                      'queda, que es lo que pide una certificación cuando '
+                      'quiere ver el predio.',
+                ],
+              ),
+              const SizedBox(height: 16),
               CampoTarjeta(
                 key: const Key('campo_codigo_lote'),
                 etiqueta: 'Código del lote',
