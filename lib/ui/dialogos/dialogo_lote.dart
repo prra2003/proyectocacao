@@ -15,7 +15,6 @@ typedef DatosLote = ({
   double areaHa,
   String variedad,
   DateTime fechaSiembra,
-  String? fotoPath,
   double? latitud,
   double? longitud,
 });
@@ -196,7 +195,6 @@ class _DialogoLoteState extends State<_DialogoLote> {
   late DateTime? _fechaSiembra = widget.inicial?.fechaSiembra;
 
   /// Una foto del lote hace que su tarjeta se reconozca sin leer el nombre.
-  late String? _fotoPath = widget.inicial?.fotoPath;
   late double? _latitud = widget.inicial?.latitud;
   late double? _longitud = widget.inicial?.longitud;
   var _buscandoGps = false;
@@ -220,17 +218,6 @@ class _DialogoLoteState extends State<_DialogoLote> {
       widget.hectareasDeLaFinca + (aNumero(_area.text) ?? 0);
 
   double get _radio => radioPermitidoMetros(_hectareas);
-  var _cargandoFoto = false;
-
-  Future<void> _elegirFoto() async {
-    setState(() => _cargandoFoto = true);
-    try {
-      final destino = await elegirFoto(context, carpeta: 'fotos_lotes');
-      if (mounted && destino != null) setState(() => _fotoPath = destino);
-    } finally {
-      if (mounted) setState(() => _cargandoFoto = false);
-    }
-  }
 
   var _faltaFecha = false;
   var _faltaVariedad = false;
@@ -338,7 +325,6 @@ class _DialogoLoteState extends State<_DialogoLote> {
       areaHa: aNumero(_area.text)!,
       variedad: _variedad!,
       fechaSiembra: _fechaSiembra!,
-      fotoPath: _fotoPath,
       latitud: _latitud,
       longitud: _longitud,
     ));
@@ -441,14 +427,6 @@ class _DialogoLoteState extends State<_DialogoLote> {
                     ),
                   ),
                 ),
-              const SizedBox(height: 14),
-              CampoFoto(
-                fotoPath: _fotoPath,
-                cargando: _cargandoFoto,
-                onTap: _elegirFoto,
-                onQuitar: () => setState(() => _fotoPath = null),
-                etiqueta: 'Foto del lote (si quiere)',
-              ),
               const SizedBox(height: 14),
               _PuntoDelLote(
                 latitud: _latitud,

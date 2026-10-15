@@ -14,7 +14,6 @@ typedef DatosCosecha = ({
   double cantidadKg,
   String? observaciones,
   String? tipoProducto,
-  String? fotoPath,
 });
 
 Future<DatosCosecha?> pedirDatosCosecha(BuildContext context) {
@@ -37,24 +36,12 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
   final _observaciones = TextEditingController();
   DateTime _fecha = DateTime.now();
   String? _tipoProducto;
-  String? _fotoPath;
-  var _cargandoFoto = false;
 
   @override
   void dispose() {
     _cantidad.dispose();
     _observaciones.dispose();
     super.dispose();
-  }
-
-  Future<void> _elegirFoto() async {
-    setState(() => _cargandoFoto = true);
-    try {
-      final destino = await elegirFoto(context, carpeta: 'fotos_cosechas');
-      if (mounted && destino != null) setState(() => _fotoPath = destino);
-    } finally {
-      if (mounted) setState(() => _cargandoFoto = false);
-    }
   }
 
   void _aceptar() {
@@ -64,7 +51,6 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
       cantidadKg: aNumero(_cantidad.text)!,
       observaciones: textoONulo(_observaciones.text),
       tipoProducto: _tipoProducto,
-      fotoPath: _fotoPath,
     ));
   }
 
@@ -115,14 +101,6 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
                 opciones: _tiposProducto,
                 valor: _tipoProducto,
                 onCambio: (v) => setState(() => _tipoProducto = v),
-              ),
-              const SizedBox(height: 16),
-              CampoFoto(
-                fotoPath: _fotoPath,
-                cargando: _cargandoFoto,
-                onTap: _elegirFoto,
-                onQuitar: () => setState(() => _fotoPath = null),
-                etiqueta: 'Tomar una foto (si quiere)',
               ),
               const SizedBox(height: 14),
               CampoDictado(

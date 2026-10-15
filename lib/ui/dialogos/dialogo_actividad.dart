@@ -44,7 +44,6 @@ typedef DatosActividad = ({
   String? observaciones,
   String? responsable,
   double? costo,
-  String? fotoPath,
   String? resultadoEsperado,
   // Siembra
   int? arbolesSembrados,
@@ -91,7 +90,6 @@ DatosActividad datosDeLabor(ActividadAgricola labor) => (
   observaciones: labor.observaciones,
   responsable: labor.responsable,
   costo: labor.costo,
-  fotoPath: labor.fotoPath,
   resultadoEsperado: labor.resultadoEsperado,
   arbolesSembrados: labor.arbolesSembrados,
   edadPlantulaMeses: labor.edadPlantulaMeses,
@@ -120,7 +118,6 @@ Future<void> guardarLabor(
     observaciones: datos.observaciones,
     responsable: datos.responsable,
     costo: datos.costo,
-    fotoPath: datos.fotoPath,
     arbolesSembrados: datos.arbolesSembrados,
     edadPlantulaMeses: datos.edadPlantulaMeses,
     insumos: datos.insumos,
@@ -190,8 +187,6 @@ class _DialogoActividadState extends State<_DialogoActividad> {
   /// árboles, responsable, costo, foto, notas) va aquí dentro, cerrado: quien
   /// tenga tiempo lo llena, y quien no, registra con dos toques.
   var _masDetalles = false;
-  String? _fotoPath;
-  var _cargandoFoto = false;
 
   bool get _esSiembra => _tipo == TipoActividad.siembra;
   bool get _esPoda => _tipo == TipoActividad.poda;
@@ -218,7 +213,6 @@ class _DialogoActividadState extends State<_DialogoActividad> {
     _cantidadAplicada.text = inicial.cantidadAplicada ?? '';
     _incidencia.text = inicial.incidencia ?? '';
     _subtipo = inicial.subtipoLabor;
-    _fotoPath = inicial.fotoPath;
     // Los detalles arrancan abiertos: si vino a terminar de llenar, lo que
     // busca está justamente ahí dentro.
     _masDetalles = true;
@@ -249,16 +243,6 @@ class _DialogoActividadState extends State<_DialogoActividad> {
       _tipo = tipo;
       _subtipo = null;
     });
-  }
-
-  Future<void> _elegirFoto() async {
-    setState(() => _cargandoFoto = true);
-    try {
-      final destino = await elegirFoto(context, carpeta: 'fotos_actividades');
-      if (mounted && destino != null) setState(() => _fotoPath = destino);
-    } finally {
-      if (mounted) setState(() => _cargandoFoto = false);
-    }
   }
 
   @override
@@ -512,14 +496,6 @@ class _DialogoActividadState extends State<_DialogoActividad> {
                   decimal: true,
                 ),
               ),
-              const SizedBox(height: 16),
-              CampoFoto(
-                fotoPath: _fotoPath,
-                cargando: _cargandoFoto,
-                onTap: _elegirFoto,
-                onQuitar: () => setState(() => _fotoPath = null),
-                etiqueta: 'Foto (opcional)',
-              ),
               const SizedBox(height: 14),
               CampoDictado(
                 campoKey: const Key('campo_observaciones_actividad'),
@@ -544,7 +520,6 @@ class _DialogoActividadState extends State<_DialogoActividad> {
             observaciones: textoONulo(_observaciones.text),
             responsable: textoONulo(_responsable.text),
             costo: aNumero(_costo.text),
-            fotoPath: _fotoPath,
             resultadoEsperado: textoONulo(_resultadoEsperado.text),
             arbolesSembrados: int.tryParse(_arbolesSembrados.text.trim()),
             edadPlantulaMeses: int.tryParse(_edadPlantula.text.trim()),

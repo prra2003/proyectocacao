@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 
@@ -203,7 +201,6 @@ class _Contenido extends StatelessWidget {
       areaSembradaHa: datos.areaHa,
       variedadCacao: datos.variedad,
       fechaSiembra: datos.fechaSiembra,
-      fotoPath: Value(datos.fotoPath),
       latitud: Value(datos.latitud),
       longitud: Value(datos.longitud),
     );
@@ -642,7 +639,6 @@ class _LaboresPorCompletar extends StatelessWidget {
       observaciones: datos.observaciones,
       responsable: datos.responsable,
       costo: datos.costo,
-      fotoPath: datos.fotoPath,
       subtipoLabor: datos.subtipoLabor,
       producto: datos.producto,
       cantidadAplicada: datos.cantidadAplicada,
@@ -1052,7 +1048,6 @@ class _TarjetaLoteState extends State<_TarjetaLote> {
   @override
   Widget build(BuildContext context) {
     final edad = PerfilRepository.edadEnAnios(widget.lote.fechaSiembra);
-    final foto = widget.lote.fotoPath;
     return GestureDetector(
       onTapDown: (_) => _fijar(true),
       onTapUp: (_) => _fijar(false),
@@ -1078,13 +1073,6 @@ class _TarjetaLoteState extends State<_TarjetaLote> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (foto != null)
-                  Image.file(
-                    File(foto),
-                    height: 120,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                  ),
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -1102,10 +1090,9 @@ class _TarjetaLoteState extends State<_TarjetaLote> {
                               ),
                             ),
                           ),
-                          // Marca de agua, no ilustración: acompaña sin robar
-                          // atención al nombre del lote. Con foto sobra.
-                          if (foto == null)
-                            Mazorca(
+                          // Marca de agua, no ilustración: acompaña sin
+                          // robar atención al nombre del lote.
+                          Mazorca(
                               tamano: 46,
                               color: Colors.white.withValues(alpha: 0.38),
                               conHoja: false,

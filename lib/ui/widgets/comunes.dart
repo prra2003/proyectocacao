@@ -1,18 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../data/local/enums.dart';
 import '../formato.dart';
 import '../tema.dart';
 import 'mazorca.dart';
-
-const _uuid = Uuid();
 
 /// Pantalla o sección sin datos todavía: ícono, explicación y una salida clara.
 class EstadoVacio extends StatelessWidget {
@@ -544,141 +536,6 @@ class SelectorDesplegable extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Abre una hoja para elegir "Tomar foto" o "Elegir de la galería", y copia
-/// lo elegido a una carpeta propia de la app dentro de sus documentos.
-///
-/// Se copia en vez de guardar la ruta que entrega el selector porque, sobre
-/// todo en la galería, esa ruta puede vivir en una caché temporal que el
-/// sistema borra sin avisar — la foto desaparecería del historial sin que
-/// el productor lo note. Devuelve `null` si cancela en cualquier paso.
-Future<String?> elegirFoto(
-    BuildContext context, {
-      required String carpeta,
-    }) async {
-  final origen = await showModalBottomSheet<ImageSource>(
-    context: context,
-    builder: (contexto) => SafeArea(
-      child: Wrap(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.photo_camera_outlined),
-            title: const Text('Tomar foto'),
-            onTap: () => Navigator.of(contexto).pop(ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: const Text('Elegir de la galería'),
-            onTap: () => Navigator.of(contexto).pop(ImageSource.gallery),
-          ),
-        ],
-      ),
-    ),
-  );
-  if (origen == null) return null;
-
-  final archivo = await ImagePicker().pickImage(
-    source: origen,
-    imageQuality: 80,
-    maxWidth: 1600,
-  );
-  if (archivo == null) return null;
-
-  final destinoCarpeta = Directory(
-    p.join((await getApplicationDocumentsDirectory()).path, carpeta),
-  );
-  await destinoCarpeta.create(recursive: true);
-  final destino = p.join(
-    destinoCarpeta.path,
-    '${_uuid.v4()}${p.extension(archivo.path)}',
-  );
-  await File(archivo.path).copy(destino);
-  return destino;
-}
-
-/// Campo tocable para agregar una foto: muestra la miniatura si ya hay una,
-/// o una invitación a tomarla si no. Es opcional a propósito: no toda labor
-/// en campo tiene con qué tomar la foto en el momento.
-class CampoFoto extends StatelessWidget {
-  const CampoFoto({
-    super.key,
-    required this.fotoPath,
-    required this.cargando,
-    required this.onTap,
-    required this.onQuitar,
-    this.etiqueta = 'Registro fotográfico (opcional)',
-  });
-
-  final String? fotoPath;
-  final bool cargando;
-  final VoidCallback onTap;
-  final VoidCallback onQuitar;
-  final String etiqueta;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: cargando ? null : onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: PaletaCacao.tarjeta,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: PaletaCacao.verde.withValues(alpha: 0.16)),
-        ),
-        child: Row(
-          children: [
-            if (fotoPath != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.file(
-                  File(fotoPath!),
-                  width: 52,
-                  height: 52,
-                  fit: BoxFit.cover,
-                ),
-              )
-            else
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: PaletaCacao.verde.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: cargando
-                    ? const Padding(
-                  padding: EdgeInsets.all(14),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-                    : const Icon(
-                  Icons.add_a_photo_outlined,
-                  color: PaletaCacao.verde,
-                ),
-              ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                fotoPath != null ? 'Foto agregada' : etiqueta,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: PaletaCacao.crema,
-                ),
-              ),
-            ),
-            if (fotoPath != null)
-              IconButton(
-                tooltip: 'Quitar foto',
-                icon: const Icon(Icons.close),
-                onPressed: onQuitar,
-              ),
-          ],
-        ),
       ),
     );
   }

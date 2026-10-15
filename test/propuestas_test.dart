@@ -122,7 +122,6 @@ void main() {
       observaciones: null,
       responsable: null,
       costo: null,
-      fotoPath: null,
       resultadoEsperado: null,
       arbolesSembrados: null,
       edadPlantulaMeses: null,

@@ -157,7 +157,6 @@ class _CascaronScreenState extends State<CascaronScreen> {
         cantidadKg: datos.cantidadKg,
         observaciones: datos.observaciones,
         tipoProducto: datos.tipoProducto,
-        fotoPath: datos.fotoPath,
       );
       if (mounted) {
         mostrarConfirmacionGuardado(context, mensaje: 'Cosecha registrada');
