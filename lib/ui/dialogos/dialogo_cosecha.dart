@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../tema.dart';
 import '../widgets/campo_dictado.dart';
+import '../widgets/nota_bpa.dart';
 import '../widgets/comunes.dart';
 import '../widgets/selector_fecha.dart';
 
@@ -14,7 +15,6 @@ typedef DatosCosecha = ({
   double cantidadKg,
   String? observaciones,
   String? tipoProducto,
-  String? fotoPath,
 });
 
 Future<DatosCosecha?> pedirDatosCosecha(BuildContext context) {
@@ -37,24 +37,12 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
   final _observaciones = TextEditingController();
   DateTime _fecha = DateTime.now();
   String? _tipoProducto;
-  String? _fotoPath;
-  var _cargandoFoto = false;
 
   @override
   void dispose() {
     _cantidad.dispose();
     _observaciones.dispose();
     super.dispose();
-  }
-
-  Future<void> _elegirFoto() async {
-    setState(() => _cargandoFoto = true);
-    try {
-      final destino = await elegirFoto(context, carpeta: 'fotos_cosechas');
-      if (mounted && destino != null) setState(() => _fotoPath = destino);
-    } finally {
-      if (mounted) setState(() => _cargandoFoto = false);
-    }
   }
 
   void _aceptar() {
@@ -64,7 +52,6 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
       cantidadKg: aNumero(_cantidad.text)!,
       observaciones: textoONulo(_observaciones.text),
       tipoProducto: _tipoProducto,
-      fotoPath: _fotoPath,
     ));
   }
 
@@ -99,6 +86,21 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
                 ),
               ),
               const SizedBox(height: 14),
+              const NotaBpa(
+                titulo: '¿Para qué sirve anotar la cosecha?',
+                puntos: [
+                  'Las BPA piden poder seguirle el rastro al producto: de qué '
+                      'lote salió, en qué fecha se cosechó y cuánto. Eso es la '
+                      'trazabilidad, y es lo primero que revisa el ICA.',
+                  'Si más adelante aparece un problema con un bulto, con esto '
+                      'se puede decir de cuál lote salió en vez de poner en '
+                      'duda toda la finca.',
+                  'Y con los kilos y el área del lote sale el rendimiento por '
+                      'hectárea, que le sirve a usted aunque nunca venga el '
+                      'ICA.',
+                ],
+              ),
+              const SizedBox(height: 16),
               SelectorFecha(
                 etiqueta: 'Fecha de la cosecha',
                 fecha: _fecha,
@@ -115,14 +117,6 @@ class _DialogoCosechaState extends State<_DialogoCosecha> {
                 opciones: _tiposProducto,
                 valor: _tipoProducto,
                 onCambio: (v) => setState(() => _tipoProducto = v),
-              ),
-              const SizedBox(height: 16),
-              CampoFoto(
-                fotoPath: _fotoPath,
-                cargando: _cargandoFoto,
-                onTap: _elegirFoto,
-                onQuitar: () => setState(() => _fotoPath = null),
-                etiqueta: 'Tomar una foto (si quiere)',
               ),
               const SizedBox(height: 14),
               CampoDictado(

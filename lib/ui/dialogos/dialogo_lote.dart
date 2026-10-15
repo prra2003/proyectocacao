@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import '../../data/local/database.dart';
 import '../tema.dart';
 import '../widgets/comunes.dart';
+import '../widgets/nota_bpa.dart';
 import '../mapa_screen.dart';
 import '../widgets/perimetro.dart';
 import '../widgets/selector_fecha.dart';
@@ -15,7 +16,6 @@ typedef DatosLote = ({
   double areaHa,
   String variedad,
   DateTime fechaSiembra,
-  String? fotoPath,
   double? latitud,
   double? longitud,
 });
@@ -196,7 +196,6 @@ class _DialogoLoteState extends State<_DialogoLote> {
   late DateTime? _fechaSiembra = widget.inicial?.fechaSiembra;
 
   /// Una foto del lote hace que su tarjeta se reconozca sin leer el nombre.
-  late String? _fotoPath = widget.inicial?.fotoPath;
   late double? _latitud = widget.inicial?.latitud;
   late double? _longitud = widget.inicial?.longitud;
   var _buscandoGps = false;
@@ -220,17 +219,6 @@ class _DialogoLoteState extends State<_DialogoLote> {
       widget.hectareasDeLaFinca + (aNumero(_area.text) ?? 0);
 
   double get _radio => radioPermitidoMetros(_hectareas);
-  var _cargandoFoto = false;
-
-  Future<void> _elegirFoto() async {
-    setState(() => _cargandoFoto = true);
-    try {
-      final destino = await elegirFoto(context, carpeta: 'fotos_lotes');
-      if (mounted && destino != null) setState(() => _fotoPath = destino);
-    } finally {
-      if (mounted) setState(() => _cargandoFoto = false);
-    }
-  }
 
   var _faltaFecha = false;
   var _faltaVariedad = false;
@@ -338,7 +326,6 @@ class _DialogoLoteState extends State<_DialogoLote> {
       areaHa: aNumero(_area.text)!,
       variedad: _variedad!,
       fechaSiembra: _fechaSiembra!,
-      fotoPath: _fotoPath,
       latitud: _latitud,
       longitud: _longitud,
     ));
@@ -355,6 +342,20 @@ class _DialogoLoteState extends State<_DialogoLote> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const NotaBpa(
+                titulo: '¿Para qué sirve registrar el lote aparte?',
+                puntos: [
+                  'La trazabilidad arranca por aquí: si los lotes no están '
+                      'identificados uno por uno, no hay forma de decir de '
+                      'cuál salió cada cosecha.',
+                  'El código es el que amarra todo —labores, cosechas y '
+                      'estados— a ese pedazo de tierra y no a otro.',
+                  'Y si marca el punto en el mapa, queda además dicho dónde '
+                      'queda, que es lo que pide una certificación cuando '
+                      'quiere ver el predio.',
+                ],
+              ),
+              const SizedBox(height: 16),
               CampoTarjeta(
                 key: const Key('campo_codigo_lote'),
                 etiqueta: 'Código del lote',
@@ -441,14 +442,6 @@ class _DialogoLoteState extends State<_DialogoLote> {
                     ),
                   ),
                 ),
-              const SizedBox(height: 14),
-              CampoFoto(
-                fotoPath: _fotoPath,
-                cargando: _cargandoFoto,
-                onTap: _elegirFoto,
-                onQuitar: () => setState(() => _fotoPath = null),
-                etiqueta: 'Foto del lote (si quiere)',
-              ),
               const SizedBox(height: 14),
               _PuntoDelLote(
                 latitud: _latitud,

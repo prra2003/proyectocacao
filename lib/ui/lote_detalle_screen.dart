@@ -7,8 +7,6 @@ import '../data/repositories/perfil_repository.dart';
 import '../data/repositories/recordatorios.dart';
 import 'dialogos/dialogo_actividad.dart';
 
-import 'dart:io';
-
 import 'dialogos/dialogo_cosecha.dart';
 import 'dialogos/dialogo_diagnostico.dart';
 import 'dialogos/dialogo_lote.dart';
@@ -133,7 +131,6 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
       areaSembradaHa: datos.areaHa,
       variedadCacao: datos.variedad,
       fechaSiembra: datos.fechaSiembra,
-      fotoPath: Value(datos.fotoPath),
       latitud: Value(datos.latitud),
       longitud: Value(datos.longitud),
     );
@@ -145,8 +142,7 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
         areaSembradaHa: datos.areaHa,
         variedadCacao: datos.variedad,
         fechaSiembra: datos.fechaSiembra,
-        fotoPath: Value(datos.fotoPath),
-        latitud: Value(datos.latitud),
+          latitud: Value(datos.latitud),
         longitud: Value(datos.longitud),
       );
     });
@@ -192,7 +188,6 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
       loteId: _lote.id,
       fecha: datos.fecha,
       estado: datos.estado,
-      fotoPath: datos.fotoPath,
       notas: datos.notas,
     );
     if (mounted) {
@@ -209,7 +204,6 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
       cantidadKg: datos.cantidadKg,
       observaciones: datos.observaciones,
       tipoProducto: datos.tipoProducto,
-      fotoPath: datos.fotoPath,
     );
     if (mounted) {
       mostrarConfirmacionGuardado(context, mensaje: 'Cosecha registrada');
@@ -474,7 +468,6 @@ class _ListaActividades extends StatelessWidget {
       observaciones: datos.observaciones,
       responsable: datos.responsable,
       costo: datos.costo,
-      fotoPath: datos.fotoPath,
       subtipoLabor: datos.subtipoLabor,
       producto: datos.producto,
       cantidadAplicada: datos.cantidadAplicada,
@@ -520,7 +513,6 @@ class _ListaActividades extends StatelessWidget {
           separatorBuilder: (_, _) => const Divider(),
           itemBuilder: (context, i) {
             final actividad = actividades[i];
-            final foto = actividad.fotoPath;
             // El "registro del proceso" del lote: además de la fecha, se
             // arman los detalles propios de cada labor (Siembra, Poda...)
             // junto con responsable, costo y observaciones, todos opcionales.
@@ -560,32 +552,13 @@ class _ListaActividades extends StatelessWidget {
                 if (context.mounted) avisar(context, 'Labor eliminada');
               },
               child: ListTile(
-                leading: foto == null
-                    ? CircleAvatar(
+                leading: CircleAvatar(
                   radius: 30,
                   backgroundColor: PaletaCacao.verdeClaro,
                   child: Icon(
                     iconoActividad(actividad.tipoActividad),
                     size: 30,
                     color: PaletaCacao.verde,
-                  ),
-                )
-                    : ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Image.file(
-                    File(foto),
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => CircleAvatar(
-                      radius: 30,
-                      backgroundColor: PaletaCacao.verdeClaro,
-                      child: Icon(
-                        iconoActividad(actividad.tipoActividad),
-                        size: 30,
-                        color: PaletaCacao.verde,
-                      ),
-                    ),
                   ),
                 ),
                 title: Text(
@@ -688,32 +661,13 @@ class _ListaCosechas extends StatelessWidget {
                 if (context.mounted) avisar(context, 'Cosecha eliminada');
               },
               child: ListTile(
-                leading: cosecha.fotoPath == null
-                    ? CircleAvatar(
+                leading: CircleAvatar(
                   radius: 30,
                   backgroundColor: PaletaCacao.maduroClaro,
                   child: const Icon(
                     Icons.shopping_basket_outlined,
                     size: 30,
                     color: PaletaCacao.maduro,
-                  ),
-                )
-                    : ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Image.file(
-                    File(cosecha.fotoPath!),
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => CircleAvatar(
-                      radius: 30,
-                      backgroundColor: PaletaCacao.maduroClaro,
-                      child: const Icon(
-                        Icons.shopping_basket_outlined,
-                        size: 30,
-                        color: PaletaCacao.maduro,
-                      ),
-                    ),
                   ),
                 ),
                 title: Text(
@@ -768,7 +722,6 @@ class _ListaDiagnosticos extends StatelessWidget {
           separatorBuilder: (_, _) => const Divider(),
           itemBuilder: (context, i) {
             final diagnostico = diagnosticos[i];
-            final foto = diagnostico.fotoPath;
             return Dismissible(
               key: ValueKey(diagnostico.id),
               direction: DismissDirection.endToStart,
@@ -778,28 +731,13 @@ class _ListaDiagnosticos extends StatelessWidget {
                 if (context.mounted) avisar(context, 'Diagnóstico eliminado');
               },
               child: ListTile(
-                leading: foto == null
-                    ? const CircleAvatar(
+                leading: const CircleAvatar(
                   radius: 30,
                   backgroundColor: PaletaCacao.cafeClaro,
                   child: Icon(
                     Icons.eco_outlined,
                     size: 30,
                     color: PaletaCacao.cafe,
-                  ),
-                )
-                    : ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Image.file(
-                    File(foto),
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const CircleAvatar(
-                      radius: 30,
-                      backgroundColor: PaletaCacao.cafeClaro,
-                      child: Icon(Icons.broken_image_outlined),
-                    ),
                   ),
                 ),
                 title: Text(

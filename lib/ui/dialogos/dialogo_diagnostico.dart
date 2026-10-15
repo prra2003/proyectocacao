@@ -1,21 +1,16 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../../data/local/enums.dart';
 import '../formato.dart';
 import '../tema.dart';
 import '../widgets/campo_dictado.dart';
+import '../widgets/nota_bpa.dart';
 import '../widgets/comunes.dart';
 import '../widgets/selector_fecha.dart';
 
 typedef DatosDiagnostico = ({
   DateTime fecha,
   EstadoFenologico estado,
-  String? fotoPath,
   String? notas,
 });
 
@@ -37,35 +32,11 @@ class _DialogoDiagnosticoState extends State<_DialogoDiagnostico> {
   final _notas = TextEditingController();
   var _estado = EstadoFenologico.floracion;
   DateTime _fecha = DateTime.now();
-  String? _fotoPath;
 
   @override
   void dispose() {
     _notas.dispose();
     super.dispose();
-  }
-
-  /// La foto se copia a la carpeta de la app: lo que devuelve la cámara es un
-  /// archivo temporal que el sistema puede borrar cuando quiera.
-  Future<void> _tomarFoto(ImageSource origen) async {
-    try {
-      final tomada = await ImagePicker().pickImage(
-        source: origen,
-        maxWidth: 1600,
-        imageQuality: 80,
-      );
-      if (tomada == null) return;
-      final carpeta = await getApplicationDocumentsDirectory();
-      final destino = p.join(
-        carpeta.path,
-        'diagnostico_${DateTime.now().millisecondsSinceEpoch}'
-        '${p.extension(tomada.path)}',
-      );
-      await File(tomada.path).copy(destino);
-      if (mounted) setState(() => _fotoPath = destino);
-    } on Exception catch (_) {
-      if (mounted) avisar(context, 'No se pudo guardar la foto');
-    }
   }
 
   @override
@@ -89,42 +60,24 @@ class _DialogoDiagnosticoState extends State<_DialogoDiagnostico> {
                   ),
               ],
             ),
+            const SizedBox(height: 14),
+            const NotaBpa(
+              titulo: '¿Para qué sirve anotar cómo ve el lote?',
+              puntos: [
+                'Las BPA parten de mirar el cultivo antes de aplicarle algo. '
+                    'Dejar anotado qué vio y cuándo es lo que sustenta por qué '
+                    'después fumigó o abonó.',
+                'Si va apareciendo monilia o escoba de bruja, el registro '
+                    'muestra desde cuándo y qué tan rápido avanzó.',
+                'Al técnico que lo visite le sirve más esto que un recuerdo: '
+                    'puede ver la historia del lote en orden.',
+              ],
+            ),
             const SizedBox(height: 16),
             SelectorFecha(
               etiqueta: 'Fecha del diagnóstico',
               fecha: _fecha,
               onCambio: (f) => setState(() => _fecha = f),
-            ),
-            const SizedBox(height: 14),
-            if (_fotoPath != null) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.file(
-                  File(_fotoPath!),
-                  height: 160,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _tomarFoto(ImageSource.camera),
-                    icon: const Icon(Icons.photo_camera_outlined),
-                    label: const Text('Foto'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _tomarFoto(ImageSource.gallery),
-                    icon: const Icon(Icons.image_outlined),
-                    label: const Text('Galería'),
-                  ),
-                ),
-              ],
             ),
             const SizedBox(height: 14),
             CampoDictado(
@@ -149,7 +102,6 @@ class _DialogoDiagnosticoState extends State<_DialogoDiagnostico> {
           onPressed: () => Navigator.of(context).pop((
             fecha: _fecha,
             estado: _estado,
-            fotoPath: _fotoPath,
             notas: textoONulo(_notas.text),
           )),
           child: const Text('Guardar'),
