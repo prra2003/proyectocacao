@@ -7,6 +7,7 @@ import '../data/sync/sync_service.dart';
 import 'editar_finca_screen.dart';
 import 'editar_productor_screen.dart';
 import 'tema.dart';
+import 'tutorial_registro_screen.dart';
 import 'widgets/boton_google.dart';
 import 'widgets/brote.dart';
 import 'widgets/comunes.dart';
@@ -363,7 +364,70 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
               ),
             ),
           ),
+
+          // El tutorial va en la esquina y no en la columna: la pantalla ya
+          // está justa de alto en un celular chico, y esto es ayuda, no el
+          // camino principal.
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 12, 16, 0),
+                child: _Aparece(
+                  animacion: _tramo(0.8, 1.0),
+                  desplazar: 8,
+                  child: _PildoraTutorial(
+                    onTap: () => abrirTutorialRegistro(context),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// El acceso al video tutorial: una pastilla translúcida con el ícono de
+/// reproducir, para que se vea que es un video y no un botón más.
+class _PildoraTutorial extends StatelessWidget {
+  const _PildoraTutorial({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Ver el video tutorial de cómo registrarse',
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.16),
+        shape: StadiumBorder(
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+        ),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.play_circle_outline, color: Colors.white, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Ver tutorial',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

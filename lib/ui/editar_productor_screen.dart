@@ -5,6 +5,7 @@ import '../data/local/enums.dart';
 import '../data/repositories/perfil_repository.dart';
 import 'formato.dart';
 import 'tema.dart';
+import 'tutorial_registro_screen.dart';
 import 'widgets/comunes.dart';
 import 'widgets/confirmacion_guardado.dart';
 
@@ -179,6 +180,16 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
     final esNuevo = widget.productor == null;
     return Scaffold(
       appBar: cabeceraCacao(
+        acciones: [
+          // Solo durante el registro: al editar ya no hace falta.
+          if (widget.paso != null)
+            IconButton(
+              tooltip: 'Ver tutorial',
+              iconSize: 30,
+              icon: const Icon(Icons.play_circle_outline),
+              onPressed: () => abrirTutorialRegistro(context),
+            ),
+        ],
         titulo: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
