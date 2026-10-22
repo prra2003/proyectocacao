@@ -15,6 +15,64 @@ Future<void> abrirTutorialRegistro(BuildContext context) {
   );
 }
 
+/// Tarjeta para poner arriba de los formularios del registro: le avisa a quien
+/// se atasca que hay un video que lo explica, sin obligarlo a verlo.
+class TarjetaTutorial extends StatelessWidget {
+  const TarjetaTutorial({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Ver el video tutorial de cómo registrarse',
+      child: Material(
+        color: PaletaCacao.verdeClaro,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => abrirTutorialRegistro(context),
+          child: const Padding(
+            padding: EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.play_circle_fill_rounded,
+                  color: PaletaCacao.verde,
+                  size: 44,
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '¿Tiene dudas? Vea el video',
+                        style: TextStyle(
+                          color: PaletaCacao.cafeOscuro,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        'Le explica paso a paso cómo registrarse.',
+                        style: TextStyle(
+                          color: PaletaCacao.cafeOscuro,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: PaletaCacao.verde),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// El video que explica cómo registrarse, con el mismo cuidado de siempre:
 /// botones grandes, nada que haya que adivinar y un mensaje claro si algo
 /// falla.

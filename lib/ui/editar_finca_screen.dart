@@ -200,6 +200,10 @@ class _EditarFincaScreenState extends State<EditarFincaScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
+              if (widget.paso != null) ...[
+                const TarjetaTutorial(),
+                const SizedBox(height: 16),
+              ],
               CampoTarjeta(
                 etiqueta: 'Nombre de la finca',
                 icono: Icons.home_outlined,

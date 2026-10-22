@@ -273,8 +273,13 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                       // convergen hacia él. Coloreado con la paleta —dorado
                       // adelante, verde atrás, tallo café— en vez de blanco
                       // plano, para que combine con el resto de la pantalla.
-                      child: const Brote(
-                        tamano: 250,
+                      // Más chico en un celular de poca altura: la franja del
+                      // tutorial le quita espacio a la columna y el brote es
+                      // lo único que se puede achicar sin perder nada.
+                      child: Brote(
+                        tamano: MediaQuery.sizeOf(context).height < 720
+                            ? 170
+                            : 250,
                         color: PaletaCacao.dorado,
                         colorHoja: PaletaCacao.verde,
                         colorTallo: PaletaCacao.cafe,
@@ -319,6 +324,10 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                     desplazar: 24,
                     child: Column(
                       children: [
+                        _FranjaTutorial(
+                          onTap: () => abrirTutorialRegistro(context),
+                        ),
+                        const SizedBox(height: 14),
                         _BotonPrimario(
                           texto: 'Comenzar registro',
                           onTap: () => _registrar(context),
@@ -364,35 +373,17 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
               ),
             ),
           ),
-
-          // El tutorial va en la esquina y no en la columna: la pantalla ya
-          // está justa de alto en un celular chico, y esto es ayuda, no el
-          // camino principal.
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 12, 16, 0),
-                child: _Aparece(
-                  animacion: _tramo(0.8, 1.0),
-                  desplazar: 8,
-                  child: _PildoraTutorial(
-                    onTap: () => abrirTutorialRegistro(context),
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-/// El acceso al video tutorial: una pastilla translúcida con el ícono de
-/// reproducir, para que se vea que es un video y no un botón más.
-class _PildoraTutorial extends StatelessWidget {
-  const _PildoraTutorial({required this.onTap});
+/// La leyenda que le dice al productor que hay un video: ocupa todo el ancho,
+/// justo encima del botón de registrarse, que es donde se va a quedar mirando
+/// quien no sabe por dónde empezar.
+class _FranjaTutorial extends StatelessWidget {
+  const _FranjaTutorial({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -402,28 +393,41 @@ class _PildoraTutorial extends StatelessWidget {
       button: true,
       label: 'Ver el video tutorial de cómo registrarse',
       child: Material(
-        color: Colors.white.withValues(alpha: 0.16),
-        shape: StadiumBorder(
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+        color: Colors.white.withValues(alpha: 0.14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.45)),
         ),
         child: InkWell(
-          customBorder: const StadiumBorder(),
+          borderRadius: BorderRadius.circular(18),
           onTap: onTap,
           child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.play_circle_outline, color: Colors.white, size: 24),
-                SizedBox(width: 8),
-                Text(
-                  'Ver tutorial',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 40),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Ver video tutorial',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        'Si no entiende algo, véalo aquí',
+                        style: TextStyle(color: Color(0xCCFFFFFF), fontSize: 14),
+                      ),
+                    ],
                   ),
                 ),
+                Icon(Icons.chevron_right_rounded, color: Colors.white70),
               ],
             ),
           ),

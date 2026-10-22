@@ -6,8 +6,10 @@ import 'package:cacao_app/data/repositories/perfil_repository.dart';
 import 'package:cacao_app/data/sync/api_falsa.dart';
 import 'package:cacao_app/data/sync/sync_service.dart';
 import 'package:cacao_app/main.dart';
+import 'package:cacao_app/ui/editar_finca_screen.dart';
 import 'package:cacao_app/ui/tutorial_registro_screen.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'utiles.dart';
@@ -50,11 +52,14 @@ void main() {
     expect(pubspec, contains('- assets/'));
   });
 
-  testWidgets('la bienvenida ofrece el tutorial y lo abre', (tester) async {
+  testWidgets('la bienvenida ofrece el tutorial con una leyenda clara', (
+    tester,
+  ) async {
     await abrirApp(tester);
 
-    expect(find.text('Ver tutorial'), findsOneWidget);
-    await tester.tap(find.text('Ver tutorial'));
+    expect(find.text('Ver video tutorial'), findsOneWidget);
+    expect(find.text('Si no entiende algo, véalo aquí'), findsOneWidget);
+    await tester.tap(find.text('Ver video tutorial'));
     await asentar(tester);
 
     expect(find.text('Cómo registrarse'), findsOneWidget);
@@ -67,7 +72,7 @@ void main() {
     tester,
   ) async {
     await abrirApp(tester);
-    await tester.tap(find.text('Ver tutorial'));
+    await tester.tap(find.text('Ver video tutorial'));
     await asentar(tester);
 
     // En las pruebas no hay reproductor de video: es justo el caso de un
@@ -89,6 +94,45 @@ void main() {
 
     expect(find.text('Paso 1 de 2'), findsOneWidget);
     expect(find.byTooltip('Ver tutorial'), findsOneWidget);
+    expect(find.text('¿Tiene dudas? Vea el video'), findsOneWidget);
+    expect(find.byType(TarjetaTutorial), findsOneWidget);
+
+    // Tocar la tarjeta abre el mismo tutorial.
+    await tester.tap(find.text('¿Tiene dudas? Vea el video'));
+    await asentar(tester);
+    expect(find.byType(TutorialRegistroScreen), findsOneWidget);
+
+    await desmontar(tester);
+  });
+
+  testWidgets('el paso de la finca también lleva la tarjeta del tutorial', (
+    tester,
+  ) async {
+    pantallaAlta(tester);
+    final productorId = await conAsync(
+      tester,
+      () => repo.guardarProductor(nombreCompleto: 'Diego Parra'),
+    );
+
+    Future<void> abrir(String? paso) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: EditarFincaScreen(
+            repo: repo,
+            productorId: productorId,
+            paso: paso,
+          ),
+        ),
+      );
+      await asentar(tester);
+    }
+
+    await abrir('Paso 2 de 2');
+    expect(find.byType(TarjetaTutorial), findsOneWidget);
+
+    // Registrando una finca más adelante (sin "paso") ya no hace falta.
+    await abrir(null);
+    expect(find.byType(TarjetaTutorial), findsNothing);
 
     await desmontar(tester);
   });
@@ -107,6 +151,7 @@ void main() {
 
     expect(find.text('Editar mis datos'), findsWidgets);
     expect(find.byTooltip('Ver tutorial'), findsNothing);
+    expect(find.byType(TarjetaTutorial), findsNothing);
 
     await desmontar(tester);
   });

@@ -214,6 +214,10 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
+              if (widget.paso != null) ...[
+                const TarjetaTutorial(),
+                const SizedBox(height: 16),
+              ],
               if (_correoCuenta != null) ...[
                 _AvisoCuentaGoogle(correo: _correoCuenta!),
                 const SizedBox(height: 16),
