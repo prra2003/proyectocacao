@@ -5,6 +5,7 @@ import '../data/local/enums.dart';
 import '../data/repositories/perfil_repository.dart';
 import 'formato.dart';
 import 'tema.dart';
+import 'tutorial_registro_screen.dart';
 import 'widgets/comunes.dart';
 import 'widgets/confirmacion_guardado.dart';
 
@@ -179,6 +180,16 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
     final esNuevo = widget.productor == null;
     return Scaffold(
       appBar: cabeceraCacao(
+        acciones: [
+          // Solo durante el registro: al editar ya no hace falta.
+          if (widget.paso != null)
+            IconButton(
+              tooltip: 'Ver tutorial',
+              iconSize: 30,
+              icon: const Icon(Icons.play_circle_outline),
+              onPressed: () => abrirTutorialRegistro(context),
+            ),
+        ],
         titulo: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -203,6 +214,10 @@ class _EditarProductorScreenState extends State<EditarProductorScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
+              if (widget.paso != null) ...[
+                const TarjetaTutorial(),
+                const SizedBox(height: 16),
+              ],
               if (_correoCuenta != null) ...[
                 _AvisoCuentaGoogle(correo: _correoCuenta!),
                 const SizedBox(height: 16),

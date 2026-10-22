@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'mapa_screen.dart';
 import 'tema.dart';
+import 'tutorial_registro_screen.dart';
 import 'widgets/comunes.dart';
 import 'widgets/ubicacion.dart';
 import 'widgets/verificar_ubicacion.dart';
@@ -166,6 +167,16 @@ class _EditarFincaScreenState extends State<EditarFincaScreen> {
     final esNueva = widget.finca == null;
     return Scaffold(
       appBar: cabeceraCacao(
+        acciones: [
+          // Solo durante el registro inicial (el "Paso 2 de 2").
+          if (widget.paso != null)
+            IconButton(
+              tooltip: 'Ver tutorial',
+              iconSize: 30,
+              icon: const Icon(Icons.play_circle_outline),
+              onPressed: () => abrirTutorialRegistro(context),
+            ),
+        ],
         titulo: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -189,6 +200,10 @@ class _EditarFincaScreenState extends State<EditarFincaScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
+              if (widget.paso != null) ...[
+                const TarjetaTutorial(),
+                const SizedBox(height: 16),
+              ],
               CampoTarjeta(
                 etiqueta: 'Nombre de la finca',
                 icono: Icons.home_outlined,

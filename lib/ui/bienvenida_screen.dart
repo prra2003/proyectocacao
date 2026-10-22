@@ -7,6 +7,7 @@ import '../data/sync/sync_service.dart';
 import 'editar_finca_screen.dart';
 import 'editar_productor_screen.dart';
 import 'tema.dart';
+import 'tutorial_registro_screen.dart';
 import 'widgets/boton_google.dart';
 import 'widgets/brote.dart';
 import 'widgets/comunes.dart';
@@ -272,8 +273,13 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                       // convergen hacia él. Coloreado con la paleta —dorado
                       // adelante, verde atrás, tallo café— en vez de blanco
                       // plano, para que combine con el resto de la pantalla.
-                      child: const Brote(
-                        tamano: 250,
+                      // Más chico en un celular de poca altura: la franja del
+                      // tutorial le quita espacio a la columna y el brote es
+                      // lo único que se puede achicar sin perder nada.
+                      child: Brote(
+                        tamano: MediaQuery.sizeOf(context).height < 720
+                            ? 170
+                            : 250,
                         color: PaletaCacao.dorado,
                         colorHoja: PaletaCacao.verde,
                         colorTallo: PaletaCacao.cafe,
@@ -318,6 +324,10 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
                     desplazar: 24,
                     child: Column(
                       children: [
+                        _FranjaTutorial(
+                          onTap: () => abrirTutorialRegistro(context),
+                        ),
+                        const SizedBox(height: 14),
                         _BotonPrimario(
                           texto: 'Comenzar registro',
                           onTap: () => _registrar(context),
@@ -364,6 +374,64 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// La leyenda que le dice al productor que hay un video: ocupa todo el ancho,
+/// justo encima del botón de registrarse, que es donde se va a quedar mirando
+/// quien no sabe por dónde empezar.
+class _FranjaTutorial extends StatelessWidget {
+  const _FranjaTutorial({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Ver el video tutorial de cómo registrarse',
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.45)),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 40),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Ver video tutorial',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        'Si no entiende algo, véalo aquí',
+                        style: TextStyle(color: Color(0xCCFFFFFF), fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: Colors.white70),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
