@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/local/database.dart';
 import '../data/repositories/perfil_repository.dart';
 import '../data/sync/sync_service.dart';
+import 'ayuda_screen.dart';
 import 'editar_productor_screen.dart';
 import 'formato.dart';
 import 'tema.dart';
@@ -49,6 +50,8 @@ class PerfilScreen extends StatelessWidget {
                 _TarjetaProductor(repo: repo, productor: productor),
                 const SizedBox(height: 20),
                 _TarjetaCuenta(db: db, sync: sync),
+                const SizedBox(height: 20),
+                const TarjetaAyuda(),
                 const SizedBox(height: 20),
                 StreamBuilder<List<Finca>>(
                   stream: repo.watchFincas(productor.id),
