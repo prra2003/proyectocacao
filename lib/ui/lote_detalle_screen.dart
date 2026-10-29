@@ -5,6 +5,7 @@ import '../data/local/database.dart';
 import '../data/repositories/lote_repository.dart';
 import '../data/repositories/perfil_repository.dart';
 import '../data/repositories/recordatorios.dart';
+import 'costo_por_kilo_screen.dart';
 import 'dialogos/dialogo_actividad.dart';
 
 import 'dialogos/dialogo_cosecha.dart';
@@ -229,6 +230,21 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
                   : null,
             ),
             onPressed: _editarLote,
+          ),
+          IconButton(
+            key: const Key('boton_costo_por_kilo'),
+            tooltip: 'Costo por kilo (en prueba)',
+            iconSize: 28,
+            icon: const Icon(Icons.calculate_outlined),
+            onPressed: () => Navigator.of(context).push(
+              RutaCacao<void>(
+                builder: (_) => CostoPorKiloScreen(
+                  repo: widget.repo,
+                  lote: _lote,
+                  nombreFinca: widget.finca?.nombre ?? 'Mi finca',
+                ),
+              ),
+            ),
           ),
           IconButton(
             tooltip: 'Borrar lote',
