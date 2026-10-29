@@ -350,6 +350,29 @@ flutter build apk --release
 
 **Versión web**
 
+La página de la Red es **https://redcacao.vercel.app** — esa es la dirección
+principal, la que se le pasa al productor. Hay otras dos que sirven lo mismo
+(`web-rust-tau-65.vercel.app` y `redcacao-cacao3.vercel.app`), pero son
+heredadas; para registrar orígenes en Google o para repartir el enlace, vale la
+primera.
+
+**Publicar la página**
+
+```bash
+tools/publicar_web.sh
+```
+
+Compila, sube, apunta las tres direcciones a lo recién subido y comprueba que
+las tres contesten la versión del `pubspec.yaml`. Ese último paso no sobra: la
+dirección principal está puesta a mano sobre una publicación concreta, no atada
+a "lo último", así que un `vercel --prod` a secas deja la página vieja sin
+avisar. Pasó: estuvo 38 días atrás del repositorio y solo se notó porque un
+cambio nuevo "no aparecía".
+
+> Lo correcto sería atarla en Vercel (proyecto `redcacao` → Settings →
+> Domains); mientras no se haga, el script es lo que evita que vuelva a
+> quedarse atrás.
+
 El mismo proyecto compila a navegador, útil para mostrar la aplicación sin
 instalar nada —por ejemplo, en un iPhone—:
 
@@ -573,6 +596,7 @@ hay cuenta o no la hay.
 | `backend/Codigo.gs` | El servidor: sesiones, subida, descarga y sellos |
 | `backend/GUIA_PASO_A_PASO.md` | Cómo dejarlo instalado en una cuenta nueva |
 | `tools/servidor_web.py` | Servidor local con las cabeceras que exige la base del navegador |
+| `tools/publicar_web.sh` | Publica la página y comprueba que las tres direcciones queden en la misma versión |
 | `web/_headers` · `vercel.json` | Las mismas cabeceras para Netlify y Vercel |
 | `test/utiles.dart` | Ayudas de tests (incluye por qué no se usa `pumpAndSettle`) |
 | `docs/DOCUMENTACION_TECNICA.md` | Cómo está hecho cada componente y por qué |
