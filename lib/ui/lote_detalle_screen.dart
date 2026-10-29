@@ -5,6 +5,7 @@ import '../data/local/database.dart';
 import '../data/repositories/lote_repository.dart';
 import '../data/repositories/perfil_repository.dart';
 import '../data/repositories/recordatorios.dart';
+import 'costo_por_kilo_screen.dart';
 import 'dialogos/dialogo_actividad.dart';
 
 import 'dialogos/dialogo_cosecha.dart';
@@ -93,7 +94,13 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
   }
 
   Future<void> _registrarActividad() async {
-    final datos = await pedirDatosActividad(context, loteNombre: _lote.nombre);
+    final reparto = await repartoDelGasto(widget.repo, _lote);
+    if (!mounted) return;
+    final datos = await pedirDatosActividad(
+      context,
+      loteNombre: _lote.nombre,
+      reparto: reparto,
+    );
     if (datos == null) return;
     await guardarLabor(widget.repo, _lote, datos);
     if (mounted) {
@@ -229,6 +236,21 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
                   : null,
             ),
             onPressed: _editarLote,
+          ),
+          IconButton(
+            key: const Key('boton_costo_por_kilo'),
+            tooltip: 'Costo por kilo (en prueba)',
+            iconSize: 28,
+            icon: const Icon(Icons.calculate_outlined),
+            onPressed: () => Navigator.of(context).push(
+              RutaCacao<void>(
+                builder: (_) => CostoPorKiloScreen(
+                  repo: widget.repo,
+                  lote: _lote,
+                  nombreFinca: widget.finca?.nombre ?? 'Mi finca',
+                ),
+              ),
+            ),
           ),
           IconButton(
             tooltip: 'Borrar lote',
@@ -461,24 +483,7 @@ class _ListaActividades extends StatelessWidget {
       inicial: datosDeLabor(actividad),
     );
     if (datos == null) return;
-    final cambiadas = await repo.actualizarActividad(
-      id: actividad.id,
-      tipo: datos.tipo,
-      fecha: datos.fecha,
-      observaciones: datos.observaciones,
-      responsable: datos.responsable,
-      costo: datos.costo,
-      subtipoLabor: datos.subtipoLabor,
-      producto: datos.producto,
-      cantidadAplicada: datos.cantidadAplicada,
-      incidencia: datos.incidencia,
-      arbolesAfectados: datos.arbolesAfectados,
-      edadCultivoAnios: datos.edadCultivoAnios,
-      arbolesSembrados: datos.arbolesSembrados,
-      edadPlantulaMeses: datos.edadPlantulaMeses,
-      insumos: datos.insumos,
-      resultadoEsperado: datos.resultadoEsperado,
-    );
+    final cambiadas = await actualizarLabor(repo, actividad, datos);
     if (!context.mounted) return;
     if (cambiadas == 0) {
       await _explicarLaborCerrada(context, faltaLlenarEn(actividad).isNotEmpty);

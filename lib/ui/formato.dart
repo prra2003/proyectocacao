@@ -31,6 +31,22 @@ String numeroCorto(double valor) {
   return texto;
 }
 
+/// Plata en pesos, con los puntos de mil y sin centavos: $1.840.000.
+///
+/// Se escribe a mano en vez de usar `intl` porque la app no lo trae y por un
+/// solo formato no vale sumar una dependencia. Los centavos sobran: nadie
+/// anota el jornal con decimales.
+String pesos(double valor) {
+  final negativo = valor < 0;
+  final entero = valor.abs().round().toString();
+  final puntos = StringBuffer();
+  for (var i = 0; i < entero.length; i++) {
+    if (i > 0 && (entero.length - i) % 3 == 0) puntos.write('.');
+    puntos.write(entero[i]);
+  }
+  return '${negativo ? '-' : ''}\$$puntos';
+}
+
 /// Cuánto hace de una fecha, en palabras de todos los días.
 String haceCuanto(DateTime fecha, {DateTime? hoy}) {
   final referencia = hoy ?? DateTime.now();

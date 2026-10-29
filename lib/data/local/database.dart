@@ -41,7 +41,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   /// Revisa cada tabla contra la definición actual y agrega lo que falte.
   ///
@@ -78,6 +78,15 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, desde, hasta) async {
+      if (desde < 15) {
+        // Un gasto puede ser de varios lotes a la vez —una fertilización de
+        // toda la finca—. Aquí queda lo pagado completo; `costo` guarda solo
+        // la parte que le toca a este lote.
+        await m.addColumn(
+          actividadesAgricolas,
+          actividadesAgricolas.costoTotalCompartido,
+        );
+      }
       if (desde < 14) {
         // Para la trazabilidad de exportación: el comprador pide el punto del
         // predio sembrado, no el de la casa de la finca.
