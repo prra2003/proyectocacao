@@ -5,6 +5,7 @@ import '../data/local/enums.dart';
 import '../data/repositories/costo_por_kilo.dart';
 import '../data/repositories/lote_repository.dart';
 import '../data/repositories/recordatorios.dart';
+import 'asistente_costo_screen.dart';
 import 'dialogos/dialogo_actividad.dart';
 import 'formato.dart';
 import 'tema.dart';
@@ -82,6 +83,28 @@ class _CostoPorKiloScreenState extends State<CostoPorKiloScreen> {
     final leido = aNumero(_precio.text);
     if (leido == _precioPorKilo) return;
     setState(() => _precioPorKilo = leido);
+  }
+
+  /// Abre el asistente, que pregunta una cosa a la vez.
+  ///
+  /// Al volver, esta pantalla adopta el período, el producto y la
+  /// confirmación que él escogió: si se quedara con los suyos, el productor
+  /// vería dos números distintos para la misma pregunta y no tendría forma de
+  /// saber cuál creer.
+  Future<void> _abrirAsistente() async {
+    final escogido = await Navigator.of(context).push<CuentaEscogida>(
+      MaterialPageRoute(
+        builder: (_) =>
+            AsistenteCostoScreen(repo: widget.repo, lote: widget.lote),
+      ),
+    );
+    if (escogido == null || !mounted) return;
+    setState(() {
+      _desde = escogido.desde;
+      _hasta = escogido.hasta;
+      _producto = escogido.producto;
+      _confirmado = escogido.confirmado;
+    });
   }
 
   /// Anota un gasto sin salir de la cuenta.
@@ -244,6 +267,7 @@ class _CostoPorKiloScreenState extends State<CostoPorKiloScreen> {
                   onAgregar: _agregarGasto,
                   onEditar: _editarGasto,
                   onConfirmar: (v) => setState(() => _confirmado = v),
+                  onAsistente: _abrirAsistente,
                 );
               },
             );
@@ -269,6 +293,7 @@ class _Contenido extends StatelessWidget {
     required this.onAgregar,
     required this.onEditar,
     required this.onConfirmar,
+    required this.onAsistente,
   });
 
   final CuentaDelLote cuenta;
@@ -286,6 +311,7 @@ class _Contenido extends StatelessWidget {
   final VoidCallback onAgregar;
   final ValueChanged<ActividadAgricola> onEditar;
   final ValueChanged<bool> onConfirmar;
+  final VoidCallback onAsistente;
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +325,11 @@ class _Contenido extends StatelessWidget {
           '${lote.nombre} · $nombreFinca',
           style: textos.titleMedium,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
+
+        // ---- la puerta fácil, antes que nada --------------------------
+        _BotonAsistente(onTap: onAsistente),
+        const SizedBox(height: 20),
 
         // ---- el período -----------------------------------------------
         Row(
@@ -783,6 +813,62 @@ class _FilaGasto extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// La entrada al asistente: grande, primero, y sin jerga.
+///
+/// Es lo primero que se ve porque para quien nunca ha sacado esta cuenta el
+/// resto de la pantalla —fechas, tipo de producto, precio, la lista de
+/// gastos— es una pared. Esto no pregunta nada todavía: solo ofrece hacerlo
+/// despacio.
+class _BotonAsistente extends StatelessWidget {
+  const _BotonAsistente({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    return Card(
+      key: const Key('abrir_asistente'),
+      elevation: 3,
+      color: PaletaCacao.verde,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 22, 18, 22),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '¿Cuánto le cuesta su kilo?',
+                      style: textos.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Le hago unas preguntas, una por una, y le digo.',
+                      style: textos.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Icon(Icons.arrow_forward, color: Colors.white, size: 28),
+            ],
+          ),
+        ),
       ),
     );
   }
