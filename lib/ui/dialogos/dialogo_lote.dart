@@ -195,7 +195,6 @@ class _DialogoLoteState extends State<_DialogoLote> {
       : null;
   late DateTime? _fechaSiembra = widget.inicial?.fechaSiembra;
 
-  /// Una foto del lote hace que su tarjeta se reconozca sin leer el nombre.
   late double? _latitud = widget.inicial?.latitud;
   late double? _longitud = widget.inicial?.longitud;
   var _buscandoGps = false;

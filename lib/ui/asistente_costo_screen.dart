@@ -105,6 +105,12 @@ class _AsistenteCostoScreenState extends State<AsistenteCostoScreen> {
   /// Abre el formulario completo, no uno recortado: si fue una poda, ahí
   /// mismo llena el tipo de poda y los árboles. Y si el gasto fue de toda la
   /// finca, el formulario le pregunta cómo repartirlo.
+  ///
+  /// El formulario abre con la fecha de la cosecha y no con la de hoy. Aquí
+  /// se está preguntando por los gastos de una cosecha que puede ser de hace
+  /// meses: con la de hoy, el gasto cae después del período, queda guardado
+  /// y no aparece por ningún lado —parece que no se guardó, y se anota otra
+  /// vez—. La fecha sale a la vista en el formulario y se puede cambiar.
   Future<void> _anotarGasto(TipoActividad tipo) async {
     final reparto = await repartoDelGasto(widget.repo, widget.lote);
     if (!mounted) return;
@@ -113,9 +119,44 @@ class _AsistenteCostoScreenState extends State<AsistenteCostoScreen> {
       tipoInicial: tipo,
       loteNombre: widget.lote.nombre,
       reparto: reparto,
+      fechaInicial: _cosecha == null ? null : _dentroDelPeriodo(_hasta),
     );
     if (datos == null) return;
     await guardarLabor(widget.repo, widget.lote, datos);
+    if (!mounted || _cosecha == null) return;
+    // Si la cambió por una de fuera, se guardó igual pero no se va a ver:
+    // decirlo es mejor que dejarla buscándolo.
+    if (!enPeriodo(datos.fecha, _desde!, _hasta)) {
+      await _avisarFueraDelPeriodo(datos.fecha);
+    }
+  }
+
+  /// Una fecha del período para abrir el formulario: la de la cosecha, salvo
+  /// que ya haya pasado el día de hoy dentro del mismo período.
+  DateTime _dentroDelPeriodo(DateTime tope) {
+    final hoy = DateTime.now();
+    return enPeriodo(hoy, _desde!, tope) ? hoy : tope;
+  }
+
+  Future<void> _avisarFueraDelPeriodo(DateTime fecha) {
+    return showDialog<void>(
+      context: context,
+      builder: (contexto) => AlertDialog(
+        title: const Text('Quedó guardado, pero no entra en esta cuenta'),
+        content: Text(
+          'Lo anotó con fecha ${fechaCorta(fecha)}, que está fuera del '
+          'tiempo que estamos contando (del ${fechaCorta(_desde!)} al '
+          '${fechaCorta(_hasta)}). Está guardado en el lote; para que entre '
+          'aquí, tóquelo y corríjale la fecha.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(contexto).pop(),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _corregirGasto(ActividadAgricola labor) async {

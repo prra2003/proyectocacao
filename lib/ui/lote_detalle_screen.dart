@@ -713,11 +713,13 @@ class _ListaDiagnosticos extends StatelessWidget {
         if (diagnosticos.isEmpty) {
           return const SingleChildScrollView(
             child: EstadoVacio(
-              icono: Icons.photo_camera_outlined,
+              // Las fotos salieron de los formularios: pedirlas aquí mandaba
+              // al productor a buscar un botón de cámara que ya no existe.
+              icono: Icons.eco_outlined,
               titulo: 'Sin diagnósticos',
               mensaje:
-              'Tome una foto y anote cómo está el cultivo: '
-                  'floración, cuajado, monilla, escoba de bruja...',
+              'Anote cómo está el cultivo: floración, cuajado, monilla, '
+                  'escoba de bruja...',
             ),
           );
         }

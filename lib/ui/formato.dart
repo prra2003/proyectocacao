@@ -38,13 +38,21 @@ String numeroCorto(double valor) {
 /// anota el jornal con decimales.
 String pesos(double valor) {
   final negativo = valor < 0;
-  final entero = valor.abs().round().toString();
-  final puntos = StringBuffer();
-  for (var i = 0; i < entero.length; i++) {
-    if (i > 0 && (entero.length - i) % 3 == 0) puntos.write('.');
-    puntos.write(entero[i]);
-  }
+  final puntos = conPuntosDeMil(valor.abs().round().toString());
   return '${negativo ? '-' : ''}\$$puntos';
+}
+
+/// Mete los puntos de mil en una tira de dígitos: `1840000` → `1.840.000`.
+///
+/// Aparte de [pesos] porque el campo donde se escribe el costo también los
+/// necesita, y ahí no va el signo de pesos adelante.
+String conPuntosDeMil(String digitos) {
+  final puntos = StringBuffer();
+  for (var i = 0; i < digitos.length; i++) {
+    if (i > 0 && (digitos.length - i) % 3 == 0) puntos.write('.');
+    puntos.write(digitos[i]);
+  }
+  return puntos.toString();
 }
 
 /// Cuánto hace de una fecha, en palabras de todos los días.

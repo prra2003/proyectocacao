@@ -31,7 +31,7 @@ const _tiposRiego = ['Goteo', 'Aspersión', 'Manual / por gravedad'];
 
 /// Además de tipo, fecha y observaciones (lo que ya había), trae los campos
 /// del "Registro del proceso (cacao)" del documento de requerimientos:
-/// - responsable, costo, foto y resultado esperado valen para cualquier
+/// - responsable, costo y resultado esperado valen para cualquier
 ///   labor.
 /// - arbolesSembrados/edadPlantulaMeses/insumos son de Siembra.
 /// - subtipoLabor/arbolesAfectados/edadCultivoAnios se reutilizan en Poda,
@@ -96,6 +96,7 @@ Future<DatosActividad?> pedirDatosActividad(
   String? loteNombre,
   DatosActividad? inicial,
   RepartoDelGasto? reparto,
+  DateTime? fechaInicial,
 }) {
   return showDialog<DatosActividad>(
     context: context,
@@ -104,6 +105,7 @@ Future<DatosActividad?> pedirDatosActividad(
       loteNombre: loteNombre,
       inicial: inicial,
       reparto: reparto,
+      fechaInicial: fechaInicial,
     ),
   );
 }
@@ -232,6 +234,7 @@ class _DialogoActividad extends StatefulWidget {
     this.loteNombre,
     this.inicial,
     this.reparto,
+    this.fechaInicial,
   });
 
   final TipoActividad? tipoInicial;
@@ -245,6 +248,15 @@ class _DialogoActividad extends StatefulWidget {
   /// Valores con los que arranca el formulario, si se está corrigiendo una
   /// labor ya anotada.
   final DatosActividad? inicial;
+
+  /// Con qué fecha abre el formulario cuando se anota algo nuevo.
+  ///
+  /// Normalmente es hoy, que es lo correcto cuando uno anota la labor el día
+  /// que la hizo. Pero el asistente del costo por kilo pregunta por los
+  /// gastos de una cosecha que puede ser de hace meses, y ahí "hoy" cae
+  /// fuera del período: queda guardado y no se ve en ninguna parte. La
+  /// fecha se muestra y se puede cambiar, como siempre.
+  final DateTime? fechaInicial;
 
   @override
   State<_DialogoActividad> createState() => _DialogoActividadState();
@@ -272,12 +284,13 @@ class _DialogoActividadState extends State<_DialogoActividad> {
 
   late var _tipo =
       widget.inicial?.tipo ?? widget.tipoInicial ?? TipoActividad.poda;
-  late DateTime _fecha = widget.inicial?.fecha ?? DateTime.now();
+  late DateTime _fecha =
+      widget.inicial?.fecha ?? widget.fechaInicial ?? DateTime.now();
 
   bool get _editando => widget.inicial != null;
 
   /// Lo único obligatorio es qué labor y cuándo. Todo lo demás (tipo de poda,
-  /// árboles, responsable, costo, foto, notas) va aquí dentro, cerrado: quien
+  /// árboles, responsable, costo, notas) va aquí dentro, cerrado: quien
   /// tenga tiempo lo llena, y quien no, registra con dos toques.
   var _masDetalles = false;
 
@@ -310,7 +323,7 @@ class _DialogoActividadState extends State<_DialogoActividad> {
   }
 
   /// Lo escrito en el campo de costo, tal como se escribió.
-  double? get _costoEscrito => aNumero(_costo.text);
+  double? get _costoEscrito => aPesos(_costo.text);
 
   /// Lo que se va a guardar como costo de **este** lote.
   double? get _costoDelLote {
@@ -351,7 +364,10 @@ class _DialogoActividadState extends State<_DialogoActividad> {
     final compartido = inicial.costoTotalCompartido;
     _deTodaLaFinca = compartido != null;
     final aMostrar = compartido ?? inicial.costo;
-    _costo.text = aMostrar == null ? '' : aMostrar.toStringAsFixed(0);
+    // Con sus puntos, igual que si lo acabara de escribir.
+    _costo.text = aMostrar == null
+        ? ''
+        : conPuntosDeMil(aMostrar.round().toString());
     _resultadoEsperado.text = inicial.resultadoEsperado ?? '';
     _arbolesSembrados.text = inicial.arbolesSembrados?.toString() ?? '';
     _edadPlantula.text = inicial.edadPlantulaMeses?.toString() ?? '';
@@ -702,11 +718,11 @@ class _DialogoActividadState extends State<_DialogoActividad> {
                 icono: Icons.payments_outlined,
                 color: PaletaCacao.dorado,
                 controller: _costo,
-                hint: 'Valor en pesos',
+                hint: 'Ej: 150.000',
                 suffixText: r'$',
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
+                keyboardType: TextInputType.number,
+                // Los puntos de mil se van poniendo solos mientras escribe.
+                inputFormatters: const [FiltroPesos()],
               ),
               if (_sePuedeRepartir) _preguntaDelReparto(context),
               // En "Otra labor" este mismo texto ya se pidió arriba, con su
