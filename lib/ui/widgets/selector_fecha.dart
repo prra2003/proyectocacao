@@ -41,9 +41,22 @@ class SelectorFecha extends StatelessWidget {
           labelText: etiqueta,
           prefixIcon: const Icon(Icons.event_outlined),
         ),
-        child: Text(
-          fecha == null ? 'Sin definir' : fechaCorta(fecha!),
-          style: Theme.of(context).textTheme.bodyLarge,
+        // Dos selectores de fecha lado a lado en un teléfono angosto dejan
+        // poco más de cien píxeles útiles: sin esto, "01/01/2026" se parte en
+        // dos renglones y el año queda colgando aparte, que es ilegible y se
+        // ve roto. `scaleDown` solo achica cuando de verdad no cabe.
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              fecha == null ? 'Sin definir' : fechaCorta(fecha!),
+              maxLines: 1,
+              softWrap: false,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
         ),
       ),
     );
