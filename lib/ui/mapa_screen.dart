@@ -307,7 +307,9 @@ class _MapaScreenState extends State<MapaScreen> {
           Positioned(
             left: 16,
             right: 16,
-            bottom: 16,
+            // Flotan sobre el mapa, así que no los cubre ningún `SafeArea`:
+            // el hueco de la barra de botones del teléfono va aquí.
+            bottom: 16 + MediaQuery.viewPaddingOf(context).bottom,
             child: Column(
               children: [
                 FilledButton.icon(
