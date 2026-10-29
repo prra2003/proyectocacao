@@ -85,6 +85,15 @@ void main() {
     );
   }
 
+  Future<String> anotarCosecha({required double kg}) {
+    return repo.registrarCosecha(
+      loteId: lote.id,
+      fecha: DateTime.now(),
+      cantidadKg: kg,
+      tipoProducto: 'Cacao seco',
+    );
+  }
+
   testWidgets('sin nada anotado, lo dice en vez de mostrar una lista vacía', (
     tester,
   ) async {
@@ -241,6 +250,79 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Entendido'));
     await asentar(tester);
+
+    await desmontar(tester);
+  });
+
+  // ---- lo obligatorio antes del número ---------------------------------
+  //
+  // El simulador en HTML con el que se diseñó esta pantalla no daba el precio
+  // hasta que estuviera lleno lo obligatorio: los kilos y el costo de cada
+  // gasto. La pantalla mostraba $0, que es peor que no mostrar nada, porque
+  // un cero parece un costo bajísimo y es en realidad "no sé".
+
+  testWidgets('sin cosecha anotada no da número, y dice que falta la cosecha', (
+    tester,
+  ) async {
+    await anotarLabor(tipo: TipoActividad.poda, costo: 400000);
+    await abrir(tester);
+
+    expect(find.text('Pendiente'), findsOneWidget);
+    expect(find.text(r'$0'), findsNothing);
+    expect(find.textContaining('Falta anotar la cosecha'), findsOneWidget);
+    expect(
+      find.byKey(const Key('confirmar_gastos_completos')),
+      findsNothing,
+      reason: 'No hay nada que confirmar mientras falte algo obligatorio.',
+    );
+
+    await desmontar(tester);
+  });
+
+  testWidgets('con un gasto sin costo tampoco da número: diría menos de lo '
+      'que costó', (tester) async {
+    await anotarLabor(tipo: TipoActividad.poda, costo: 400000);
+    await anotarLabor(tipo: TipoActividad.riego);
+    await anotarCosecha(kg: 100);
+    await abrir(tester);
+
+    expect(find.text('Pendiente'), findsOneWidget);
+    expect(
+      find.textContaining('Falta el costo de 1 labor'),
+      findsOneWidget,
+      reason: 'Tiene que saber cuál es el dato que le falta, no solo que '
+          'falta algo.',
+    );
+
+    await desmontar(tester);
+  });
+
+  testWidgets('con todo lo obligatorio da el número, rotulado provisional', (
+    tester,
+  ) async {
+    await anotarLabor(tipo: TipoActividad.poda, costo: 400000);
+    await anotarCosecha(kg: 100);
+    await abrir(tester);
+
+    expect(find.text(r'$4.000'), findsOneWidget);
+    expect(find.text('Provisional'), findsOneWidget);
+    expect(find.text('Pendiente'), findsNothing);
+
+    await desmontar(tester);
+  });
+
+  testWidgets('al confirmar que no falta ningún gasto, deja de ser '
+      'provisional', (tester) async {
+    await anotarLabor(tipo: TipoActividad.poda, costo: 400000);
+    await anotarCosecha(kg: 100);
+    await abrir(tester);
+
+    await tester.tap(find.byKey(const Key('confirmar_gastos_completos')));
+    await asentar(tester);
+
+    expect(find.text('✓ Gastos confirmados'), findsOneWidget);
+    expect(find.text('Provisional'), findsNothing);
+    expect(find.text(r'$4.000'), findsOneWidget);
 
     await desmontar(tester);
   });

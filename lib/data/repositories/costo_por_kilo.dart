@@ -20,6 +20,25 @@ import '../local/enums.dart';
 /// contando una parte del gasto y no todo. Quien lo lea tiene derecho a
 /// saberlo, así que ese número viaja junto al resultado y la pantalla lo
 /// muestra.
+/// En qué punto está la cuenta, y con cuánta reserva se puede dar el número.
+///
+/// Son los tres estados del simulador en HTML con el que se diseñó esta
+/// pantalla, y están aquí por la misma razón que allá: un costo por kilo que
+/// sale de datos a medio llenar no es un costo bajo, es un número falso. Más
+/// vale decir "pendiente" y nombrar lo que falta que dar una cifra que el
+/// productor va a usar para decidir si le conviene seguir con el lote.
+enum EstadoCuenta {
+  /// Falta algo obligatorio. No se da número.
+  pendiente,
+
+  /// Todo lo anotado cuadra, pero el productor no ha confirmado que anotó
+  /// *todo* —la aplicación no puede saber si contó sus propios jornales—.
+  provisional,
+
+  /// Cuadra y el productor confirmó que no falta nada por anotar.
+  confirmada,
+}
+
 class CuentaDelLote {
   const CuentaDelLote({
     required this.costoTotal,
@@ -30,6 +49,7 @@ class CuentaDelLote {
     required this.producto,
     required this.kilos,
     this.precioPorKilo,
+    this.confirmada = false,
   });
 
   /// Suma de los costos anotados en el período. Lo que no tiene costo no suma.
@@ -56,6 +76,14 @@ class CuentaDelLote {
 
   /// Lo que le pagan por kilo. No se guarda; se escribe para ver la cuenta.
   final double? precioPorKilo;
+
+  /// El productor marcó que ya están anotados todos los gastos del período,
+  /// incluidos sus propios jornales y los de la familia.
+  ///
+  /// Nadie más puede responder esto: la aplicación ve lo que se anotó, no lo
+  /// que se dejó de anotar. El trabajo propio es justamente el gasto que más
+  /// se olvida, y el que más mueve el costo por kilo.
+  final bool confirmada;
 
   bool get hayCosechas => kilos > 0;
 
@@ -86,6 +114,37 @@ class CuentaDelLote {
 
   /// ¿La cuenta está completa, o le faltan costos por anotar?
   bool get completa => laboresSinCosto == 0 && laboresConCosto > 0;
+
+  /// Lo que falta para que el número signifique algo, dicho en palabras.
+  ///
+  /// Se devuelve la lista y no un `bool` porque "pendiente" sin más deja al
+  /// productor adivinando: tiene que saber qué le falta para poder llenarlo.
+  List<String> get faltantes {
+    final falta = <String>[];
+    if (!hayCosechas) {
+      falta.add('Falta anotar la cosecha del período: sin kilos no hay entre '
+          'qué dividir el gasto.');
+    }
+    if (laboresConCosto == 0 && laboresSinCosto == 0) {
+      falta.add('No hay ninguna labor anotada en este período.');
+    } else if (laboresConCosto == 0) {
+      falta.add('Ninguna labor del período tiene el costo anotado.');
+    } else if (laboresSinCosto == 1) {
+      falta.add('Falta el costo de 1 labor del período.');
+    } else if (laboresSinCosto > 1) {
+      falta.add('Falta el costo de $laboresSinCosto labores del período.');
+    }
+    return falta;
+  }
+
+  /// ¿Se puede dar el costo por kilo sin mentir?
+  bool get calculable => faltantes.isEmpty;
+
+  EstadoCuenta get estado => !calculable
+      ? EstadoCuenta.pendiente
+      : confirmada
+          ? EstadoCuenta.confirmada
+          : EstadoCuenta.provisional;
 }
 
 /// ¿La fecha cae en el período, contando los dos días del borde?
@@ -111,6 +170,7 @@ CuentaDelLote calcularCostoPorKilo({
   required DateTime hasta,
   String? producto,
   double? precioPorKilo,
+  bool confirmada = false,
 }) {
   bool dentro(DateTime fecha) => enPeriodo(fecha, desde, hasta);
 
@@ -160,5 +220,6 @@ CuentaDelLote calcularCostoPorKilo({
     producto: elegido,
     kilos: elegido == null ? 0 : (porProducto[elegido] ?? 0),
     precioPorKilo: precioPorKilo,
+    confirmada: confirmada,
   );
 }

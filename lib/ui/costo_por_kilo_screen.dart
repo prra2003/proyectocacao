@@ -54,6 +54,14 @@ class _CostoPorKiloScreenState extends State<CostoPorKiloScreen> {
   String? _producto;
   double? _precioPorKilo;
 
+  /// El productor dijo que ya no falta ningún gasto por anotar.
+  ///
+  /// Vive en la pantalla y no en la base porque es una afirmación sobre un
+  /// período y un lote que se está mirando ahora, no un dato del lote. Se
+  /// vuelve a preguntar cada vez, y eso está bien: con un gasto nuevo la
+  /// respuesta de la semana pasada ya no vale.
+  var _confirmado = false;
+
   @override
   void initState() {
     super.initState();
@@ -200,6 +208,7 @@ class _CostoPorKiloScreenState extends State<CostoPorKiloScreen> {
                   hasta: _hasta,
                   producto: _producto,
                   precioPorKilo: _precioPorKilo,
+                  confirmada: _confirmado,
                 );
                 // Los mismos que se sumaron, los más recientes primero.
                 final gastos =
@@ -215,11 +224,20 @@ class _CostoPorKiloScreenState extends State<CostoPorKiloScreen> {
                   desde: _desde,
                   hasta: _hasta,
                   controladorPrecio: _precio,
-                  onDesde: (f) => setState(() => _desde = f),
-                  onHasta: (f) => setState(() => _hasta = f),
+                  onDesde: (f) => setState(() {
+                    _desde = f;
+                    // Otro período, otros gastos: lo que confirmó para el
+                    // anterior no dice nada de este.
+                    _confirmado = false;
+                  }),
+                  onHasta: (f) => setState(() {
+                    _hasta = f;
+                    _confirmado = false;
+                  }),
                   onProducto: (p) => setState(() => _producto = p),
                   onAgregar: _agregarGasto,
                   onEditar: _editarGasto,
+                  onConfirmar: (v) => setState(() => _confirmado = v),
                 );
               },
             );
@@ -244,6 +262,7 @@ class _Contenido extends StatelessWidget {
     required this.onProducto,
     required this.onAgregar,
     required this.onEditar,
+    required this.onConfirmar,
   });
 
   final CuentaDelLote cuenta;
@@ -260,6 +279,7 @@ class _Contenido extends StatelessWidget {
   final ValueChanged<String?> onProducto;
   final VoidCallback onAgregar;
   final ValueChanged<ActividadAgricola> onEditar;
+  final ValueChanged<bool> onConfirmar;
 
   @override
   Widget build(BuildContext context) {
@@ -306,8 +326,13 @@ class _Contenido extends StatelessWidget {
           const SizedBox(height: 16),
         ],
 
-        if (cuenta.laboresSinCosto > 0) ...[
-          _AvisoCostosFaltantes(cuantas: cuenta.laboresSinCosto),
+        // Ya no se puede confirmar nada si falta algo: el estado de arriba
+        // lo dice y nombra qué es.
+        if (cuenta.calculable) ...[
+          _ConfirmarCompleto(
+            confirmada: cuenta.confirmada,
+            onConfirmar: onConfirmar,
+          ),
           const SizedBox(height: 16),
         ],
 
@@ -333,7 +358,9 @@ class _Contenido extends StatelessWidget {
           ),
         ),
 
-        if (cuenta.margenPorKilo != null) ...[
+        // Sin un costo confiable, el margen tampoco lo es: restarle a un
+        // gasto incompleto da una ganancia inflada, que es peor que ninguna.
+        if (cuenta.calculable && cuenta.margenPorKilo != null) ...[
           const SizedBox(height: 18),
           _TarjetaGanancia(cuenta: cuenta),
         ],
@@ -394,6 +421,12 @@ class _Contenido extends StatelessWidget {
 
 // ---------------------------------------------------------------------------
 
+/// El número grande, o la razón por la que todavía no hay número.
+///
+/// Mientras falte algo obligatorio —kilos cosechados, o el costo de alguna
+/// labor— aquí dice **Pendiente** y debajo qué es lo que falta. Antes
+/// mostraba `$0`, que no es un costo bajo: es la cuenta diciendo que no sabe
+/// y aparentando que sí.
 class _TarjetaResultado extends StatelessWidget {
   const _TarjetaResultado({required this.cuenta, required this.costo});
 
@@ -403,6 +436,9 @@ class _TarjetaResultado extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
+    final faltantes = cuenta.faltantes;
+    final hayNumero = cuenta.calculable && costo != null;
+
     return Card(
       color: PaletaCacao.cafeOscuro,
       child: Padding(
@@ -416,7 +452,7 @@ class _TarjetaResultado extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              costo == null ? 'Sin cosechas' : pesos(costo!),
+              hayNumero ? pesos(costo!) : 'Pendiente',
               key: const Key('costo_por_kilo'),
               style: textos.displaySmall?.copyWith(
                 color: Colors.white,
@@ -424,17 +460,82 @@ class _TarjetaResultado extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              costo == null
-                  ? 'Anote una cosecha en este período y aquí sale la cuenta.'
-                  : '${pesos(cuenta.costoTotal)} gastados · '
-                        '${numeroCorto(cuenta.kilos)} kg de '
-                        '${(cuenta.producto ?? '').toLowerCase()}',
-              style: textos.bodyMedium?.copyWith(
-                color: PaletaCacao.cafeClaro,
+            if (!hayNumero) ...[
+              Text(
+                'Falta esto para poder dar el número:',
+                key: const Key('falta_para_el_numero'),
+                style: textos.bodyMedium?.copyWith(
+                  color: PaletaCacao.cafeClaro,
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              for (final falta in faltantes)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 3),
+                        child: Icon(
+                          Icons.radio_button_unchecked,
+                          size: 13,
+                          color: PaletaCacao.cafeClaro,
+                        ),
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          falta,
+                          style: textos.bodyMedium?.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ] else ...[
+              Text(
+                '${pesos(cuenta.costoTotal)} gastados · '
+                '${numeroCorto(cuenta.kilos)} kg de '
+                '${(cuenta.producto ?? '').toLowerCase()}',
+                style: textos.bodyMedium?.copyWith(
+                  color: PaletaCacao.cafeClaro,
+                ),
+              ),
+              const SizedBox(height: 14),
+              _Sello(estado: cuenta.estado),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Dice si el número es definitivo o provisional, sin esconderlo.
+class _Sello extends StatelessWidget {
+  const _Sello({required this.estado});
+
+  final EstadoCuenta estado;
+
+  @override
+  Widget build(BuildContext context) {
+    final confirmada = estado == EstadoCuenta.confirmada;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: confirmada ? PaletaCacao.verde : PaletaCacao.maduro,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        confirmada ? '✓ Gastos confirmados' : 'Provisional',
+        key: const Key('sello_estado'),
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
         ),
       ),
     );
@@ -576,35 +677,56 @@ class _EscogerProducto extends StatelessWidget {
   }
 }
 
-class _AvisoCostosFaltantes extends StatelessWidget {
-  const _AvisoCostosFaltantes({required this.cuantas});
+/// La única pregunta que la aplicación no puede responder sola.
+///
+/// La cuenta ve los gastos anotados; no ve los que nunca se anotaron. El más
+/// grande de esos suele ser el trabajo propio y el de la familia, que no se
+/// paga en efectivo y por eso no se apunta —y es el que decide si el lote
+/// deja plata o solo lo parece.
+///
+/// Mientras no esté marcado, el número sale rotulado "Provisional". Nada se
+/// esconde: se dice con qué reserva está dado.
+class _ConfirmarCompleto extends StatelessWidget {
+  const _ConfirmarCompleto({
+    required this.confirmada,
+    required this.onConfirmar,
+  });
 
-  final int cuantas;
+  final bool confirmada;
+  final ValueChanged<bool> onConfirmar;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: PaletaCacao.maduroClaro,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.info_outline, color: PaletaCacao.maduro),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                cuantas == 1
-                    ? 'Hay 1 labor del período sin costo anotado, así que este '
-                          'número va por debajo de lo que de verdad le costó.'
-                    : 'Hay $cuantas labores del período sin costo anotado, así '
-                          'que este número va por debajo de lo que de verdad '
-                          'le costó.',
-                key: const Key('aviso_costos_faltantes'),
-                style: Theme.of(context).textTheme.bodyMedium,
+      color: confirmada
+          ? PaletaCacao.verdeClaro
+          : Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => onConfirmar(!confirmada),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 16, 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                key: const Key('confirmar_gastos_completos'),
+                value: confirmada,
+                onChanged: (v) => onConfirmar(v ?? false),
               ),
-            ),
-          ],
+              const SizedBox(width: 4),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 11),
+                  child: Text(
+                    'Ya están anotados todos los gastos de este lote y este '
+                    'período, incluidos mis jornales y los de la familia.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

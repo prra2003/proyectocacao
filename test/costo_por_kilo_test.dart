@@ -250,4 +250,73 @@ void main() {
     expect(enPeriodo(DateTime(2025, 12, 31, 23, 59), enero, diciembre), isFalse);
     expect(enPeriodo(DateTime(2027), enero, diciembre), isFalse);
   });
+
+  // ---- lo obligatorio antes del número ---------------------------------
+
+  test('sin cosechas la cuenta queda pendiente y dice qué falta', () {
+    final r = cuenta(
+      labores: [labor(fecha: DateTime(2026, 3, 10), costo: 600000)],
+    );
+
+    expect(r.calculable, isFalse);
+    expect(r.estado, EstadoCuenta.pendiente);
+    expect(r.faltantes, hasLength(1));
+    expect(r.faltantes.single, contains('cosecha'));
+  });
+
+  test('una labor sin costo deja la cuenta pendiente, no solo avisada', () {
+    final r = cuenta(
+      labores: [
+        labor(fecha: DateTime(2026, 3, 10), costo: 300000),
+        labor(fecha: DateTime(2026, 4, 10)),
+      ],
+      cosechas: [cosecha(fecha: DateTime(2026, 9, 1), kg: 100)],
+    );
+
+    expect(
+      r.calculable,
+      isFalse,
+      reason: 'Dividir un gasto incompleto entre los kilos da un costo por '
+          'kilo más bajo que el real, y con ese número se decide si el lote '
+          'conviene.',
+    );
+    expect(r.faltantes.single, 'Falta el costo de 1 labor del período.');
+  });
+
+  test('sin labores anotadas lo dice así, no "falta el costo"', () {
+    final r = cuenta(
+      cosechas: [cosecha(fecha: DateTime(2026, 9, 1), kg: 100)],
+    );
+
+    expect(r.faltantes.single, contains('ninguna labor anotada'));
+  });
+
+  test('con todo lleno el número es provisional hasta que lo confirmen', () {
+    final completa = cuenta(
+      labores: [labor(fecha: DateTime(2026, 3, 10), costo: 400000)],
+      cosechas: [cosecha(fecha: DateTime(2026, 9, 1), kg: 100)],
+    );
+
+    expect(completa.calculable, isTrue);
+    expect(completa.faltantes, isEmpty);
+    expect(
+      completa.estado,
+      EstadoCuenta.provisional,
+      reason: 'La aplicación ve lo anotado, no lo que se dejó de anotar: el '
+          'trabajo propio solo lo puede confirmar el productor.',
+    );
+  });
+
+  test('confirmado por el productor, el número queda en firme', () {
+    final r = calcularCostoPorKilo(
+      actividades: [labor(fecha: DateTime(2026, 3, 10), costo: 400000)],
+      cosechas: [cosecha(fecha: DateTime(2026, 9, 1), kg: 100)],
+      desde: enero,
+      hasta: diciembre,
+      confirmada: true,
+    );
+
+    expect(r.estado, EstadoCuenta.confirmada);
+    expect(r.costoPorKilo, 4000);
+  });
 }
