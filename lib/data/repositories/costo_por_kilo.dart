@@ -88,6 +88,18 @@ class CuentaDelLote {
   bool get completa => laboresSinCosto == 0 && laboresConCosto > 0;
 }
 
+/// ¿La fecha cae en el período, contando los dos días del borde?
+///
+/// Vive aquí y no dentro de la cuenta porque la pantalla también lo necesita:
+/// la lista de gastos que el productor ve y edita tiene que ser exactamente
+/// la misma que se sumó. Si cada una filtrara por su lado, un día de más o de
+/// menos haría que los gastos de la lista no den el total de arriba.
+bool enPeriodo(DateTime fecha, DateTime desde, DateTime hasta) {
+  final inicio = DateTime(desde.year, desde.month, desde.day);
+  final fin = DateTime(hasta.year, hasta.month, hasta.day, 23, 59, 59, 999);
+  return !fecha.isBefore(inicio) && !fecha.isAfter(fin);
+}
+
 /// Hace la cuenta con lo anotado entre [desde] y [hasta], ambos incluidos.
 ///
 /// [producto] escoge cuál tipo de cacao costear. Si no se pasa, toma el que
@@ -100,10 +112,7 @@ CuentaDelLote calcularCostoPorKilo({
   String? producto,
   double? precioPorKilo,
 }) {
-  final inicio = DateTime(desde.year, desde.month, desde.day);
-  final fin = DateTime(hasta.year, hasta.month, hasta.day, 23, 59, 59, 999);
-  bool dentro(DateTime fecha) =>
-      !fecha.isBefore(inicio) && !fecha.isAfter(fin);
+  bool dentro(DateTime fecha) => enPeriodo(fecha, desde, hasta);
 
   var costoTotal = 0.0;
   var conCosto = 0;

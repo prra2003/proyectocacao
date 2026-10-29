@@ -243,4 +243,11 @@ void main() {
     expect(r.kilosPorProducto['Cacao seco'], 100);
     expect(r.kilosPorProducto['Sin especificar'], 40);
   });
+
+  test('el filtro del período es el mismo que ve la lista de gastos', () {
+    expect(enPeriodo(DateTime(2026, 1, 1), enero, diciembre), isTrue);
+    expect(enPeriodo(DateTime(2026, 12, 31, 23, 59), enero, diciembre), isTrue);
+    expect(enPeriodo(DateTime(2025, 12, 31, 23, 59), enero, diciembre), isFalse);
+    expect(enPeriodo(DateTime(2027), enero, diciembre), isFalse);
+  });
 }

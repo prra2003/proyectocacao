@@ -477,24 +477,7 @@ class _ListaActividades extends StatelessWidget {
       inicial: datosDeLabor(actividad),
     );
     if (datos == null) return;
-    final cambiadas = await repo.actualizarActividad(
-      id: actividad.id,
-      tipo: datos.tipo,
-      fecha: datos.fecha,
-      observaciones: datos.observaciones,
-      responsable: datos.responsable,
-      costo: datos.costo,
-      subtipoLabor: datos.subtipoLabor,
-      producto: datos.producto,
-      cantidadAplicada: datos.cantidadAplicada,
-      incidencia: datos.incidencia,
-      arbolesAfectados: datos.arbolesAfectados,
-      edadCultivoAnios: datos.edadCultivoAnios,
-      arbolesSembrados: datos.arbolesSembrados,
-      edadPlantulaMeses: datos.edadPlantulaMeses,
-      insumos: datos.insumos,
-      resultadoEsperado: datos.resultadoEsperado,
-    );
+    final cambiadas = await actualizarLabor(repo, actividad, datos);
     if (!context.mounted) return;
     if (cambiadas == 0) {
       await _explicarLaborCerrada(context, faltaLlenarEn(actividad).isNotEmpty);

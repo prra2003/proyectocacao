@@ -132,6 +132,39 @@ Future<void> guardarLabor(
   );
 }
 
+/// Guarda sobre [labor] lo que se corrigió en el formulario.
+///
+/// Devuelve cuántas filas cambió; **0 significa que pasó la semana** y la
+/// labor quedó cerrada, no que no hubiera nada que cambiar. Quien llama tiene
+/// que decírselo a la persona en vez de dar por guardado.
+///
+/// Está aquí, y no copiado en cada pantalla, porque la actualización escribe
+/// todas las columnas de una: a la que se le olvide pasar un campo lo borra.
+Future<int> actualizarLabor(
+  LoteRepository repo,
+  ActividadAgricola labor,
+  DatosActividad datos,
+) {
+  return repo.actualizarActividad(
+    id: labor.id,
+    tipo: datos.tipo,
+    fecha: datos.fecha,
+    observaciones: datos.observaciones,
+    responsable: datos.responsable,
+    costo: datos.costo,
+    subtipoLabor: datos.subtipoLabor,
+    producto: datos.producto,
+    cantidadAplicada: datos.cantidadAplicada,
+    incidencia: datos.incidencia,
+    arbolesAfectados: datos.arbolesAfectados,
+    edadCultivoAnios: datos.edadCultivoAnios,
+    arbolesSembrados: datos.arbolesSembrados,
+    edadPlantulaMeses: datos.edadPlantulaMeses,
+    insumos: datos.insumos,
+    resultadoEsperado: datos.resultadoEsperado,
+  );
+}
+
 /// Cómo se le dice a cada labor en el campo. En el historial y los reportes
 /// sigue saliendo el nombre técnico ([etiquetaActividad]), que es el que usa
 /// el técnico; aquí, donde el productor elige, va el de todos los días.
@@ -189,15 +222,26 @@ class _DialogoActividadState extends State<_DialogoActividad> {
   /// tenga tiempo lo llena, y quien no, registra con dos toques.
   var _masDetalles = false;
 
+  /// Se pidió decir qué fue y se dejó en blanco. Mientras esté en true, el
+  /// campo sale en rojo con el motivo.
+  var _faltaDecirQueFue = false;
+
   bool get _esSiembra => _tipo == TipoActividad.siembra;
   bool get _esPoda => _tipo == TipoActividad.poda;
   bool get _esFertilizacion => _tipo == TipoActividad.fertilizacion;
   bool get _esFitosanitario => _tipo == TipoActividad.controlFitosanitario;
   bool get _esRiego => _tipo == TipoActividad.riego;
 
+  /// Un gasto o una labor que la aplicación todavía no tiene en la lista:
+  /// transporte, jornales, bolsas, arriendo. Lo único que se le exige es que
+  /// diga qué fue, porque "Otra labor" a secas no le sirve a nadie después.
+  bool get _esOtro => _tipo == TipoActividad.otro;
+
   @override
   void initState() {
     super.initState();
+    // En cuanto empieza a escribir, el reclamo en rojo sobra.
+    _observaciones.addListener(_borrarElReclamo);
     final inicial = widget.inicial;
     if (inicial == null) return;
     // Abrir el formulario en blanco sobre una labor ya anotada seria pedirle
@@ -219,8 +263,15 @@ class _DialogoActividadState extends State<_DialogoActividad> {
     _masDetalles = true;
   }
 
+  void _borrarElReclamo() {
+    if (!_faltaDecirQueFue) return;
+    if (textoONulo(_observaciones.text) == null) return;
+    setState(() => _faltaDecirQueFue = false);
+  }
+
   @override
   void dispose() {
+    _observaciones.removeListener(_borrarElReclamo);
     _observaciones.dispose();
     _responsable.dispose();
     _costo.dispose();
@@ -243,6 +294,7 @@ class _DialogoActividadState extends State<_DialogoActividad> {
     setState(() {
       _tipo = tipo;
       _subtipo = null;
+      _faltaDecirQueFue = false;
     });
   }
 
@@ -269,6 +321,38 @@ class _DialogoActividadState extends State<_DialogoActividad> {
           children: [
             _SelectorTipo(tipo: _tipo, onCambio: _cambiarTipo),
             const SizedBox(height: 14),
+            // Las demás labores ya se nombran solas con el botón que se tocó.
+            // Esta no: va arriba y fuera de los detalles opcionales porque,
+            // sin ella, el registro queda como "Otra labor" y dentro de un
+            // año nadie sabrá si fue el transporte o el jornal de cosecha.
+            if (_esOtro) ...[
+              CampoTarjeta(
+                key: const Key('campo_que_fue'),
+                etiqueta: '¿Qué gasto o labor fue?',
+                icono: Icons.edit_note_outlined,
+                color: PaletaCacao.cafe,
+                controller: _observaciones,
+                hint: 'Ej: transporte del bulto, jornal de cosecha, bolsas',
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: Text(
+                  _faltaDecirQueFue
+                      ? 'Escriba qué fue para poder guardarlo.'
+                      : 'Esto no está en la lista de la aplicación, así que '
+                            'queda anotado con el nombre que usted le ponga.',
+                  key: const Key('nota_que_fue'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: _faltaDecirQueFue
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
             const NotaBpa(
               titulo: '¿Para qué sirve anotar esta labor?',
               puntos: [
@@ -515,13 +599,18 @@ class _DialogoActividadState extends State<_DialogoActividad> {
                   decimal: true,
                 ),
               ),
-              const SizedBox(height: 14),
-              CampoDictado(
-                campoKey: const Key('campo_observaciones_actividad'),
-                controller: _observaciones,
-                etiqueta: 'Observaciones',
-                hint: 'Toque el micrófono y hable, o escriba',
-              ),
+              // En "Otra labor" este mismo texto ya se pidió arriba, con su
+              // nombre propio. Mostrarlo otra vez aquí sería el mismo campo
+              // dos veces en la misma pantalla.
+              if (!_esOtro) ...[
+                const SizedBox(height: 14),
+                CampoDictado(
+                  campoKey: const Key('campo_observaciones_actividad'),
+                  controller: _observaciones,
+                  etiqueta: 'Observaciones',
+                  hint: 'Toque el micrófono y hable, o escriba',
+                ),
+              ],
             ],
           ],
         ),
@@ -533,7 +622,19 @@ class _DialogoActividadState extends State<_DialogoActividad> {
         ),
         FilledButton(
           style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
-          onPressed: () => Navigator.of(context).pop((
+          onPressed: () => _registrar(context),
+          child: Text(_editando ? 'Guardar' : 'Registrar'),
+        ),
+      ],
+    );
+  }
+
+  void _registrar(BuildContext context) {
+    if (_esOtro && textoONulo(_observaciones.text) == null) {
+      setState(() => _faltaDecirQueFue = true);
+      return;
+    }
+    Navigator.of(context).pop((
             tipo: _tipo,
             fecha: _fecha,
             observaciones: textoONulo(_observaciones.text),
@@ -550,11 +651,7 @@ class _DialogoActividadState extends State<_DialogoActividad> {
             producto: textoONulo(_producto.text),
             cantidadAplicada: textoONulo(_cantidadAplicada.text),
             incidencia: textoONulo(_incidencia.text),
-          )),
-          child: Text(_editando ? 'Guardar' : 'Registrar'),
-        ),
-      ],
-    );
+          ));
   }
 }
 
