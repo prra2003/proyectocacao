@@ -554,10 +554,13 @@ class _Recordatorios extends StatelessWidget {
   final List<Lote> lotes;
 
   Future<void> _anotar(BuildContext context, Recordatorio aviso) async {
+    final reparto = await repartoDelGasto(lotesRepo, aviso.lote);
+    if (!context.mounted) return;
     final datos = await pedirDatosActividad(
       context,
       tipoInicial: aviso.tipo,
       loteNombre: aviso.lote.nombre,
+      reparto: reparto,
     );
     if (datos == null) return;
     await guardarLabor(lotesRepo, aviso.lote, datos);
@@ -632,24 +635,10 @@ class _LaboresPorCompletar extends StatelessWidget {
       inicial: datosDeLabor(labor),
     );
     if (datos == null) return;
-    final cambiadas = await lotesRepo.actualizarActividad(
-      id: labor.id,
-      tipo: datos.tipo,
-      fecha: datos.fecha,
-      observaciones: datos.observaciones,
-      responsable: datos.responsable,
-      costo: datos.costo,
-      subtipoLabor: datos.subtipoLabor,
-      producto: datos.producto,
-      cantidadAplicada: datos.cantidadAplicada,
-      incidencia: datos.incidencia,
-      arbolesAfectados: datos.arbolesAfectados,
-      edadCultivoAnios: datos.edadCultivoAnios,
-      arbolesSembrados: datos.arbolesSembrados,
-      edadPlantulaMeses: datos.edadPlantulaMeses,
-      insumos: datos.insumos,
-      resultadoEsperado: datos.resultadoEsperado,
-    );
+    // Por el passthrough compartido y no campo por campo: la actualización
+    // escribe todas las columnas de una, así que a la copia a la que se le
+    // olvide un campo nuevo lo borra.
+    final cambiadas = await actualizarLabor(lotesRepo, labor, datos);
     if (!context.mounted) return;
     if (cambiadas == 0) {
       avisar(

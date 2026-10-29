@@ -93,9 +93,12 @@ class _CostoPorKiloScreenState extends State<CostoPorKiloScreen> {
   /// queda guardado como una labor del lote, igual que si lo hubiera anotado
   /// desde el historial: esta pantalla no inventa una tabla aparte.
   Future<void> _agregarGasto() async {
+    final reparto = await repartoDelGasto(widget.repo, widget.lote);
+    if (!mounted) return;
     final datos = await pedirDatosActividad(
       context,
       loteNombre: widget.lote.nombre,
+      reparto: reparto,
     );
     if (datos == null || !mounted) return;
     await guardarLabor(widget.repo, widget.lote, datos);
@@ -116,10 +119,13 @@ class _CostoPorKiloScreenState extends State<CostoPorKiloScreen> {
       await _explicarCerrada();
       return;
     }
+    final reparto = await repartoDelGasto(widget.repo, widget.lote);
+    if (!mounted) return;
     final datos = await pedirDatosActividad(
       context,
       inicial: datosDeLabor(labor),
       loteNombre: widget.lote.nombre,
+      reparto: reparto,
     );
     if (datos == null || !mounted) return;
     final cambiadas = await actualizarLabor(widget.repo, labor, datos);
@@ -836,6 +842,7 @@ class _FilaGastoLabor extends StatelessWidget {
     final cerrada = plazoVencido(labor);
     final costo = labor.costo;
     final sinCosto = costo == null || costo <= 0;
+    final compartido = labor.costoTotalCompartido;
 
     return Card(
       key: Key('gasto_${labor.id}'),
@@ -894,12 +901,26 @@ class _FilaGastoLabor extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Text(
-                sinCosto ? 'Sin costo' : pesos(costo),
-                style: textos.bodyLarge?.copyWith(
-                  fontWeight: sinCosto ? FontWeight.w400 : FontWeight.w600,
-                  color: sinCosto ? PaletaCacao.maduro : null,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    sinCosto ? 'Sin costo' : pesos(costo),
+                    style: textos.bodyLarge?.copyWith(
+                      fontWeight: sinCosto ? FontWeight.w400 : FontWeight.w600,
+                      color: sinCosto ? PaletaCacao.maduro : null,
+                    ),
+                  ),
+                  // Lo que se ve es la parte del lote, no lo que pagó: sin
+                  // decirlo, parecería que el valor quedó mal anotado.
+                  if (compartido != null)
+                    Text(
+                      'parte de ${pesos(compartido)}',
+                      style: textos.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
               ),
             ],
           ),

@@ -60,6 +60,7 @@ class MapeadorActividad {
     'observaciones': fila.observaciones,
     'responsable': fila.responsable,
     'costo': fila.costo,
+    'costo_total_compartido': fila.costoTotalCompartido,
     // La foto no viaja: solo su ruta en este teléfono. Subir la imagen es
     // harina de otro costal (ver docs/DOCUMENTACION_TECNICA.md, 11.1).
     'foto_path': fila.fotoPath,
@@ -92,6 +93,7 @@ class MapeadorActividad {
       observaciones: Value(fila['observaciones'] as String?),
       responsable: _textoSiViene(fila, 'responsable'),
       costo: _realSiViene(fila, 'costo'),
+      costoTotalCompartido: _realSiViene(fila, 'costo_total_compartido'),
       fotoPath: _textoSiViene(fila, 'foto_path'),
       subtipoLabor: _textoSiViene(fila, 'subtipo_labor'),
       producto: _textoSiViene(fila, 'producto'),

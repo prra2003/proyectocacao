@@ -122,6 +122,7 @@ void main() {
       observaciones: null,
       responsable: null,
       costo: null,
+      costoTotalCompartido: null,
       resultadoEsperado: null,
       arbolesSembrados: null,
       edadPlantulaMeses: null,

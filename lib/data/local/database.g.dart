@@ -3373,6 +3373,17 @@ class $ActividadesAgricolasTable extends ActividadesAgricolas
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _costoTotalCompartidoMeta =
+      const VerificationMeta('costoTotalCompartido');
+  @override
+  late final GeneratedColumn<double> costoTotalCompartido =
+      GeneratedColumn<double>(
+        'costo_total_compartido',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _fotoPathMeta = const VerificationMeta(
     'fotoPath',
   );
@@ -3510,6 +3521,7 @@ class $ActividadesAgricolasTable extends ActividadesAgricolas
     observaciones,
     responsable,
     costo,
+    costoTotalCompartido,
     fotoPath,
     subtipoLabor,
     producto,
@@ -3608,6 +3620,15 @@ class $ActividadesAgricolasTable extends ActividadesAgricolas
       context.handle(
         _costoMeta,
         costo.isAcceptableOrUnknown(data['costo']!, _costoMeta),
+      );
+    }
+    if (data.containsKey('costo_total_compartido')) {
+      context.handle(
+        _costoTotalCompartidoMeta,
+        costoTotalCompartido.isAcceptableOrUnknown(
+          data['costo_total_compartido']!,
+          _costoTotalCompartidoMeta,
+        ),
       );
     }
     if (data.containsKey('foto_path')) {
@@ -3762,6 +3783,10 @@ class $ActividadesAgricolasTable extends ActividadesAgricolas
         DriftSqlType.double,
         data['${effectivePrefix}costo'],
       ),
+      costoTotalCompartido: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}costo_total_compartido'],
+      ),
       fotoPath: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}foto_path'],
@@ -3845,8 +3870,26 @@ class ActividadAgricola extends DataClass
   /// registra en la app: puede ser un jornalero o un técnico.
   final String? responsable;
 
-  /// Lo gastado en esa labor (insumos, jornales), cuando aplica.
+  /// Lo que esa labor costó **en este lote**, cuando aplica.
+  ///
+  /// Para un gasto que se repartió entre varios lotes, aquí va solo la parte
+  /// que le toca a este, no lo que se pagó en total: es lo que suman las
+  /// cuentas del lote, y si aquí estuviera el total de la finca el costo por
+  /// kilo de este lote saldría inflado. Lo pagado completo queda en
+  /// [costoTotalCompartido].
   final double? costo;
+
+  /// Lo que se pagó en total, cuando el gasto fue de varios lotes.
+  ///
+  /// `null` quiere decir que la labor fue solo de este lote y [costo] ya es
+  /// todo. Se guarda para no perder el dato real: una fertilización de
+  /// $700.000 para la finca sigue siendo de $700.000, y la parte del lote es
+  /// un número derivado de ella, no el gasto mutilado.
+  ///
+  /// El reparto se guarda ya hecho, no como un porcentaje que se recalcule:
+  /// si mañana se corrige el área de un lote, lo que se pagó el año pasado no
+  /// debe cambiar solo.
+  final double? costoTotalCompartido;
 
   /// Foto de la labor, guardada en el propio teléfono.
   final String? fotoPath;
@@ -3885,6 +3928,7 @@ class ActividadAgricola extends DataClass
     this.observaciones,
     this.responsable,
     this.costo,
+    this.costoTotalCompartido,
     this.fotoPath,
     this.subtipoLabor,
     this.producto,
@@ -3932,6 +3976,9 @@ class ActividadAgricola extends DataClass
     }
     if (!nullToAbsent || costo != null) {
       map['costo'] = Variable<double>(costo);
+    }
+    if (!nullToAbsent || costoTotalCompartido != null) {
+      map['costo_total_compartido'] = Variable<double>(costoTotalCompartido);
     }
     if (!nullToAbsent || fotoPath != null) {
       map['foto_path'] = Variable<String>(fotoPath);
@@ -3996,6 +4043,9 @@ class ActividadAgricola extends DataClass
       costo: costo == null && nullToAbsent
           ? const Value.absent()
           : Value(costo),
+      costoTotalCompartido: costoTotalCompartido == null && nullToAbsent
+          ? const Value.absent()
+          : Value(costoTotalCompartido),
       fotoPath: fotoPath == null && nullToAbsent
           ? const Value.absent()
           : Value(fotoPath),
@@ -4054,6 +4104,9 @@ class ActividadAgricola extends DataClass
       observaciones: serializer.fromJson<String?>(json['observaciones']),
       responsable: serializer.fromJson<String?>(json['responsable']),
       costo: serializer.fromJson<double?>(json['costo']),
+      costoTotalCompartido: serializer.fromJson<double?>(
+        json['costoTotalCompartido'],
+      ),
       fotoPath: serializer.fromJson<String?>(json['fotoPath']),
       subtipoLabor: serializer.fromJson<String?>(json['subtipoLabor']),
       producto: serializer.fromJson<String?>(json['producto']),
@@ -4092,6 +4145,7 @@ class ActividadAgricola extends DataClass
       'observaciones': serializer.toJson<String?>(observaciones),
       'responsable': serializer.toJson<String?>(responsable),
       'costo': serializer.toJson<double?>(costo),
+      'costoTotalCompartido': serializer.toJson<double?>(costoTotalCompartido),
       'fotoPath': serializer.toJson<String?>(fotoPath),
       'subtipoLabor': serializer.toJson<String?>(subtipoLabor),
       'producto': serializer.toJson<String?>(producto),
@@ -4120,6 +4174,7 @@ class ActividadAgricola extends DataClass
     Value<String?> observaciones = const Value.absent(),
     Value<String?> responsable = const Value.absent(),
     Value<double?> costo = const Value.absent(),
+    Value<double?> costoTotalCompartido = const Value.absent(),
     Value<String?> fotoPath = const Value.absent(),
     Value<String?> subtipoLabor = const Value.absent(),
     Value<String?> producto = const Value.absent(),
@@ -4149,6 +4204,9 @@ class ActividadAgricola extends DataClass
         : this.observaciones,
     responsable: responsable.present ? responsable.value : this.responsable,
     costo: costo.present ? costo.value : this.costo,
+    costoTotalCompartido: costoTotalCompartido.present
+        ? costoTotalCompartido.value
+        : this.costoTotalCompartido,
     fotoPath: fotoPath.present ? fotoPath.value : this.fotoPath,
     subtipoLabor: subtipoLabor.present ? subtipoLabor.value : this.subtipoLabor,
     producto: producto.present ? producto.value : this.producto,
@@ -4198,6 +4256,9 @@ class ActividadAgricola extends DataClass
           ? data.responsable.value
           : this.responsable,
       costo: data.costo.present ? data.costo.value : this.costo,
+      costoTotalCompartido: data.costoTotalCompartido.present
+          ? data.costoTotalCompartido.value
+          : this.costoTotalCompartido,
       fotoPath: data.fotoPath.present ? data.fotoPath.value : this.fotoPath,
       subtipoLabor: data.subtipoLabor.present
           ? data.subtipoLabor.value
@@ -4244,6 +4305,7 @@ class ActividadAgricola extends DataClass
           ..write('observaciones: $observaciones, ')
           ..write('responsable: $responsable, ')
           ..write('costo: $costo, ')
+          ..write('costoTotalCompartido: $costoTotalCompartido, ')
           ..write('fotoPath: $fotoPath, ')
           ..write('subtipoLabor: $subtipoLabor, ')
           ..write('producto: $producto, ')
@@ -4274,6 +4336,7 @@ class ActividadAgricola extends DataClass
     observaciones,
     responsable,
     costo,
+    costoTotalCompartido,
     fotoPath,
     subtipoLabor,
     producto,
@@ -4303,6 +4366,7 @@ class ActividadAgricola extends DataClass
           other.observaciones == this.observaciones &&
           other.responsable == this.responsable &&
           other.costo == this.costo &&
+          other.costoTotalCompartido == this.costoTotalCompartido &&
           other.fotoPath == this.fotoPath &&
           other.subtipoLabor == this.subtipoLabor &&
           other.producto == this.producto &&
@@ -4330,6 +4394,7 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
   final Value<String?> observaciones;
   final Value<String?> responsable;
   final Value<double?> costo;
+  final Value<double?> costoTotalCompartido;
   final Value<String?> fotoPath;
   final Value<String?> subtipoLabor;
   final Value<String?> producto;
@@ -4356,6 +4421,7 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
     this.observaciones = const Value.absent(),
     this.responsable = const Value.absent(),
     this.costo = const Value.absent(),
+    this.costoTotalCompartido = const Value.absent(),
     this.fotoPath = const Value.absent(),
     this.subtipoLabor = const Value.absent(),
     this.producto = const Value.absent(),
@@ -4383,6 +4449,7 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
     this.observaciones = const Value.absent(),
     this.responsable = const Value.absent(),
     this.costo = const Value.absent(),
+    this.costoTotalCompartido = const Value.absent(),
     this.fotoPath = const Value.absent(),
     this.subtipoLabor = const Value.absent(),
     this.producto = const Value.absent(),
@@ -4412,6 +4479,7 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
     Expression<String>? observaciones,
     Expression<String>? responsable,
     Expression<double>? costo,
+    Expression<double>? costoTotalCompartido,
     Expression<String>? fotoPath,
     Expression<String>? subtipoLabor,
     Expression<String>? producto,
@@ -4439,6 +4507,8 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
       if (observaciones != null) 'observaciones': observaciones,
       if (responsable != null) 'responsable': responsable,
       if (costo != null) 'costo': costo,
+      if (costoTotalCompartido != null)
+        'costo_total_compartido': costoTotalCompartido,
       if (fotoPath != null) 'foto_path': fotoPath,
       if (subtipoLabor != null) 'subtipo_labor': subtipoLabor,
       if (producto != null) 'producto': producto,
@@ -4468,6 +4538,7 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
     Value<String?>? observaciones,
     Value<String?>? responsable,
     Value<double?>? costo,
+    Value<double?>? costoTotalCompartido,
     Value<String?>? fotoPath,
     Value<String?>? subtipoLabor,
     Value<String?>? producto,
@@ -4495,6 +4566,7 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
       observaciones: observaciones ?? this.observaciones,
       responsable: responsable ?? this.responsable,
       costo: costo ?? this.costo,
+      costoTotalCompartido: costoTotalCompartido ?? this.costoTotalCompartido,
       fotoPath: fotoPath ?? this.fotoPath,
       subtipoLabor: subtipoLabor ?? this.subtipoLabor,
       producto: producto ?? this.producto,
@@ -4558,6 +4630,11 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
     if (costo.present) {
       map['costo'] = Variable<double>(costo.value);
     }
+    if (costoTotalCompartido.present) {
+      map['costo_total_compartido'] = Variable<double>(
+        costoTotalCompartido.value,
+      );
+    }
     if (fotoPath.present) {
       map['foto_path'] = Variable<String>(fotoPath.value);
     }
@@ -4613,6 +4690,7 @@ class ActividadesAgricolasCompanion extends UpdateCompanion<ActividadAgricola> {
           ..write('observaciones: $observaciones, ')
           ..write('responsable: $responsable, ')
           ..write('costo: $costo, ')
+          ..write('costoTotalCompartido: $costoTotalCompartido, ')
           ..write('fotoPath: $fotoPath, ')
           ..write('subtipoLabor: $subtipoLabor, ')
           ..write('producto: $producto, ')
@@ -9396,6 +9474,7 @@ typedef $$ActividadesAgricolasTableCreateCompanionBuilder =
       Value<String?> observaciones,
       Value<String?> responsable,
       Value<double?> costo,
+      Value<double?> costoTotalCompartido,
       Value<String?> fotoPath,
       Value<String?> subtipoLabor,
       Value<String?> producto,
@@ -9424,6 +9503,7 @@ typedef $$ActividadesAgricolasTableUpdateCompanionBuilder =
       Value<String?> observaciones,
       Value<String?> responsable,
       Value<double?> costo,
+      Value<double?> costoTotalCompartido,
       Value<String?> fotoPath,
       Value<String?> subtipoLabor,
       Value<String?> producto,
@@ -9537,6 +9617,11 @@ class $$ActividadesAgricolasTableFilterComposer
 
   ColumnFilters<double> get costo => $composableBuilder(
     column: $table.costo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get costoTotalCompartido => $composableBuilder(
+    column: $table.costoTotalCompartido,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9688,6 +9773,11 @@ class $$ActividadesAgricolasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get costoTotalCompartido => $composableBuilder(
+    column: $table.costoTotalCompartido,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get fotoPath => $composableBuilder(
     column: $table.fotoPath,
     builder: (column) => ColumnOrderings(column),
@@ -9824,6 +9914,11 @@ class $$ActividadesAgricolasTableAnnotationComposer
   GeneratedColumn<double> get costo =>
       $composableBuilder(column: $table.costo, builder: (column) => column);
 
+  GeneratedColumn<double> get costoTotalCompartido => $composableBuilder(
+    column: $table.costoTotalCompartido,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get fotoPath =>
       $composableBuilder(column: $table.fotoPath, builder: (column) => column);
 
@@ -9946,6 +10041,7 @@ class $$ActividadesAgricolasTableTableManager
                 Value<String?> observaciones = const Value.absent(),
                 Value<String?> responsable = const Value.absent(),
                 Value<double?> costo = const Value.absent(),
+                Value<double?> costoTotalCompartido = const Value.absent(),
                 Value<String?> fotoPath = const Value.absent(),
                 Value<String?> subtipoLabor = const Value.absent(),
                 Value<String?> producto = const Value.absent(),
@@ -9972,6 +10068,7 @@ class $$ActividadesAgricolasTableTableManager
                 observaciones: observaciones,
                 responsable: responsable,
                 costo: costo,
+                costoTotalCompartido: costoTotalCompartido,
                 fotoPath: fotoPath,
                 subtipoLabor: subtipoLabor,
                 producto: producto,
@@ -10000,6 +10097,7 @@ class $$ActividadesAgricolasTableTableManager
                 Value<String?> observaciones = const Value.absent(),
                 Value<String?> responsable = const Value.absent(),
                 Value<double?> costo = const Value.absent(),
+                Value<double?> costoTotalCompartido = const Value.absent(),
                 Value<String?> fotoPath = const Value.absent(),
                 Value<String?> subtipoLabor = const Value.absent(),
                 Value<String?> producto = const Value.absent(),
@@ -10026,6 +10124,7 @@ class $$ActividadesAgricolasTableTableManager
                 observaciones: observaciones,
                 responsable: responsable,
                 costo: costo,
+                costoTotalCompartido: costoTotalCompartido,
                 fotoPath: fotoPath,
                 subtipoLabor: subtipoLabor,
                 producto: producto,

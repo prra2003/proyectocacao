@@ -94,7 +94,13 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen>
   }
 
   Future<void> _registrarActividad() async {
-    final datos = await pedirDatosActividad(context, loteNombre: _lote.nombre);
+    final reparto = await repartoDelGasto(widget.repo, _lote);
+    if (!mounted) return;
+    final datos = await pedirDatosActividad(
+      context,
+      loteNombre: _lote.nombre,
+      reparto: reparto,
+    );
     if (datos == null) return;
     await guardarLabor(widget.repo, _lote, datos);
     if (mounted) {

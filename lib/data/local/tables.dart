@@ -125,8 +125,26 @@ class ActividadesAgricolas extends Table with SyncColumns {
   /// registra en la app: puede ser un jornalero o un técnico.
   TextColumn get responsable => text().nullable()();
 
-  /// Lo gastado en esa labor (insumos, jornales), cuando aplica.
+  /// Lo que esa labor costó **en este lote**, cuando aplica.
+  ///
+  /// Para un gasto que se repartió entre varios lotes, aquí va solo la parte
+  /// que le toca a este, no lo que se pagó en total: es lo que suman las
+  /// cuentas del lote, y si aquí estuviera el total de la finca el costo por
+  /// kilo de este lote saldría inflado. Lo pagado completo queda en
+  /// [costoTotalCompartido].
   RealColumn get costo => real().nullable()();
+
+  /// Lo que se pagó en total, cuando el gasto fue de varios lotes.
+  ///
+  /// `null` quiere decir que la labor fue solo de este lote y [costo] ya es
+  /// todo. Se guarda para no perder el dato real: una fertilización de
+  /// $700.000 para la finca sigue siendo de $700.000, y la parte del lote es
+  /// un número derivado de ella, no el gasto mutilado.
+  ///
+  /// El reparto se guarda ya hecho, no como un porcentaje que se recalcule:
+  /// si mañana se corrige el área de un lote, lo que se pagó el año pasado no
+  /// debe cambiar solo.
+  RealColumn get costoTotalCompartido => real().nullable()();
 
   /// Foto de la labor, guardada en el propio teléfono.
   TextColumn get fotoPath => text().nullable()();

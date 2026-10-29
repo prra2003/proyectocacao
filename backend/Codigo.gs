@@ -80,7 +80,10 @@ var TABLAS = {
           // el comprador que exporta.
           'latitud', 'longitud'].concat(COMUNES),
   actividades_agricolas: ['id', 'lote_id', 'tipo_actividad', 'fecha',
-                          'observaciones', 'responsable', 'costo', 'foto_path',
+                          'observaciones', 'responsable', 'costo',
+                          // Lo pagado completo cuando el gasto fue de varios
+                          // lotes; `costo` lleva solo la parte de este lote.
+                          'costo_total_compartido', 'foto_path',
                           'subtipo_labor', 'producto', 'cantidad_aplicada',
                           'incidencia', 'arboles_afectados',
                           'edad_cultivo_anios', 'arboles_sembrados',
