@@ -615,6 +615,29 @@ con la misma llave y subir el número de compilación. Está explicado en
 
 **Versión web**
 
+La página de la Red es **https://redcacao.vercel.app** — esa es la dirección
+principal, la que se le pasa al productor. Hay otras dos que sirven lo mismo
+(`web-rust-tau-65.vercel.app` y `redcacao-cacao3.vercel.app`), pero son
+heredadas; para registrar orígenes en Google o para repartir el enlace, vale la
+primera.
+
+**Publicar la página**
+
+```bash
+tools/publicar_web.sh
+```
+
+Compila, sube, apunta las tres direcciones a lo recién subido y comprueba que
+las tres contesten la versión del `pubspec.yaml`. Ese último paso no sobra: la
+dirección principal está puesta a mano sobre una publicación concreta, no atada
+a "lo último", así que un `vercel --prod` a secas deja la página vieja sin
+avisar. Pasó: estuvo 38 días atrás del repositorio y solo se notó porque un
+cambio nuevo "no aparecía".
+
+> Lo correcto sería atarla en Vercel (proyecto `redcacao` → Settings →
+> Domains); mientras no se haga, el script es lo que evita que vuelva a
+> quedarse atrás.
+
 El mismo proyecto compila a navegador, útil para mostrar la aplicación sin
 instalar nada —por ejemplo, en un iPhone—:
 
@@ -644,15 +667,17 @@ Y se abre en `http://localhost:8099`.
 > puede desalojar, mientras que en el teléfono el archivo SQLite es del sistema
 > operativo. En el campo, esa diferencia lo es todo.
 
-**Publicar el sitio oficial.** El sitio `redcacao.vercel.app` se publica a mano:
-`flutter build web --release`, desplegar `build/web` en el proyecto `redcacao` de
-Vercel y apuntar el alias de `redcacao.vercel.app` al despliegue nuevo.
+**Publicar el sitio oficial.** Con `tools/publicar_web.sh`, explicado más
+arriba. Hace a mano exactamente esos pasos —compilar, desplegar `build/web` en
+el proyecto `redcacao` y apuntar el alias— y además comprueba al final que las
+tres direcciones hayan quedado en la versión nueva, que es el paso que se
+olvida.
 
 ---
 
 ## 11. Pruebas
 
-**217 pruebas**, todas en verde, y `flutter analyze` sin avisos. Se ejecutan con
+**230 pruebas**, todas en verde, y `flutter analyze` sin avisos. Se ejecutan con
 `flutter test`; GitHub las corre solo en cada pull request ("Análisis y
 pruebas").
 
@@ -670,6 +695,9 @@ pruebas").
 | `costo_por_kilo_ui_test.dart` | Anotar y corregir gastos desde la pantalla de costo |
 | `asistente_costo_test.dart` | El recorrido completo del asistente |
 | `reparto_gasto_test.dart` | Repartir un gasto entre lotes por hectáreas |
+| `campo_de_plata_test.dart` | Los puntos de mil al escribir un costo, y que `1.500` se lea como mil quinientos |
+| `barra_del_telefono_test.dart` | Nada queda debajo de la barra de botones de Android, y sin hueco doble |
+| `selector_fecha_test.dart` | La fecha cabe en un renglón en un teléfono angosto |
 | `tutorial_registro_test.dart` | El video está empaquetado, la leyenda y el fallo de reproducción |
 | `ayuda_test.dart` | La pantalla de Ayuda y sus enlaces |
 | `sync_productores_test.dart` | Ciclo completo de una entidad |
@@ -882,6 +910,7 @@ hay cuenta o no la hay.
 | `backend/Codigo.gs` | El servidor: sesiones, subida, descarga, sellos y administradores |
 | `backend/GUIA_PASO_A_PASO.md` | Cómo dejarlo instalado en una cuenta nueva |
 | `tools/servidor_web.py` | Servidor local con las cabeceras que exige la base del navegador |
+| `tools/publicar_web.sh` | Publica la página y comprueba que las tres direcciones queden en la misma versión |
 | `tools/generar_capturas_test.dart` | Genera las capturas de `docs/capturas/` |
 | `web/` | Página de arranque, manifiesto, íconos, política de privacidad y condiciones |
 | `web/_headers` · `vercel.json` | Las cabeceras de la web para Netlify y Vercel |

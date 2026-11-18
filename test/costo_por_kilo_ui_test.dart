@@ -203,7 +203,11 @@ void main() {
     await asentar(tester);
 
     // Abre lleno: el costo que ya tenía está ahí, no en blanco.
-    expect(find.text('400000'), findsOneWidget);
+    expect(
+      find.text('400.000'),
+      findsOneWidget,
+      reason: 'Con sus puntos de mil, igual que si lo acabara de escribir.',
+    );
 
     await tester.enterText(find.byKey(const Key('campo_costo')), '500000');
     await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
