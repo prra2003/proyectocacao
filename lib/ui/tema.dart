@@ -306,6 +306,18 @@ AppBar cabeceraCacao({
 /// Fondo de pantalla: el degradado oscuro de la app, plano y sobrio, de
 /// punta a punta — sin manchas ni adornos encima, para que el foco quede en
 /// las tarjetas.
+///
+/// El degradado se pinta de borde a borde, pero el contenido se mete por
+/// encima de la barra de botones del teléfono. Desde Android 15 la
+/// aplicación se dibuja debajo de esa barra, así que sin esto los tres
+/// botones del sistema le quedan encima a lo último de la pantalla y el
+/// productor no sabe dónde dar.
+///
+/// Va aquí y no pantalla por pantalla porque casi todas lo usan de cuerpo:
+/// una sola vez, y ninguna se queda sin él por olvido. Arriba no se toca,
+/// que el degradado de la cabecera suba hasta el reloj es a propósito. Y
+/// donde ya hay barra de pestañas abajo, `Scaffold` descuenta ese espacio
+/// por su cuenta y esto no agrega nada.
 class FondoCacao extends StatelessWidget {
   const FondoCacao({super.key, required this.child});
 
@@ -321,7 +333,7 @@ class FondoCacao extends StatelessWidget {
           end: Alignment.bottomCenter,
         ),
       ),
-      child: child,
+      child: SafeArea(top: false, child: child),
     );
   }
 }

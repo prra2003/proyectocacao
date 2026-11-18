@@ -258,10 +258,17 @@ class _CascaronScreenState extends State<CascaronScreen> {
       // el Inicio y en Reportes.
       bottomNavigationBar: BottomAppBar(
         color: PaletaCacao.tarjeta,
-        height: 78,
+        // 78 para los botones, más lo que ocupe la barra del teléfono. Desde
+        // Android 15 la aplicación se dibuja debajo de ella: sin esta suma,
+        // los tres botones del sistema quedan encima de estos y no se sabe
+        // dónde dar.
+        height: 78 + MediaQuery.viewPaddingOf(context).bottom,
         // Sin esto, el relleno propio de la barra deja 54 px útiles y el
-        // contenido (ícono + etiqueta) se desborda.
-        padding: EdgeInsets.zero,
+        // contenido (ícono + etiqueta) se desborda. Abajo sí, el hueco de la
+        // barra del teléfono.
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewPaddingOf(context).bottom,
+        ),
         child: Row(
           children: [
             Expanded(

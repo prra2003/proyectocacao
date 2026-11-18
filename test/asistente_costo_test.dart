@@ -222,4 +222,42 @@ void main() {
 
     await desmontar(tester);
   });
+
+  testWidgets('un gasto anotado en el asistente aparece ahí mismo, aunque la '
+      'cosecha sea vieja', (tester) async {
+    // Una cosecha de hace dos meses: el caso corriente, porque uno saca la
+    // cuenta después de vender, no el mismo día.
+    final haceDosMeses = DateTime.now().subtract(const Duration(days: 60));
+    final cosechaId = await repo.registrarCosecha(
+      loteId: lote.id,
+      fecha: haceDosMeses,
+      cantidadKg: 100,
+      tipoProducto: 'Cacao seco',
+    );
+    await abrir(tester);
+
+    await tester.tap(find.byKey(Key('cosecha_$cosechaId')));
+    await asentar(tester);
+    await tester.tap(find.byKey(const Key('asistente_seguir')));
+    await asentar(tester);
+
+    // Paso de la poda: anotar una.
+    await tester.tap(find.byKey(const Key('asistente_anotar_gasto')));
+    await asentar(tester);
+    await tester.tap(find.byKey(const Key('boton_mas_detalles')));
+    await asentar(tester);
+    await tester.enterText(find.byKey(const Key('campo_costo')), '400000');
+    await tester.tap(find.widgetWithText(FilledButton, 'Registrar'));
+    await asentar(tester);
+
+    expect(
+      find.byKey(const Key('ya_tiene_anotados')),
+      findsOneWidget,
+      reason: 'Lo acaba de anotar aquí mismo, contestando esta pregunta: si '
+          'no sale, parece que no se guardó y lo anota otra vez.',
+    );
+    expect(find.text(r'$400.000'), findsOneWidget);
+
+    await desmontar(tester);
+  });
 }

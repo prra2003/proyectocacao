@@ -76,6 +76,12 @@ void main() {
     await tester.tap(find.text('Estado'));
     await asentar(tester);
     expect(find.text('Sin diagnósticos'), findsOneWidget);
+    expect(
+      find.textContaining('foto'),
+      findsNothing,
+      reason: 'Las fotos salieron de los formularios: pedirlas aquí manda al '
+          'productor a buscar un botón de cámara que ya no existe.',
+    );
 
     await desmontar(tester);
   });

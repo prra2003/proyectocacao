@@ -267,6 +267,66 @@ class FiltroSoloNumeros extends TextInputFormatter {
   }
 }
 
+/// Pone los puntos de mil mientras se escribe: al teclear `150000` el campo
+/// va mostrando `1`, `15`, `150`, `1.500`, `15.000`, `150.000`.
+///
+/// Un costo de seis cifras sin puntos es muy fácil de equivocar —`150000` y
+/// `1500000` se ven casi igual—, y ese error no se nota hasta que el costo
+/// por kilo sale diez veces más caro. Con los puntos se lee de un vistazo.
+///
+/// Los centavos no se admiten a propósito: nadie anota un jornal con
+/// decimales, y permitirlos obligaría a decidir si el punto separa miles o
+/// decimales, que es justo la confusión que esto evita.
+class FiltroPesos extends TextInputFormatter {
+  const FiltroPesos();
+
+  static final _noEsDigito = RegExp(r'[^0-9]');
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue viejo,
+      TextEditingValue nuevo,
+      ) {
+    final digitos = nuevo.text.replaceAll(_noEsDigito, '');
+    if (digitos.isEmpty) return const TextEditingValue();
+    // Más allá de esto ya no es una cifra de plata sino un error de dedo
+    // sostenido; se deja como estaba en vez de seguir alargando el campo.
+    if (digitos.length > 15) return viejo;
+
+    // Cuántos dígitos quedan a la izquierda del cursor: es lo que hay que
+    // respetar para que no salte al final cuando se corrige una cifra por
+    // la mitad.
+    final hastaElCursor = nuevo.text.substring(0, nuevo.selection.end);
+    final digitosAntes = hastaElCursor.replaceAll(_noEsDigito, '').length;
+
+    final texto = conPuntosDeMil(digitos);
+    var cursor = texto.length;
+    var vistos = 0;
+    for (var i = 0; i < texto.length; i++) {
+      if (texto[i] != '.') vistos++;
+      if (vistos == digitosAntes) {
+        cursor = i + 1;
+        break;
+      }
+    }
+    if (digitosAntes == 0) cursor = 0;
+
+    return TextEditingValue(
+      text: texto,
+      selection: TextSelection.collapsed(offset: cursor),
+    );
+  }
+}
+
+/// Lee lo que hay en un campo de plata, con puntos de mil o sin ellos.
+///
+/// No se usa [aNumero] porque ahí el punto es la coma decimal: `1.500` le
+/// daría 1,5 pesos en vez de mil quinientos.
+double? aPesos(String texto) {
+  final digitos = texto.replaceAll(RegExp(r'[^0-9]'), '');
+  return digitos.isEmpty ? null : double.tryParse(digitos);
+}
+
 String? textoONulo(String texto) => texto.trim().isEmpty ? null : texto.trim();
 
 /// Convierte lo que se escribe en campo ("2,5") a número.

@@ -80,7 +80,7 @@ class _CostoPorKiloScreenState extends State<CostoPorKiloScreen> {
   }
 
   void _releerPrecio() {
-    final leido = aNumero(_precio.text);
+    final leido = aPesos(_precio.text);
     if (leido == _precioPorKilo) return;
     setState(() => _precioPorKilo = leido);
   }
@@ -379,9 +379,10 @@ class _Contenido extends StatelessWidget {
           icono: Icons.sell_outlined,
           color: PaletaCacao.maduro,
           controller: controladorPrecio,
-          hint: 'Ej: 12000',
+          hint: 'Ej: 12.000',
           suffixText: r'$',
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          keyboardType: TextInputType.number,
+          inputFormatters: const [FiltroPesos()],
         ),
         const SizedBox(height: 6),
         Padding(

@@ -250,7 +250,7 @@ void main() {
     await abrirFormulario(tester, quebrada, corrigiendo: labor);
 
     expect(
-      find.text('700000'),
+      find.text('700.000'),
       findsOneWidget,
       reason: 'Es lo que la persona recuerda haber pagado. Mostrarle los '
           '\$361.290 repartidos la haría pensar que el dato quedó mal.',
