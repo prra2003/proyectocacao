@@ -947,6 +947,7 @@ no debe correr en cada pull request.
 
 | Documento | Para qué |
 |---|---|
+| [`docs/TRASPASO.md`](docs/TRASPASO.md) | **Para el equipo de 2027-1**: los accesos que hay que recibir además del código, lo pendiente y dónde se engancha cada módulo nuevo |
 | [`docs/MODELOS.md`](docs/MODELOS.md) | Arquitectura, IDEF0 (A0 y A1) y entidad-relación de la app real, con PNG para el informe |
 | [`docs/DOCUMENTACION_TECNICA.md`](docs/DOCUMENTACION_TECNICA.md) | Cómo está hecho cada componente y por qué, y los problemas reales que aparecieron |
 | [`docs/GUIA_DEL_EQUIPO.md`](docs/GUIA_DEL_EQUIPO.md) | Cómo trabajar entre varios sin pisarse: ramas, pull requests, qué no se hace |

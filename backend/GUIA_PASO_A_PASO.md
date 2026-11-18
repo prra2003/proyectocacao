@@ -181,7 +181,8 @@ Entre a <https://console.cloud.google.com> con **la misma cuenta**.
    - **Nombre:** `Cacao Web`
    - En **Orígenes autorizados de JavaScript**, toque **Agregar URI** y ponga
      estos dos, uno por uno:
-     - `https://proyectocacao.vercel.app`
+     - `https://redcacao.vercel.app`
+       *(la página oficial; sin barra al final)*
      - `http://127.0.0.1:8099`
        *(este es el servidor local con el que probamos la versión web)*
 3. **Crear**.
