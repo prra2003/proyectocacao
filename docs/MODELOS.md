@@ -3,7 +3,7 @@
 Los cuatro modelos que pide el documento del seminario —arquitectura (figura 3),
 modelo funcional IDEF0 en sus niveles A0 y A1 (figuras 4 y 5) y modelo
 entidad-relación (figura 6)—, **sacados de la aplicación que existe**, no de la
-propuesta.
+propuesta. Al final, en la sección 5, el modelo matemático del costo por kilo.
 
 Cada figura está en dos formatos en [`modelos/`](modelos/): **SVG**, que se ve
 nítido en GitHub y a cualquier tamaño, y **PNG** de 3000 píxeles de ancho, para
@@ -198,3 +198,126 @@ respaldar la evidencia y no la respaldaba.
 La columna se dejó porque vaciarla obligaba a una migración de la base y a
 cambiar el script de Google, sin ganar nada. No se dibuja en el modelo porque
 ninguna pantalla la usa.
+
+---
+
+## 5. Modelo matemático del costo por kilo
+
+La calculadora no guarda nada: toma lo que el productor ya anotó en un lote y
+hace la cuenta. Está en
+[`lib/data/repositories/costo_por_kilo.dart`](../lib/data/repositories/costo_por_kilo.dart)
+(la cuenta) y en
+[`lib/ui/dialogos/dialogo_actividad.dart`](../lib/ui/dialogos/dialogo_actividad.dart)
+(el reparto de un gasto entre lotes). Las pruebas que la verifican con números
+a mano están en `test/costo_por_kilo_test.dart` y `test/reparto_gasto_test.dart`.
+
+### 5.1 Los datos
+
+Para un lote y un período $P = [d_0,\ d_1]$, los dos días incluidos completos:
+
+| Símbolo | Qué es |
+|---|---|
+| $A$ | Las labores del lote con fecha en $P$ |
+| $c_a$ | El costo anotado de la labor $a$ (puede faltar) |
+| $H$ | Las cosechas del lote con fecha en $P$ |
+| $k_h$ | Los kilos de la cosecha $h$ |
+| $t_h$ | El tipo de producto de la cosecha $h$ (baba, fermentado, seco; *sin especificar* si no se anotó) |
+| $v$ | El precio de venta por kilo, si el productor lo escribe (opcional, no se guarda) |
+
+### 5.2 El gasto del período
+
+Una labor cuenta como gasto solo si tiene un costo mayor que cero. Las demás
+se cuentan aparte, porque cada una es un gasto que falta:
+
+$$A^{+} = \{\, a \in A : c_a > 0 \,\} \qquad A^{0} = A \setminus A^{+}$$
+
+$$C = \sum_{a \in A^{+}} c_a$$
+
+Un costo anotado en cero no es un gasto de cero: es uno que falta, y por eso
+va en $A^{0}$ y no en $A^{+}$.
+
+El mismo $C$ se reparte por tipo de labor para mostrar en qué se fue la plata:
+
+$$C_{\tau} = \sum_{a \in A^{+},\ \mathrm{tipo}(a) = \tau} c_a \qquad \sum_{\tau} C_{\tau} = C$$
+
+### 5.3 Los kilos: nunca se suman productos distintos
+
+Un kilo de cacao en baba no es un kilo de cacao seco —se necesitan del orden de
+dos kilos y medio de baba para uno seco—, así que sumarlos daría un costo por
+kilo sin sentido. Los kilos se agrupan por producto:
+
+$$K_p = \sum_{h \in H,\ t_h = p} k_h$$
+
+y se costea **un solo producto** $p^{*}$: el que escoja el productor o, si no
+escoge, el que más kilos tenga en el período:
+
+$$p^{*} = \arg\max_{p} K_p \qquad K = K_{p^{*}}$$
+
+### 5.4 El resultado
+
+$$\text{costo por kilo} = \frac{C}{K} \qquad \text{solo si } K > 0$$
+
+Con $K = 0$ el resultado **no es cero**: queda indefinido, porque la pregunta
+todavía no se puede responder.
+
+Si el productor escribe un precio de venta $v$:
+
+$$\text{margen por kilo} = v - \frac{C}{K} \qquad \text{venta estimada} = K \cdot v \qquad \text{utilidad} = K \cdot v - C$$
+
+### 5.5 Cuándo se da el número
+
+El número solo se muestra cuando no falta nada obligatorio:
+
+$$\text{calculable} \iff K > 0 \ \wedge\ |A^{+}| > 0 \ \wedge\ |A^{0}| = 0$$
+
+Mientras falte algo, la app dice **"Pendiente"** y nombra lo que falta, en vez
+de mostrar un número que va por debajo de lo real. Cuando ya se puede dar,
+tiene dos estados:
+
+| Estado | Condición |
+|---|---|
+| Pendiente | No es calculable |
+| Provisional | Calculable, pero el productor no ha confirmado que anotó **todos** los gastos —en especial su trabajo y el de su familia, que la app no puede ver— |
+| Confirmado | Calculable y confirmado |
+
+### 5.6 El reparto de un gasto entre lotes
+
+Cuando un gasto fue de toda la finca —una fertilización de todos los lotes—,
+anotarlo completo en uno solo infla su costo por kilo y abarata el de los
+demás. Se reparte por área sembrada:
+
+$$c_{\text{lote}} = \operatorname{redondeo}\!\left( c_{\text{total}} \cdot \frac{h_{\text{lote}}}{\sum_{\ell \in \text{finca}} h_{\ell}} \right)$$
+
+donde $h$ son las hectáreas sembradas, y el redondeo es al peso. En el
+**costo por kilo entra $c_{\text{lote}}$**; $c_{\text{total}}$ se guarda aparte
+para no perder lo que se pagó de verdad. El reparto se guarda ya hecho: si
+después se corrige el área de un lote, lo pagado antes no cambia solo.
+
+El reparto solo se ofrece si la finca tiene dos lotes o más y el lote tiene
+área: con un lote no hay nada que repartir.
+
+### 5.7 El período en el asistente
+
+El asistente fija el período a partir de la cosecha que escoge el productor:
+$d_1$ es la fecha de esa cosecha, y $d_0$ lo escoge él (por defecto, el 1 de
+enero de ese año). El producto $p^{*}$ es el de esa cosecha.
+
+### 5.8 Lo que el modelo no hace
+
+Para que nadie lo lea como más de lo que es:
+
+- **Todo el gasto del período se le carga al producto que se costea.** Si en
+  el mismo período el lote dio cacao en baba y cacao seco, el costo por kilo de
+  uno de ellos se calcula con el gasto total y los kilos de ese solo producto.
+  No se reparte el gasto entre productos, porque no hay un dato que diga cómo.
+  La app lo advierte y le pide escoger uno.
+- **$K$ son todos los kilos del producto en el período**, no solo los de la
+  cosecha que se escogió en el asistente. Si hubo dos cosechas del mismo
+  producto entre $d_0$ y $d_1$, entran las dos. La cuenta es correcta como
+  costo promedio del período.
+- **No incluye costos fijos** —la tierra, la depreciación de la herramienta—
+  ni el valor del trabajo propio, salvo que el productor lo anote como un
+  gasto. Por eso existe el estado *provisional*.
+- **El precio de venta no se guarda**: se escribe para ver la cuenta y se
+  pierde al salir. Es la razón de que la pantalla esté marcada como *en
+  prueba*.
