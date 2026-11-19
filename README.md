@@ -325,6 +325,10 @@ De lo más básico a lo más nuevo.
 
 ## 5. Arquitectura
 
+> Los diagramas formales que pide el seminario —arquitectura, IDEF0 A0 y A1,
+> entidad-relación— están en [`docs/MODELOS.md`](docs/MODELOS.md). Aquí va el
+> resumen técnico.
+
 ```
         Flutter (UI)
              │
@@ -911,6 +915,7 @@ hay cuenta o no la hay.
 | `backend/GUIA_PASO_A_PASO.md` | Cómo dejarlo instalado en una cuenta nueva |
 | `tools/servidor_web.py` | Servidor local con las cabeceras que exige la base del navegador |
 | `tools/publicar_web.sh` | Publica la página y comprueba que las tres direcciones queden en la misma versión |
+| `tools/generar_modelos.py` | Dibuja los modelos de `docs/modelos/` (SVG y PNG) |
 | `tools/generar_capturas_test.dart` | Genera las capturas de `docs/capturas/` |
 | `web/` | Página de arranque, manifiesto, íconos, política de privacidad y condiciones |
 | `web/_headers` · `vercel.json` | Las cabeceras de la web para Netlify y Vercel |
@@ -942,6 +947,8 @@ no debe correr en cada pull request.
 
 | Documento | Para qué |
 |---|---|
+| [`docs/TRASPASO.md`](docs/TRASPASO.md) | **Para el equipo de 2027-1**: los accesos que hay que recibir además del código, lo pendiente y dónde se engancha cada módulo nuevo |
+| [`docs/MODELOS.md`](docs/MODELOS.md) | Arquitectura, IDEF0 (A0 y A1) y entidad-relación de la app real, con PNG para el informe |
 | [`docs/DOCUMENTACION_TECNICA.md`](docs/DOCUMENTACION_TECNICA.md) | Cómo está hecho cada componente y por qué, y los problemas reales que aparecieron |
 | [`docs/GUIA_DEL_EQUIPO.md`](docs/GUIA_DEL_EQUIPO.md) | Cómo trabajar entre varios sin pisarse: ramas, pull requests, qué no se hace |
 | [`docs/GUIA_DE_PRUEBAS.md`](docs/GUIA_DE_PRUEBAS.md) | Para quien recibe la APK y la prueba, sin saber programar |
