@@ -33,11 +33,11 @@ nuevo puede leer el proyecto pero no publicarlo ni actualizar la app de nadie.
 |---|---|---|---|
 | **Llave de firma de Android** (`cacao-release.jks` y su `key.properties`) | En el computador de quien compila, **fuera del repositorio** | **Nadie podrá volver a actualizar la app** en los teléfonos donde ya está instalada: Android solo acepta una actualización firmada con la misma llave. Habría que desinstalar en cada teléfono y los productores perderían lo que no hayan sincronizado. | En persona o por un gestor de contraseñas. **Nunca** por GitHub, chat o correo sin cifrar: con ella cualquiera firma una app que el teléfono acepta como Cacaiva. Hacer una copia de respaldo **antes** de entregar. |
 | **Repositorio** `prra2003/proyectocacao` | GitHub (público) | — | Agregar a los nuevos como colaboradores, o transferir el repositorio. |
-| **Hoja de cálculo y Apps Script** (el servidor) | En una cuenta de Google | Los teléfonos dejan de sincronizar | Compartir la hoja y el script como **editor** con el equipo nuevo. |
+| **Hoja de cálculo y Apps Script** (el servidor) | En una cuenta de Google. El script va **dentro** de la hoja | Los teléfonos dejan de sincronizar | Compartir la hoja como **editor**: el script viene con ella. **Nunca** hacer una implementación nueva (ver la sección 7). |
 | **Proyecto de Google Cloud** "Red Cacao" (los dos clientes de OAuth: Android y Web) | En la misma cuenta de Google | Nadie puede entrar con Google | Agregar al equipo nuevo como propietario del proyecto. |
 | **Vercel**, equipo `cacao3`, proyecto `redcacao` (la página) | Vercel | No se puede publicar la página | Invitar al equipo nuevo al equipo `cacao3`. |
 | **Canal de YouTube** de los videos de Ayuda | YouTube | Los videos de la pantalla de Ayuda dejan de cargar | Agregar administradores al canal. |
-| **Correos de administrador del SENA** | Lista `ADMINISTRADORES` en `backend/Codigo.gs` | — | Actualizar la lista con los correos del equipo y del instructor. |
+| **Correos de administrador del SENA** | Lista `ADMINISTRADORES` del script **que está en la hoja** | — | Actualizarla allí con los correos del equipo y del instructor. |
 
 > **Antes de entregar, anotar en esta tabla con qué cuenta está cada cosa.**
 > La guía del servidor ya lo advertía: todo queda amarrado a la cuenta de
@@ -150,3 +150,118 @@ lista para no olvidarlas.
 - **La versión siempre sube** antes de repartir una APK, o el teléfono
   rechaza la instalación. Ver [`docs/GUIA_ACTUALIZAR_APK.md`](GUIA_ACTUALIZAR_APK.md).
 - **Ninguna llave ni secreto va al repositorio.** El repositorio es público.
+
+---
+
+## 7. Cómo se hace el traspaso, paso a paso
+
+Para **quien entrega**. El orden importa: primero se **agrega** al equipo
+nuevo en todo, ellos **prueban** que pueden trabajar solos, y solo al final
+quien se va **suelta** lo suyo. Si se hace al revés y algo falla, ya no hay
+quién lo arregle.
+
+### Paso 1 · Antes de tocar nada
+
+- [ ] **Respaldar la llave de firma.** Son dos cosas y hacen falta las dos:
+  el archivo `cacao-release.jks` y sus contraseñas (están en
+  `android/key.properties`, que no va en el repositorio). Copiar el archivo a
+  una memoria USB y las contraseñas a un gestor de contraseñas o a un papel en
+  sobre cerrado. Guardar las dos cosas **por separado**.
+- [ ] **Fusionar el último *pull request*** para que `main` sea exactamente lo
+  publicado.
+- [ ] **Llenar la tabla de la sección 2** con la cuenta que tiene cada cosa.
+
+### Paso 2 · Agregar al equipo nuevo, sin quitarse uno
+
+**GitHub.** En el repositorio: *Settings → Collaborators → Add people*, con
+rol *Write* (o *Admin* para quien vaya a administrar). Si el proyecto va a
+quedar en una cuenta del SENA, la otra opción es *Settings → General → Danger
+Zone → Transfer ownership*. La regla que protege `main` se va con el
+repositorio.
+
+**La hoja y el script.** Abrir la hoja → botón **Compartir** → el correo de
+cada persona → **Editor**. El script viene con la hoja: no hay que
+compartirlo aparte.
+
+> **Advertencia sobre el script, la más importante de todo el traspaso.**
+>
+> - **Nunca "Nueva implementación".** Crea una dirección nueva del servidor, y
+>   todos los teléfonos que ya tienen la app instalada dejan de sincronizar
+>   hasta que se reparta una APK nueva con esa dirección. Para subir un cambio
+>   al script: *Implementar → Administrar implementaciones → el lápiz →
+>   Versión: Nueva versión → Implementar*. Así la dirección no cambia.
+> - **El script de la hoja no es igual al del repositorio.** El de la hoja tiene
+>   los identificadores reales de Google y los correos de los administradores;
+>   el de `backend/Codigo.gs` tiene `PEGUE-AQUI…`, porque el repositorio es
+>   público. Si alguien copia el del repositorio y lo pega encima sin volver a
+>   llenar esos datos, **nadie vuelve a poder entrar con Google**.
+> - El servidor corre **con la cuenta de quien lo implementó** ("Ejecutar
+>   como: Yo"). En *Administrar implementaciones* se ve cuál es. Mientras esa
+>   cuenta exista y siga teniendo la hoja, todo funciona. Si esa cuenta va a
+>   desaparecer, cambiarla es una migración planeada —implementación nueva,
+>   dirección nueva en `lib/data/sync/config_nube.dart`, APK y página nuevas,
+>   y todos los productores actualizando—, no algo que se haga el día de la
+>   entrega.
+
+**Google Cloud** (el proyecto "Red Cacao"). *IAM y administración → IAM →
+Otorgar acceso* → el correo → rol **Propietario**. Ahí mismo, en *Google Auth
+Platform → Público*: si dice **"Prueba"**, solo pueden entrar con Google las
+cuentas de la lista de usuarios de prueba; hay que agregar las del equipo nuevo
+o pasar la app a producción.
+
+**Vercel** (la página). En el equipo `cacao3`: *Settings → Members → Invite*.
+Si el plan del equipo no deja invitar miembros, la alternativa es pasar el
+proyecto `redcacao` a una cuenta del equipo nuevo: *Settings → General →
+Transfer Project*. Ojo: al pasarlo, revisar que `redcacao.vercel.app` siga
+apuntando bien, y usar `tools/publicar_web.sh` con el identificador del
+proyecto nuevo.
+
+**YouTube.** En YouTube Studio: *Configuración → Permisos → Invitar*, como
+administrador. Si el canal es de una cuenta personal y no deja agregar
+personas, se entrega la cuenta del canal o se suben los videos a un canal
+nuevo y se cambian los enlaces en `lib/ui/ayuda_screen.dart`.
+
+**La llave de firma.** En persona: la memoria USB con el `.jks` y, por
+separado, las contraseñas. Quien la recibe crea su propio
+`android/key.properties` a partir de `android/key.properties.ejemplo`.
+
+**Lo que está fuera del repositorio.** Las APK de `entregas/` (una por versión,
+con su `LEEME.md`) y las propuestas de diseño del panel (`cacao_admin/`): a una
+carpeta compartida de Drive.
+
+### Paso 3 · Que el equipo nuevo pruebe, solo
+
+Con quien entrega todavía disponible, el equipo nuevo hace esto **sin ayuda**:
+
+- [ ] Clona, y `flutter test` pasa entero.
+- [ ] Compila la APK con su copia de la llave, y la firma es la del equipo:
+  `apksigner verify --print-certs` tiene que decir
+  `CN=Red Nacional de Cacao, OU=SENA`. Si dice otra cosa, la llave está mal y
+  esa APK no se puede instalar encima de las que ya están.
+- [ ] La instala **encima** de la 1.7.1 en un teléfono de prueba, y los datos
+  siguen ahí.
+- [ ] Entra con su cuenta de Google en esa APK, anota una labor, y la ve
+  llegar a la hoja.
+- [ ] Publica la página con `tools/publicar_web.sh` y el script termina en
+  "Listo".
+- [ ] Cambia algo pequeño en el script de la hoja (un comentario) y lo sube
+  como **nueva versión de la misma implementación**, sin que la dirección
+  cambie.
+
+### Paso 4 · Soltar
+
+Solo cuando todo lo del paso 3 salió bien:
+
+- [ ] Quien se va se quita de GitHub, de Vercel y de Google Cloud, o queda con
+  permisos de solo lectura si quiere seguir viendo.
+- [ ] Si quien implementó el script es quien se va, ver la advertencia del
+  paso 2 **antes** de que cierre o pierda su cuenta.
+- [ ] Borrar las copias de la llave que queden en computadores personales.
+
+### Sobre los datos de los productores
+
+La hoja tiene **datos personales reales**: nombres, documentos de identidad,
+teléfonos y la ubicación de las fincas. Darle acceso solo a quien lo necesite
+para trabajar, no a todo el curso, y recordar que su uso está atado a la
+[política de privacidad](https://redcacao.vercel.app/privacidad) que aceptó
+cada productor.
